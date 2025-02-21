@@ -1,43 +1,3 @@
-"""
-Le Chêne un jour dit au roseau :
-
-Vous avez bien sujet d'accuser la Nature ;
-Un Roitelet  pour vous est un pesant fardeau.
-Le moindre vent qui d'aventure
-Fait rider la face de l'eau,
-Vous oblige à baisser la tête :
-
-Cependant que mon front, au Caucase pareil,
-Non content d'arrêter les rayons du soleil,
-Brave l'effort de la tempête.
-Tout vous est aquilon ; tout me semble zéphir.
-
-Encor si vous naissiez à l'abri du feuillage
-Dont je couvre le voisinage,
-Vous n'auriez pas tant à souffrir :
-Je vous défendrais de l'orage ;
-Mais vous naissez le plus souvent
-Sur les humides bords des Royaumes du vent.
-La Nature envers vous me semble bien injuste.
-
-Votre compassion, lui répondit l'Arbuste ,
-Part d'un bon naturel ; mais quittez ce souci.
-Les vents me sont moins qu'à vous redoutables.
-Je plie, et ne romps pas. Vous avez jusqu'ici
-Contre leurs coups épouvantables
-Résisté sans courber le dos ;
-
-Mais attendons la fin. Comme il disait ces mots,
-Du bout de l'horizon accourt avec furie
-Le plus terrible des enfants
-Que le Nord eût porté jusque-là dans ses flancs.
-L'Arbre tient bon ; le Roseau plie.
-Le vent redouble ses efforts,
-Et fait si bien qu'il déracine
-Celui de qui la tête au ciel était voisine,
-Et dont les pieds touchaient à l'empire des morts.
-"""
-
 import os
 import sys
 
@@ -72,19 +32,6 @@ os.environ["PYTHONWARNINGS"] = "ignore"
 
 
 class Roseau:
-    """
-    This class implements different ML classifiers (supervised) that aim to predict trending in financial time series.
-
-    It is based on the following steps:
-        - Data preparation: decompose the data, apply the labelling method and compute the features.
-        - Learning logic: train the model on the training data and provide some insights.
-        - Backtesting logic: test the model on the testing data and provide some insights.
-
-
-    Note:   In his fable "Le Chêne et le Roseau", Jean de La Fontaine tells the story of a tree and a reed. The tree is proud and strong, but the reed
-            is modest and flexible. When a storm came, the tree was uprooted while the reed bent with the wind and survived : "The reed bends, but does not break".
-            The model is inspired by the reed : it doesn't stand out against the storm but try to consistently follow the trend.
-    """
 
     def __init__(
         self,

@@ -76,13 +76,13 @@ def entropy_predictions_features(
     predictions_series: pd.Series,
     window: int,
 ):
-    # ======= II. Compute the rolling entropy features =======
+    # ======= I. Compute the rolling entropy features =======
     rolling_shannon = predictions_series.rolling(window=window + 1).apply(get_shannon_entropy, raw=False)
     rolling_plugin = predictions_series.rolling(window=window + 1).apply(get_plugin_entropy, raw=False)
     rolling_lempel_ziv = predictions_series.rolling(window=window + 1).apply(get_lempel_ziv_entropy, raw=False)
     rolling_kontoyiannis = predictions_series.rolling(window=window + 1).apply(get_kontoyiannis_entropy, raw=False)
 
-    # ======= III. Convert to pd.Series and Center =======
+    # ======= II. Convert to pd.Series =======
     rolling_shannon = pd.Series(rolling_shannon, index=predictions_series.index)
     rolling_plugin = pd.Series(rolling_plugin, index=predictions_series.index)
     rolling_lempel_ziv = pd.Series(rolling_lempel_ziv, index=predictions_series.index)
@@ -163,10 +163,14 @@ def get_plugin_entropy(signs_series: pd.Series, word_length: int = 1):
         return pmf
 
     # ======= I. Convert the signs series to a string =======
-    sequence = "".join(map(str, signs_series))
+    message = signs_series.copy()
+    message -= message.min()
+    message = [int(x) for x in message]
+
+    message = "".join(map(str, message))
 
     # ======= II. Compute the probability mass function =======
-    pmf = compute_pmf(sequence, word_length)
+    pmf = compute_pmf(message, word_length)
 
     # ======= III. Compute the plug-in entropy =======
     entropy = -sum([pmf[i] * np.log2(pmf[i]) for i in pmf]) / word_length
@@ -269,6 +273,9 @@ def get_kontoyiannis_entropy(signs_series: pd.Series, window=None):
     # ======= I. Convert the signs series to a string =======
     out = {"nb_patterns": 0, "sum": 0, "patterns": []}
     message = signs_series.copy()
+    message -= message.min()
+    message = [int(x) for x in message]
+
     message = "".join(map(str, message))
 
     # ======= II. Extract the starting indexes (no need to iterate after half the series as a pattern would be found before if existing) =======

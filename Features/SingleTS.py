@@ -1,36 +1,17 @@
-"""
-This file contains multiple time series features that can be used to analyze the behavior of an asset's price series.
-Each function uses only the price series and the feature-specific parameters, it returns a pd.Series with the feature values.
-The file features_exploration.ipynb lets you explore the features and visualize them.
+import os
+import sys
 
-The features include:
-
-    - MinMax Features : Compute the rolling minimum and maximum of a price series and compare it to the price series.
-    - Mean Features : Compute the rolling mean of a price series and compare it to the price series.
-    - Volatility Features : Compute the rolling volatility of a price series and compare it to the price series.
-    - Momentum Features : Compute the rolling momentum of a price series and compare it to the price series.
-    - Linear Temporal Regression Features : Compute the rolling trend and t-statistic of a price series.
-    - Nonlinear Temporal Regression Features : Compute the rolling trend, acceleration, and t-statistic of a price series.
-    - Hurst Exponent Features : Compute the Hurst exponent of a price series.
-    - Entropy Features : Compute the entropy of a price series.
-    - Wavelets Features : Compute the wavelet features of a price series.
-"""
+sys.path.append(os.path.abspath("../"))
+import Smoothing.NoLook_Filters as filters
 
 import pandas as pd
 import numpy as np
 import statsmodels.api as sm
 import scipy.stats as sps
 import pywt
-from tqdm import tqdm
-
-import os
-import sys
-
-sys.path.append(os.path.abspath("../"))
-import models.NoLook_Filters as filters
 
 
-# ========================== Time Series Features ==========================
+# ========================== Single TS Features ==========================
 def minMax_features(
     price_series: pd.Series,
     window: int,
@@ -58,13 +39,13 @@ def minMax_features(
 
 
 # -----------------------------------------------------------------------------
-def mean_features(
+def smoothing_features(
     price_series: pd.Series,
     window: int,
+    ind_lambda: float
 ):
     """
-    This function computes the rolling mean of a price series and compares it to the price series.
-
+    This function computes different smoothed series of a price series and compares it to the price series.
 
     Args:
         price_series (pd.Series): The price series of the asset.
@@ -73,17 +54,19 @@ def mean_features(
     Returns:
         pd.Series: The rolling mean of the price series.
     """
-    # ======= I. Compute the rolling mean =======
-    rolling_mean = price_series.rolling(window=window + 1).apply(lambda x: np.mean(x[:window]))
+    # ======= I. Compute the different smoothed series =======
+    rolling_average = price_series.rolling(window=window + 1).apply(lambda x: np.mean(x[:window]))
+    rolling_ewma = filters.exponential_weighted_moving_average(price_series=price_series, window=window, ind_lambda=ind_lambda)
 
     # ======= II. Convert to pd.Series and Center =======
-    rolling_adjusted_mean = (pd.Series(rolling_mean, index=price_series.index) / (price_series + 1e-8)) - 1
+    rolling_average = (pd.Series(rolling_average, index=price_series.index) / (price_series + 1e-8)) - 1
+    rolling_ewma = (pd.Series(rolling_ewma, index=price_series.index) / (price_series + 1e-8)) - 1
 
-    return rolling_adjusted_mean
+    return rolling_average, rolling_ewma
 
 
 # -----------------------------------------------------------------------------
-def vol_features(
+def volatility_features(
     price_series: pd.Series,
     window: int,
 ):
@@ -142,7 +125,10 @@ def momentum_features(
 
 
 # -----------------------------------------------------------------------------
-def linear_tempReg_features(price_series: pd.Series, regression_window: int):
+def linear_tempReg_features(
+    price_series: pd.Series, 
+    regression_window: int
+):
     """
     Computes the rolling trend and t-statistic of a price series.
 
@@ -262,7 +248,10 @@ def nonlinear_tempReg_features(
 
 
 # -----------------------------------------------------------------------------
-def hurst_exponent_features(price_series: pd.Series, power: int):
+def hurst_exponent_features(
+    price_series: pd.Series, 
+    power: int
+):
     # ======= 0. Initialize the variables =======
     prices_array = np.array(price_series)
     returns_array = prices_array[1:] / prices_array[:-1] - 1
@@ -512,10 +501,14 @@ def get_plugin_entropy(signs_series: pd.Series, word_length: int = 1):
         return pmf
 
     # ======= I. Convert the signs series to a string =======
-    sequence = "".join(map(str, signs_series))
+    message = signs_series.copy()
+    message -= message.min()
+    message = [int(x) for x in message]
+
+    message = "".join(map(str, message))
 
     # ======= II. Compute the probability mass function =======
-    pmf = compute_pmf(sequence, word_length)
+    pmf = compute_pmf(message, word_length)
 
     # ======= III. Compute the plug-in entropy =======
     entropy = -sum([pmf[i] * np.log2(pmf[i]) for i in pmf]) / word_length
@@ -618,6 +611,9 @@ def get_kontoyiannis_entropy(signs_series: pd.Series, window=None):
     # ======= I. Convert the signs series to a string =======
     out = {"nb_patterns": 0, "sum": 0, "patterns": []}
     message = signs_series.copy()
+    message -= message.min()
+    message = [int(x) for x in message]
+
     message = "".join(map(str, message))
 
     # ======= II. Extract the starting indexes (no need to iterate after half the series as a pattern would be found before if existing) =======
@@ -648,144 +644,3 @@ def get_kontoyiannis_entropy(signs_series: pd.Series, window=None):
     entropy = out["entropy"] if out["entropy"] < 1 else 1
 
     return entropy
-
-
-# =========================================================================
-# ========================== Applying function ==========================
-def apply_features(data_df: pd.DataFrame, features_params: dict):
-    """
-    This method applies the centered features to the labeled dataframes.
-    It saves the featured dataframes in the instance variable featured_dfs_list which is a list of dataframes.
-
-    Args:
-        individual_dfs_list (list): The list of labeled dataframes.
-
-    Returns:
-        featured_dfs_list (list): The list of featured dataframes.
-    """
-
-    # ======= 0. Auxiliary Function =======
-    def decompose_data(data_df: pd.DataFrame = None):
-        """
-        This method decomposes the data into individual dataframes for each asset in order to apply the labels and compute the features.
-        It saves the individual dataframes in the instance variable individual_dfs_list which is a list of dataframes.
-
-        Args:
-            data_df (pd.DataFrame): The dataframe containing the data to decompose (optional because stored at class initialization).
-
-        Returns:
-            individual_dfs_list (list): The list of individual dataframes.
-        """
-        # ======= I. Initialize input and output =======
-        data = data_df.copy()
-        individual_dfs_list = []
-
-        # ======= II. Decompose the data =======
-        for col in data.columns:
-            asset_df = pd.DataFrame(data[col])
-            individual_dfs_list.append(asset_df)
-
-        return individual_dfs_list
-
-    # ======= I. Initialize the input and output =======
-    individual_dfs_list = decompose_data(data_df=data_df)
-
-    labeled_dfs = individual_dfs_list.copy()
-    featured_dfs_list = []
-
-    # ======= II. Apply the features =======
-    for asset_df in tqdm(labeled_dfs):
-        # II.1. Initialize the dataframe with the asset price and the label + list of different series (raw prices, MA serie, EWMA serie)
-        asset_name = asset_df.columns[0]
-        featured_df = asset_df.copy()
-        series_list = {}
-
-        # ------- II.2 Store the different series -------
-        raw_price_series = asset_df[asset_name]
-        series_list["RAW"] = raw_price_series
-
-        for filtering_window in features_params["filter_windows"]:
-            if "MA" in features_params["filter_series"]:
-                ma_price_series = filters.moving_average(price_series=raw_price_series, window=filtering_window)
-                series_list[f"MA{filtering_window}"] = ma_price_series
-            if "EWMA" in features_params["filter_series"]:
-                ewma_price_series = filters.exponential_weighted_moving_average(price_series=raw_price_series, window=filtering_window, ind_lambda=0.6)
-                series_list[f"EWMA{filtering_window}"] = ewma_price_series
-
-        # ------- II.3 Compute the features -------
-        for series_name, price_series in series_list.items():
-            print(f"Computing features for {series_name}")
-
-            for rolling_window in features_params["rolling_windows"]:
-                print(f"Rolling window: {rolling_window}")
-
-                # Rolling min and max
-                rolling_min, rolling_max = minMax_features(price_series=price_series, window=rolling_window)
-                featured_df[f"{series_name}_rolling_min_{rolling_window}"] = rolling_min
-                featured_df[f"{series_name}_rolling_max_{rolling_window}"] = rolling_max
-
-                # Rolling adjusted mean
-                rolling_adjusted_mean = mean_features(price_series=price_series, window=rolling_window)
-                featured_df[f"{series_name}_rolling_mean_{rolling_window}"] = rolling_adjusted_mean
-
-                # Rolling volatility
-                rolling_vol = vol_features(price_series=price_series, window=rolling_window)
-                featured_df[f"{series_name}_rolling_vol_{rolling_window}"] = rolling_vol
-
-                # Rolling momentum
-                rolling_momentum, rolling_Z_momentum = momentum_features(price_series=price_series, window=rolling_window)
-                featured_df[f"{series_name}_rolling_momentum_{rolling_window}"] = rolling_momentum
-                featured_df[f"{series_name}_rolling_Z_momentum_{rolling_window}"] = rolling_Z_momentum
-
-                # Rolling linear temporal regression
-                rolling_trend, rolling_tstat = linear_tempReg_features(
-                    price_series=price_series,
-                    regression_window=rolling_window,
-                )
-                featured_df[f"{series_name}_rolling_trend_{rolling_window}"] = rolling_trend
-                featured_df[f"{series_name}_rolling_tstat_{rolling_window}"] = rolling_tstat
-
-                # Rolling nonlinear temporal regression
-                (
-                    nonLin_rolling_trend,
-                    nonLin_rolling_acceleration,
-                    nonLin_rolling_tstat,
-                ) = nonlinear_tempReg_features(
-                    price_series=price_series,
-                    regression_window=rolling_window,
-                )
-                featured_df[f"{series_name}_rolling_nonLin_trend_{rolling_window}"] = nonLin_rolling_trend
-                featured_df[f"{series_name}_rolling_nonLin_acceleration_{rolling_window}"] = nonLin_rolling_acceleration
-                featured_df[f"{series_name}_rolling_nonLin_tstat_{rolling_window}"] = nonLin_rolling_tstat
-
-                # Rolling entropy
-                if rolling_window < 50:
-                    rolling_shannon, rolling_plugin, rolling_lempel_ziv, rolling_kontoyiannis = entropy_features(price_series=price_series, window=rolling_window)
-                    featured_df[f"{series_name}_rolling_shannon_{rolling_window}"] = rolling_shannon
-                    featured_df[f"{series_name}_rolling_plugin_{rolling_window}"] = rolling_plugin
-                    featured_df[f"{series_name}_rolling_lempel_ziv_{rolling_window}"] = rolling_lempel_ziv
-                    featured_df[f"{series_name}_rolling_kontoyiannis_{rolling_window}"] = rolling_kontoyiannis
-
-                # Rolling wavelets
-                wav_family = features_params["wav_family"]
-                decomposition_level = features_params["decomposition_level"]
-                wavelet_tuple = wavelets_features(price_series=price_series, wavelet_window=rolling_window, wav_family=wav_family, decomposition_level=decomposition_level)
-                for wavelet in wavelet_tuple:
-                    featured_df[f"{series_name}_rolling_wavelet_{wavelet.name}_{rolling_window}"] = wavelet
-
-            # Rolling hurst exponent
-            for power in features_params["hurst_power"]:
-                (
-                    rolling_hurst_exponent,
-                    rolling_hurst_tstat,
-                    rolling_hurst_pvalue,
-                ) = hurst_exponent_features(price_series=price_series, power=power)
-                featured_df[f"{series_name}_rolling_hurst_exponent_{power}"] = rolling_hurst_exponent
-                featured_df[f"{series_name}_rolling_hurst_tstat_{power}"] = rolling_hurst_tstat
-                featured_df[f"{series_name}_rolling_hurst_pvalue_{power}"] = rolling_hurst_pvalue
-
-        # II.4. Drop NaN values and save the featured dataframe
-        featured_df = featured_df.dropna(axis=0)
-        featured_dfs_list.append(featured_df)
-
-    return featured_dfs_list

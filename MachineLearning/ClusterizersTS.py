@@ -1,16 +1,3 @@
-"""
-# Description: This file contains the functions used to clusterize a given universe of assets.
-                -> We expect the input to be a DataFrame containing the prices of the assets and the output to be a list of DataFrames, each containing the assets of a cluster.
-                -> REMINDER: We model the spread of a combination of assets as a linear combination of the assets' log(prices).
-_____
-riskfolio_clustering: uses riskfolio-lib to perform the clustering based on Hierarchical Risk Parity.
-dtw_clustering: uses TimeSeriesKMeans from tslearn to perform the clustering based on Dynamic Time Warping.
-_____
-POTENTIAL IMPROVEMENTS:
-    - Add more clustering methods.
-    - Specifically design a clustering method to detect co-integrated assets (custom criterion in hierarchical clustering?).
-"""
-
 import pandas as pd
 import numpy as np
 import riskfolio as rp
