@@ -1,51 +1,3 @@
-"""
-# Description: This file contains the functions to perform the labelling process using the regR2rank method.
-_____
-Main function:
-    combination_labeller: Perform the labelling process using the combination method.
-
-Secondary functions:
-    regR2rank_labeller: Perform the labelling process using the regR2rank method : the labelling is based on the R2 score of a linear regression model perfromed on the horizon next days.
-    agrega_rotulos: This function aggregates the labels based on the conviction metric.
-    monta_segmentos_rotulos: This function identifies the segments of distinct labels along the series.
-
-Auxiliary functions :
-    WMA: Perform a weighted moving average on a numpy array.
-    trunc_expon_smooth: Perform a weighted moving average on a numpy array using a truncated exponential function.
-    t_studen: Student's t density.
-    dt: Student's t distribution for pd.Series.
-    conviction_metrics: This function calculates the conviction value for a given interval.
-    get_range: This function returns a range from a to b, including both a and b, while considering the direction of the range.
-    get_frequency: This function calculates the frequency of each possible outcome in the data array.
-    update: This function updates the data with the current data.
-    print_head: This function prints the head of a dataframe.
-    print_df: This function prints the dataframe.
-_____
-Parameters for labelling process :
-params = {
-            "size_window_smooth": 10,
-            "lambda_smooth": 0.2,
-            "trend_size": 10,
-            "volatility_threshold": 1.5,
-            "horizon": 10,
-            "horizon_extension": 1.5,
-            "upper_r2_threshold": 0.8,
-            "lower_r2_threshold": 0.5,
-            "r": 0
-        }
-
-Details of the parameters:
-- size_window_smooth: The size of the window to be used in the moving average.
-- lambda_smooth: The lambda parameter for the exponential function.
-- trend_size: The minimum size of the trend to be considered.
-- volatility_threshold: The threshold for the volatility score.
-- horizon: The size of the horizon to be used in the labelling process.
-- horizon_extension: The extension of the horizon to be used in the labelling process.
-- upper_r2_threshold: The upper threshold for the R2 score.
-- lower_r2_threshold: The lower threshold for the R2 score.
-- r: The parameter between 0 and 1 for the calculation of the conviction function.
-"""
-
 import numpy as np
 import pandas as pd
 from math import gamma, sqrt, pi
@@ -56,28 +8,20 @@ from sklearn.linear_model import LinearRegression
 from sklearn.metrics import r2_score
 
 
-# ========================== MAIN FUNCTION ========================== #
+# ========================== COMBINATION LABELLER ========================== #
 def combination_labeller(price_series: pd.Series, params: dict):
     """
-    Args:
-        price_series (pd.Series): The Series of prices to be labelled.
-        params (dict): A dictionary of parameters to be used in the labelling algorithm.
-        _________________________________
-        params = {
-            "size_window_smooth": 10,
-            "lambda_smooth": 0.2,
-            "trend_size": 10,
-            "volatility_threshold": 1.5,
-            "horizon": 10,
-            "horizon_extension": 1.5,
-            "upper_r2_threshold": 0.8,
-            "lower_r2_threshold": 0.5,
-            "r": 0
-        }
-        _________________________________
-
-    Returns:
-        results_df (pd.DataFrame): A DataFrame containing the original data and the labels.
+    labelling_params = {
+        "size_window_smooth": 10,
+        "lambda_smooth": 0.2,
+        "trend_size": 10,
+        "volatility_threshold": 1.5,
+        "horizon": 10,
+        "horizon_extension": 1.5,
+        "upper_r2_threshold": 0.8,
+        "lower_r2_threshold": 0.5,
+        "r": 0,
+    }
     """
     # ======= 0. Params extraction & Initialization =======
     price_series = price_series.dropna()
@@ -153,25 +97,13 @@ def combination_labeller(price_series: pd.Series, params: dict):
         axis=1,
     )
 
-    return (
-        results_df["Xdays_label"],
-        results_df["reg_label"],
-        results_df["combination_label"],
-    )
+    label_series = results_df["combination_label"]
+
+    return label_series
 
 
-# ========================== SECONDARY FUNCTIONS ========================== #
+# ========================== REGR2RANK LABELLER ========================== #
 def regR2rank_labeller(price_series: pd.Series, params: dict):
-    """
-    Perform the labelling process using the regR2rank method : the labelling is based on the R2 score of a linear regression model perfromed on the horizon next days.
-
-    Args:
-        data_df (pd.DataFrame): The dataframe containing the data to be labelled.
-        params (dict): The dictionary containing the parameters for the labelling process.
-
-    Returns:
-        final_results_df (pd.Series): The series containing the labelled data.
-    """
     # ======= I. Extract the parameters =======
     size_window_smooth = int(params["size_window_smooth"])
     lambda_smooth = params["lambda_smooth"]
@@ -287,7 +219,143 @@ def regR2rank_labeller(price_series: pd.Series, params: dict):
     return final_results_df
 
 
-# --------------------------------------------------------------------------------------------------------------
+# ========================== TRIPLE BARRIER LABELLER ========================== #
+def tripleBarrier_labeller(price_series: pd.Series, params: dict):
+    # ======= 0. Auxiliary functions =======
+    def observed_volatility(price_series: pd.Series, window: int):
+        """
+        Computes rolling window volatility using percentage returns.
+
+        Args:
+            price_series (pd.Series): Price series of the asset
+            window (int): Window for the rolling computation
+
+        Returns:
+            volatility_series (pd.Series): Rolling volatility series
+        """
+        returns_series = price_series.pct_change().fillna(0)
+        volatility_series = returns_series.rolling(window).std() * np.sqrt(window)
+
+        return volatility_series
+
+    # ======= I. Compute volatility target =======
+    upper_barrier = params["upper_barrier"]
+    lower_barrier = params["lower_barrier"]
+    vertical_barrier = params["vertical_barrier"]
+    volatility_function = params["volatility_function"]
+
+    if volatility_function == "observed":
+        volatility_series = observed_volatility(price_series=price_series, window=vertical_barrier)
+
+    # ======= II. Initialize the labeled series and trade side =======
+    labeled_series = pd.Series(index=price_series.index, dtype=int)
+    trade_side = 0
+
+    # ======= III. Iterate through the price series =======
+    for index in price_series.index:
+        # III.1 Extract the future prices over the horizon
+        start_idx = price_series.index.get_loc(index)
+        end_idx = min(start_idx + vertical_barrier, len(price_series))
+        future_prices = price_series.iloc[start_idx:end_idx]
+
+        # III.2 Compute the range of future returns over the horizon
+        max_price = future_prices.max()
+        min_price = future_prices.min()
+
+        max_price_index = future_prices.idxmax()
+        min_price_index = future_prices.idxmin()
+
+        max_return = (max_price - price_series.loc[index]) / price_series.loc[index]
+        min_return = (min_price - price_series.loc[index]) / price_series.loc[index]
+
+        # III.3 Adjust the barrier thresholds with the volatility
+        upper_threshold = upper_barrier * volatility_series.loc[index]
+        lower_threshold = lower_barrier * volatility_series.loc[index]
+
+        # III.4 Check if the horiazontal barriers have been hit
+        long_event = False
+        short_event = False
+
+        if trade_side == 1:  # Long trade
+            if max_return > upper_threshold:
+                long_event = True
+            elif min_return < -lower_threshold:
+                short_event = True
+
+        elif trade_side == -1:  # Short trade
+            if min_return < -upper_threshold:
+                short_event = True
+            elif max_return > lower_threshold:
+                long_event = True
+
+        else:  # No position held
+            if max_return > upper_threshold:
+                long_event = True
+            elif min_return < -upper_threshold:
+                short_event = True
+
+        # III.5 Label the events base on the first event that occurs
+        if long_event and short_event:  # If both events occur, choose the first one
+            if max_price_index < min_price_index:
+                labeled_series.loc[index] = 1
+            else:
+                labeled_series.loc[index] = -1
+
+        elif long_event and not short_event:  # If only long event occurs
+            labeled_series.loc[index] = 1
+
+        elif short_event and not long_event:  # If only short event occurs
+            labeled_series.loc[index] = -1
+
+        else:  # If no event occurs (vertical hit)
+            labeled_series.loc[index] = 0
+
+        # III.6 Update the trade side
+        trade_side = labeled_series.loc[index]
+
+    return labeled_series
+
+
+# ========================== LOOK FORWARD LABELLER ========================== #
+def lookForward_labeller(price_series: pd.Series, params: dict):
+    # ======= 0. Params extraction & Initialization =======
+    price_series = price_series.dropna()
+
+    size_window_smooth = params["size_window_smooth"]
+    lambda_smooth = params["lambda_smooth"]
+    trend_size = params["trend_size"]
+    volatility_threshold = params["volatility_threshold"]
+
+    results_df = price_series.to_frame()
+    results_df["smooth_close"] = trunc_expon_smooth(price_series, size_window_smooth, lambda_smooth)
+
+    # ======= I. Significant look forward Label =======
+    # ------- 1. Get the moving X days returns and the moving X days volatility -------
+    results_df["Xdays_returns"] = (results_df["smooth_close"].shift(-size_window_smooth) - results_df["smooth_close"]) / results_df["smooth_close"]
+    results_df["Xdays_vol"] = results_df["Xdays_returns"].rolling(window=size_window_smooth).std()
+
+    # ------- 2. Compare the X days returns to the volatility  -------
+    results_df["Xdays_score"] = results_df["Xdays_returns"] / results_df["Xdays_vol"]
+    results_df["Xdays_label"] = results_df["Xdays_score"].apply(lambda x: 1 if x > volatility_threshold else (-1 if x < -volatility_threshold else 0))
+
+    # ------- 3. Eliminate the trends that are too small -------
+    results_df["group"] = (results_df["Xdays_label"] != results_df["Xdays_label"].shift()).cumsum()
+    group_sizes = results_df.groupby("group")["Xdays_label"].transform("size")
+
+    results_df["Xdays_label"] = results_df.apply(
+        lambda row: row["Xdays_label"] if group_sizes[row.name] >= trend_size else 0,
+        axis=1,
+    )
+    results_df = results_df.drop(columns=["group"])
+
+    label_series = results_df["Xdays_label"]
+
+    return label_series
+
+
+# ========================================================================= #
+# ========================================================================= #
+# ========================== AUXILIARY FUNCTIONS ========================== #
 def labels_aggregator(label: np.array, r: int):
     """
     This function aggregates the labels based on the conviction metric.
@@ -603,8 +671,7 @@ def funde_segmentos_rotulos(r: int, segments_df_input: np.array, segments_df_col
     return NewStat, NewStat_col
 
 
-# ========================================================================= #
-# ========================== AUXILIARY FUNCTIONS ========================== #
+# --------------------------------------------------------------------------------------------------------------
 def WMA(values: np.array, weight_range: np.array):
     """
     Perform a weighted moving average on a numpy array.

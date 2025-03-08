@@ -22,7 +22,7 @@ def riskfolio_clustering(df: pd.DataFrame, linkage: str):
     Returns:
         clusters (list): List containing the DataFrames of assets for each cluster (prices are raw i.e without any transformation).
     """
-    # ======== I. Apply log transformation to the prices ======== (As we further model the spread as a linear combination of the assets' log prices)
+    # ======== I. Apply log transformation to the prices ========
     log_prices = np.log(df)
     log_prices.dropna(axis=0, inplace=False)
 

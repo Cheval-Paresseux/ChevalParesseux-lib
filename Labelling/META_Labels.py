@@ -13,8 +13,9 @@ def right_wrong(preds_labels_df: pd.DataFrame):
     meta_df = preds_labels_df.copy()
 
     meta_df["meta_label"] = np.where(meta_df["predictions"] == meta_df["label"], 1, 0)
+    label_series = meta_df["meta_label"]
 
-    return meta_df
+    return label_series
 
 
 # -----------------------------------------------------------
@@ -27,8 +28,9 @@ def trade_lock(preds_labels_df: pd.DataFrame):
     meta_df = preds_labels_df.copy()
 
     meta_df["meta_label"] = np.where(meta_df["predictions"] == 0, 1, np.where(meta_df["predictions"] == meta_df["label"], 1, 0))
+    label_series = meta_df["meta_label"]
 
-    return meta_df
+    return label_series
 
 
 # -----------------------------------------------------------
@@ -41,8 +43,9 @@ def right_wrong_noZero(preds_labels_df: pd.DataFrame):
     meta_df = preds_labels_df.copy()
 
     meta_df["meta_label"] = np.where((meta_df["predictions"] == meta_df["label"]) & (meta_df["predictions"] != 0), 1, 0)
+    label_series = meta_df["meta_label"]
 
-    return meta_df
+    return label_series
 
 
 # ============================================================
@@ -61,8 +64,9 @@ def good_bad_ugly(preds_labels_df: pd.DataFrame):
         1,
         np.where(((meta_df["predictions"] == -1) & (meta_df["label"] == 1)) | ((meta_df["predictions"] == 1) & (meta_df["label"] == -1)), -1, 0),
     )
+    label_series = meta_df["meta_label"]
 
-    return meta_df
+    return label_series
 
 
 # -----------------------------------------------------------
@@ -80,10 +84,12 @@ def gbu_extended(preds_labels_df: pd.DataFrame):
         1,
         np.where((meta_df["predictions"] == 0) & (meta_df["label"] != 0), 0, -1),
     )
+    label_series = meta_df["meta_label"]
 
-    return meta_df
+    return label_series
 
 
+# -----------------------------------------------------------
 def good_bad_ugly_noZero(preds_labels_df: pd.DataFrame):
     """
     Perform trinary labelling of the predictions and labels :
@@ -98,8 +104,9 @@ def good_bad_ugly_noZero(preds_labels_df: pd.DataFrame):
         1,
         np.where(((meta_df["predictions"] == -1) & (meta_df["label"] == 1)) | ((meta_df["predictions"] == 1) & (meta_df["label"] == -1)), -1, 0),
     )
+    label_series = meta_df["meta_label"]
 
-    return meta_df
+    return label_series
 
 
 # -----------------------------------------------------------
@@ -117,5 +124,6 @@ def gbu_extended_noZero(preds_labels_df: pd.DataFrame):
         1,
         np.where((meta_df["predictions"] == 0) & (meta_df["label"] != 0), 0, -1),
     )
+    label_series = meta_df["meta_label"]
 
-    return meta_df
+    return label_series
