@@ -1,13 +1,3 @@
-"""
-This file contains multiple filtering methods that can be used to smooth out price series data.
-
-The methods include:
-
-    - Moving Average : Smooth the series by taking the average of the last n values.
-    - Exponential Weighted Moving Average : Smooth the series by taking a weighted average of the last n values, with more weight given to the latest values (following an exponential function).
-
-"""
-
 import pandas as pd
 import numpy as np
 
@@ -18,16 +8,6 @@ def moving_average(
     price_series: pd.Series,
     window: int,
 ):
-    """
-    This function computes the moving average of a price series.
-
-    Args:
-        price_series (pd.Series): The price series of the asset.
-        window (int): The window size for the moving average.
-
-    Returns:
-        pd.Series: The moving average of the price series.
-    """
     # ======= I. Compute the moving average =======
     moving_avg = price_series.rolling(window=window + 1).mean()
 
@@ -39,18 +19,6 @@ def moving_average(
 
 # -----------------------------------------------------------------------------
 def exponential_weighted_moving_average(price_series: pd.Series, window: int, ind_lambda: float):
-    """
-    Perform a weighted moving average on a numpy array using a truncated exponential function. The objective is to give more importance to the latest values in the array.
-
-    Args:
-        price_series (pd.Series): The price series of the asset.
-        window (int): The window size for the moving average.
-        ind_lambda (float): The lambda value for the exponential function.
-
-    Returns:
-        pd.Series: The weighted moving average of the price series.
-    """
-
     # ======= 0. Intermediate function =======
     def weighted_moving_average(values: np.array, weight_range: np.array):
         """

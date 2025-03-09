@@ -122,9 +122,9 @@ class LinearRegression(ABC):
             "Variance": variance,
             "Mean": mean,
             "Median": median,
-            "R-squared": R_squared,
-            "T-stats": t_stats,
-            "P-values": p_values
+            "R_squared": R_squared,
+            "T_stats": t_stats,
+            "P_values": p_values
         }
         
         self.statistics = statistics
