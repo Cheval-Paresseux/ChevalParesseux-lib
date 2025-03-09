@@ -66,7 +66,7 @@ def get_Z_momentum(series: pd.Series):
     
     return Z_momentum
 # ____________________________________________________________________________________ #
-def get_trend_and_tstat(series: pd.Series):
+def get_simpleOLS(series: pd.Series):
     # ------- 1. Fit the OLS regression -------
     X = np.arange(len(series))
     X = sm.add_constant(X)  # Add intercept for OLS
@@ -79,3 +79,17 @@ def get_trend_and_tstat(series: pd.Series):
 
     return trend_coefficient, t_statistic
 # ____________________________________________________________________________________ #
+def get_quadOLS(series: pd.Series):
+    # ------- 1. Fit the OLS regression -------
+    X = np.arange(len(series))
+    X_quad = np.column_stack((X, X**2))
+    X_quad = sm.add_constant(X_quad)
+    model = sm.OLS(series, X_quad, missing="drop")
+    results = model.fit()
+
+    # ------- 2. Extract the trend coefficient, acceleration coefficient, and t-statistic -------
+    trend_coefficient = results.params[1]
+    acceleration_coefficient = results.params[2]
+    t_statistic = results.tvalues[2]
+
+    return trend_coefficient, acceleration_coefficient, t_statistic
