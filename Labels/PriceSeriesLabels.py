@@ -7,7 +7,6 @@ from scipy.stats import beta
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import r2_score
 
-
 # ========================== COMBINATION LABELLER ========================== #
 def combination_labeller(price_series: pd.Series, params: dict):
     """
@@ -353,7 +352,6 @@ def lookForward_labeller(price_series: pd.Series, params: dict):
     return label_series
 
 
-# ========================================================================= #
 # ========================================================================= #
 # ========================== AUXILIARY FUNCTIONS ========================== #
 def labels_aggregator(label: np.array, r: int):

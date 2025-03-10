@@ -61,7 +61,31 @@ def get_quad_TempReg(series: pd.Series):
 
     return intercept, coefficients, statistics
 
+# ____________________________________________________________________________________ #
+def get_weightedMA(series: pd.Series, weight_range: np.array):
+        # ======= I. Check if the weights are valid =======
+        values = np.array(series)
+        values = values.astype("float64")
+        wma = values.copy()
 
+        if isinstance(weight_range, int):
+            weights = np.array(range(1, weight_range + 1))
+            rolling_window = weight_range
+        else:
+            weights = weight_range
+            rolling_window = len(weight_range)
+
+        # ======= II. Calculate the weighted moving average over a rolling window =======
+        for i in range(0, len(values)):
+            try:
+                wma[i] = values[i - rolling_window + 1 : i + 1].dot(weights) / np.sum(weights)
+            except:
+                wma[i] = np.nan
+
+        return wma
+    
+    
+    
 # ==================================================================================== #
 # =============================== Series Entropy Functions =========================== #
 def movements_signs(series: pd.Series):

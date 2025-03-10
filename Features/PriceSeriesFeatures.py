@@ -1,9 +1,11 @@
-"""Hurst and Wavelet to fix"""
-
+import sys
+sys.path.append("../")
+from Models import LinearRegression as reg
 import auxiliary as aux
 
 import numpy as np
 import pandas as pd
+import pywt
 
 # ==================================================================================== #
 # ======================= Unscaled Smoothed-like Series Features ===================== #
@@ -288,11 +290,14 @@ def hurst_exponent_features(
 
             Y = np.append(Y, np.log2(np.average(rs_array)))
 
-        reg = sm.OLS(Y, sm.add_constant(X))
-        res = reg.fit()
-        hurst = res.params[1]
-        tstat = (res.params[1] - 0.5) / res.bse[1]
-        pvalue = 2 * (1 - sps.t.cdf(abs(tstat), res.df_resid))
+        model = reg.MSERegression()
+        model.fit(X, Y)
+        
+        hurst = model.coefficients[0]
+        statistics = model.get_statistics()
+        tstat = statistics['T_stats'][0]
+        pvalue = statistics['P_values'][0]
+        
         hursts = np.append(hursts, hurst)
         tstats = np.append(tstats, tstat)
         pvalues = np.append(pvalues, pvalue)
@@ -313,7 +318,7 @@ def hurst_exponent_features(
 
 
 # ==================================================================================== #
-# ============================= to_define Features ============================= #
+# ============================= Signal Processing Features ============================= #
 def entropy_features(
     price_series: pd.Series,
     window: int,
@@ -342,18 +347,6 @@ def wavelets_features(
     wav_family: list,
     decomposition_level: int,
 ):
-    """
-    This function computes the wavelet features of a price series.
-
-    Args:
-        price_series (pd.Series): The price series of the asset.
-        wavelet_window (int): The window size for the wavelet decomposition.
-        wav_family (list): The list of wavelet families to compute the features.
-        decomposition_level (int): The decomposition level for the wavelet transform.
-
-    Returns:
-        tuple: The wavelet features of the price series.
-    """
     # ======= 0. Initialize the input series as a dataframe to store the wavelets =======
     if len(wav_family) == 0:
         wav_family = ["haar", "db1", "db2", "db3", "db4", "sym2", "sym3", "sym4", "sym5", "coif1", "coif2", "coif3", "coif4", "bior1.1", "bior1.3", "bior1.5", "bior2.2", "rbio1.1", "rbio1.3", "rbio1.5"]
