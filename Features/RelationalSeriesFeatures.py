@@ -28,7 +28,7 @@ def cointegration_features(series_1: pd.Series, series_2: pd.Series, window: int
         intercept_values[i] = intercept
         adf_p_values[i] = adf_results[1]  # Extract p-value
         kpss_p_values[i] = kpss_results[1]  # Extract p-value
-        residuals_values[i] = residuals[-1]
+        residuals_values[i] = residuals[-1] # Store last residual
     
     # ======== III. Convert to Series ========
     index = series_1.index[window:]

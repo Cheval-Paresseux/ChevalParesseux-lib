@@ -283,16 +283,15 @@ def get_kontoyiannis_entropy(signs_series: pd.Series, window=None):
 # ============================ Series Relationship Functions ========================= #
 def cointegration_test(series_1: pd.Series, series_2: pd.Series):
     # ======== I. Perform a Linear Regression ========
-    series_1_reshaped = series_1.values.reshape(-1, 1) 
     model = reg.MSERegression()
-    model.fit(series_1_reshaped, series_2)
+    model.fit(series_2, series_1)
 
     # ======== II. Extract Regression Coefficients ========
     beta = model.coefficients[0]
     intercept = model.intercept
 
     # ======== III. Compute Residuals ========
-    residuals = series_2 - (beta * series_1 + intercept)
+    residuals = series_1 - (beta * series_2 + intercept)
 
     # ======== IV. Perform ADF & KPSS Tests ========
     adf_results = adfuller(residuals)
@@ -320,7 +319,7 @@ def ornstein_uhlenbeck_estimation(series: pd.Series):
     # ======== III. Extract Parameters ========
     theta = -model.coefficients[0]
     if theta > 0:
-        residuals = reg.resid
+        _, residuals = model.get_statistics()
         sigma = np.sqrt(np.var(residuals) * 2 * theta)
         half_life = np.log(2) / theta
     else:

@@ -51,6 +51,7 @@ class LinearRegression(ABC):
         
         # --- Model Statistics ---
         self.statistics = None
+        self.residuals = None
         self.loss_history = None
         
     # ------------------------------- Auxiliary Functions -------------------------------- #
@@ -128,8 +129,9 @@ class LinearRegression(ABC):
         }
         
         self.statistics = statistics
+        self.residuals = residuals
 
-        return statistics
+        return statistics, residuals
     
     # -------------------------------- Model Visualization ------------------------------- #
     def plot_loss_history(self):

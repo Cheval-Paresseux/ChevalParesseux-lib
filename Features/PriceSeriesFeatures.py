@@ -84,7 +84,7 @@ def skewness_features(
 ):
     # ======= I. Compute the rolling skewness =======
     returns_series = price_series.pct_change().dropna()
-    rolling_skew = returns_series.rolling(window=window + 1).apply(lambda x: np.skew(x[:window]))
+    rolling_skew = returns_series.rolling(window=window + 1).apply(lambda x: (x[:window]).skew())
 
     # ======= II. Convert to pd.Series and Center =======
     rolling_skew = pd.Series(rolling_skew, index=price_series.index)
@@ -98,7 +98,7 @@ def kurtosis_features(
 ):
     # ======= I. Compute the rolling kurtosis =======
     returns_series = price_series.pct_change().dropna()
-    rolling_kurt = returns_series.rolling(window=window + 1).apply(lambda x: np.kurtosis(x[:window]))
+    rolling_kurt = returns_series.rolling(window=window + 1).apply(lambda x: (x[:window]).kurtosis())
 
     # ======= II. Convert to pd.Series and Center =======
     rolling_kurt = pd.Series(rolling_kurt, index=price_series.index)
@@ -175,7 +175,7 @@ def linear_tempReg_features(
     
     def compute_R_squared(series):
         _, _, statistics = aux.get_simple_TempReg(series)
-        R_squared = statistics['R_squared'][0]
+        R_squared = statistics['R_squared']
         
         return R_squared
 
@@ -217,7 +217,7 @@ def nonlinear_tempReg_features(
 
     def compute_T_stats(series):
         _, _, statistics = aux.get_quad_TempReg(series)
-        T_stats = statistics['T_stats']
+        T_stats = statistics['T_stats'][0]
         
         return T_stats
     
@@ -229,7 +229,7 @@ def nonlinear_tempReg_features(
     
     def compute_R_squared(series):
         _, _, statistics = aux.get_quad_TempReg(series)
-        R_squared = statistics['R_squared'][0]
+        R_squared = statistics['R_squared']
         
         return R_squared
 
@@ -324,7 +324,7 @@ def entropy_features(
     window: int,
 ):
     # ======= I. Extract the signs series =======
-    signs_series = aux.movements_signs(price_series=price_series)
+    signs_series = aux.movements_signs(series=price_series)
 
     # ======= II. Compute the rolling entropy features =======
     rolling_shannon = signs_series.rolling(window=window + 1).apply(aux.get_shannon_entropy, raw=False)
@@ -344,8 +344,8 @@ def entropy_features(
 def wavelets_features(
     price_series: pd.Series,
     wavelet_window: int,
-    wav_family: list,
-    decomposition_level: int,
+    wav_family: list = [],
+    decomposition_level: int = 2,
 ):
     # ======= 0. Initialize the input series as a dataframe to store the wavelets =======
     if len(wav_family) == 0:
