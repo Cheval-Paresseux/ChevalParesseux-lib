@@ -4,8 +4,8 @@ import pandas as pd
 import numpy as np
 
 
-# =======================================================================
-# ========================== Filtering Methods ==========================
+# ==================================================================================== #
+# ================================== Series Filters ================================== #
 def moving_average(
     price_series: pd.Series,
     window: int,
@@ -18,8 +18,7 @@ def moving_average(
 
     return moving_avg
 
-
-# -----------------------------------------------------------------------------
+# ____________________________________________________________________________________ #
 def exponential_weightedMA(price_series: pd.Series, window: int, ind_lambda: float):
     # ======= I. Create the weights using a truncated exponential function =======
     weight_range = [(1 - ind_lambda) ** (i - 1) for i in range(1, window + 1)]

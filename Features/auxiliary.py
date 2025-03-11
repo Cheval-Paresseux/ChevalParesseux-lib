@@ -1,10 +1,16 @@
+import os
+
+os.environ["MKL_NUM_THREADS"] = "1"
+
 import sys
 sys.path.append("../")
 from Models import LinearRegression as reg
 
 import numpy as np
 import pandas as pd
-
+from statsmodels.tsa.stattools import adfuller
+from statsmodels.tsa.stattools import kpss
+import warnings
 
 # ==================================================================================== #
 # ======================= Series Tendency Statistics Functions ======================= #
@@ -270,3 +276,112 @@ def get_kontoyiannis_entropy(signs_series: pd.Series, window=None):
     entropy = out["entropy"] if out["entropy"] < 1 else 1
 
     return entropy
+
+
+
+# ==================================================================================== #
+# ============================ Series Relationship Functions ========================= #
+def cointegration_test(series_1: pd.Series, series_2: pd.Series):
+    # ======== I. Perform a Linear Regression ========
+    series_1_reshaped = series_1.values.reshape(-1, 1) 
+    model = reg.MSERegression()
+    model.fit(series_1_reshaped, series_2)
+
+    # ======== II. Extract Regression Coefficients ========
+    beta = model.coefficients[0]
+    intercept = model.intercept
+
+    # ======== III. Compute Residuals ========
+    residuals = series_2 - (beta * series_1 + intercept)
+
+    # ======== IV. Perform ADF & KPSS Tests ========
+    adf_results = adfuller(residuals)
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        kpss_results = kpss(residuals, regression="c", nlags="auto")
+
+    return beta, intercept, adf_results, kpss_results, residuals
+
+# ____________________________________________________________________________________ #
+def ornstein_uhlenbeck_estimation(series: pd.Series):
+    # ======== I. Initialize series ========
+    series_array = np.array(series)
+    differentiated_series = np.diff(series_array)
+    mu = np.mean(series)
+    
+    X = series_array[:-1] - mu  # X_t - mu
+    Y = differentiated_series  # X_{t+1} - X_t
+
+    # ======== II. Perform OLS regression ========
+    model = reg.MSERegression()
+    model.fit(Y, X)
+    
+    # ======== III. Extract Parameters ========
+    theta = -model.coefficients[0]
+    if theta > 0:
+        residuals = reg.resid
+        sigma = np.sqrt(np.var(residuals) * 2 * theta)
+        half_life = np.log(2) / theta
+    else:
+        theta = 0
+        sigma = 0
+        half_life = 0
+
+    return mu, theta, sigma, half_life
+
+# ____________________________________________________________________________________ #
+def kalmanOU_estimation(series: pd.Series, smooth_coefficient: float):
+    # ======== 0. Define Kalman Filter Prediction Step ========
+    def make_prediction(observation: float, prior_estimate: float, prior_variance: float,
+                        mean: float, theta: float, obs_sigma: float, pro_sigma: float):
+        """
+        Performs a Kalman Filter update step for the Ornstein-Uhlenbeck process.
+        """
+        # ======= I. Observation update =======
+        innovation_t = observation - prior_estimate
+        innovation_variance_t = prior_variance + obs_sigma**2
+        kalman_gain_t = prior_variance / innovation_variance_t
+
+        # ======= II. Update state and variance =======
+        estimate_t = prior_estimate + kalman_gain_t * innovation_t
+        variance_t = (1 - kalman_gain_t) * prior_variance
+
+        # ======= III. Prediction step (OU transition) =======
+        estimate_t = mean + (1 - theta) * (estimate_t - mean)
+        variance_t = max((1 - theta) ** 2 * variance_t + pro_sigma**2, 1e-8)  # Ensure non-negative variance
+
+        return estimate_t, variance_t
+
+    # ======== I. Estimate OU parameters ========
+    mu, theta, sigma, _ = ornstein_uhlenbeck_estimation(series)
+    theta = max(theta, 1e-4)
+
+    # ======== II. Initialize Kalman Filter ========
+    kf_mean, kf_theta, kf_obs_sigma = mu, theta, sigma
+    kf_pro_sigma = kf_obs_sigma * smooth_coefficient  # Process noise scaled by smooth coefficient
+
+    # Initial state estimates
+    prior_estimate = kf_mean
+    prior_variance = max(kf_pro_sigma**2 / (2 * kf_theta), 1e-8)  # Ensure non-zero variance
+
+    # ======== III. Perform Kalman Filtering ========
+    n = len(series)
+    filtered_states = np.zeros(n)
+    variances = np.zeros(n)
+
+    for t in range(n):
+        observation = series.iloc[t]
+        estimate_t, variance_t = make_prediction(observation, prior_estimate, prior_variance,
+                                                 kf_mean, kf_theta, kf_obs_sigma, kf_pro_sigma)
+        prior_estimate, prior_variance = estimate_t, variance_t
+
+        filtered_states[t] = estimate_t
+        variances[t] = variance_t
+
+    # ======== IV. Convert to Series ========
+    index = series.index
+    filtered_states = pd.Series(filtered_states, index=index)
+    variances = pd.Series(variances, index=index)
+    
+    return filtered_states, variances
