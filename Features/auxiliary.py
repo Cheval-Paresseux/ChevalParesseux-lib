@@ -47,9 +47,9 @@ def get_simple_TempReg(series: pd.Series):
     coefficients = model.coefficients
     intercept = model.intercept
     
-    statistics = model.get_statistics()
+    statistics, residuals = model.get_statistics()
 
-    return intercept, coefficients, statistics
+    return intercept, coefficients, statistics,residuals
 
 # ____________________________________________________________________________________ #
 def get_quad_TempReg(series: pd.Series):
@@ -63,9 +63,9 @@ def get_quad_TempReg(series: pd.Series):
     coefficients = model.coefficients
     intercept = model.intercept
     
-    statistics = model.get_statistics()
+    statistics, residuals = model.get_statistics()
 
-    return intercept, coefficients, statistics
+    return intercept, coefficients, statistics, residuals
 
 # ____________________________________________________________________________________ #
 def get_weightedMA(series: pd.Series, weight_range: np.array):

@@ -156,25 +156,25 @@ def linear_tempReg_features(
 ):
     # ======= 0. Intermediate functions =======
     def compute_slope(series):
-        _, coefficients, _ = aux.get_simple_TempReg(series)
+        _, coefficients, _, _ = aux.get_simple_TempReg(series)
         slope = coefficients[0]
         
         return slope
 
     def compute_T_stats(series):
-        _, _, statistics = aux.get_simple_TempReg(series)
-        T_stats = statistics['T_stats']
+        _, _, statistics, _ = aux.get_simple_TempReg(series)
+        T_stats = statistics['T_stats'][0]
         
         return T_stats
     
     def compute_Pvalue(series):
-        _, _, statistics = aux.get_simple_TempReg(series)
+        _, _, statistics, _ = aux.get_simple_TempReg(series)
         P_value = statistics['P_values'][0]
         
         return P_value
     
     def compute_R_squared(series):
-        _, _, statistics = aux.get_simple_TempReg(series)
+        _, _, statistics, _ = aux.get_simple_TempReg(series)
         R_squared = statistics['R_squared']
         
         return R_squared
@@ -204,31 +204,31 @@ def nonlinear_tempReg_features(
 ):
     # ======= 0. Intermediate functions =======
     def compute_slope(series):
-        _, coefficients, _ = aux.get_quad_TempReg(series)
+        _, coefficients, _, _ = aux.get_quad_TempReg(series)
         slope = coefficients[0]
         
         return slope
     
     def compute_acceleration(series):
-        _, coefficients, _ = aux.get_quad_TempReg(series)
+        _, coefficients, _, _ = aux.get_quad_TempReg(series)
         acceleration = coefficients[1]
         
         return acceleration
 
     def compute_T_stats(series):
-        _, _, statistics = aux.get_quad_TempReg(series)
+        _, _, statistics, _ = aux.get_quad_TempReg(series)
         T_stats = statistics['T_stats'][0]
         
         return T_stats
     
     def compute_Pvalue(series):
-        _, _, statistics = aux.get_quad_TempReg(series)
+        _, _, statistics, _ = aux.get_quad_TempReg(series)
         P_value = statistics['P_values'][0]
         
         return P_value
     
     def compute_R_squared(series):
-        _, _, statistics = aux.get_quad_TempReg(series)
+        _, _, statistics, _ = aux.get_quad_TempReg(series)
         R_squared = statistics['R_squared']
         
         return R_squared
@@ -294,7 +294,7 @@ def hurst_exponent_features(
         model.fit(X, Y)
         
         hurst = model.coefficients[0]
-        statistics = model.get_statistics()
+        statistics, _ = model.get_statistics()
         tstat = statistics['T_stats'][0]
         pvalue = statistics['P_values'][0]
         

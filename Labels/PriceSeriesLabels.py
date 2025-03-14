@@ -1,3 +1,10 @@
+import sys
+sys.path.append("../")
+from Models import LinearRegression as reg
+from Features import SeriesFilter as sf
+import auxiliary as aux
+
+
 import numpy as np
 import pandas as pd
 from math import gamma, sqrt, pi
@@ -7,21 +14,220 @@ from scipy.stats import beta
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import r2_score
 
-# ========================== COMBINATION LABELLER ========================== #
+
+# ==================================================================================== #
+# =================================== LABELLERS ====================================== #
+def tripleBarrier_labeller(price_series: pd.Series, params: dict):
+    # ======= 0. Params extraction =======
+    upper_barrier = params["upper_barrier"]
+    lower_barrier = params["lower_barrier"]
+    vertical_barrier = params["vertical_barrier"]
+
+    # ======= I. Compute volatility target =======
+    volatility_series = aux.get_volatility(price_series=price_series, window=vertical_barrier)
+
+    # ======= II. Initialize the labeled series and trade side =======
+    labeled_series = pd.Series(index=price_series.index, dtype=int)
+    trade_side = 0
+
+    # ======= III. Iterate through the price series =======
+    for index in price_series.index:
+        # III.1 Extract the future prices over the horizon
+        start_idx = price_series.index.get_loc(index)
+        end_idx = min(start_idx + vertical_barrier, len(price_series))
+        future_prices = price_series.iloc[start_idx:end_idx]
+
+        # III.2 Compute the range of future returns over the horizon
+        max_price = future_prices.max()
+        min_price = future_prices.min()
+
+        max_price_index = future_prices.idxmax()
+        min_price_index = future_prices.idxmin()
+
+        max_return = (max_price - price_series.loc[index]) / price_series.loc[index]
+        min_return = (min_price - price_series.loc[index]) / price_series.loc[index]
+
+        # III.3 Adjust the barrier thresholds with the volatility
+        upper_threshold = upper_barrier * volatility_series.loc[index]
+        lower_threshold = lower_barrier * volatility_series.loc[index]
+
+        # III.4 Check if the horiazontal barriers have been hit
+        long_event = False
+        short_event = False
+
+        if trade_side == 1:  # Long trade
+            if max_return > upper_threshold:
+                long_event = True
+            elif min_return < -lower_threshold:
+                short_event = True
+
+        elif trade_side == -1:  # Short trade
+            if min_return < -upper_threshold:
+                short_event = True
+            elif max_return > lower_threshold:
+                long_event = True
+
+        else:  # No position held
+            if max_return > upper_threshold:
+                long_event = True
+            elif min_return < -upper_threshold:
+                short_event = True
+
+        # III.5 Label the events base on the first event that occurs
+        if long_event and short_event:  # If both events occur, choose the first one
+            if max_price_index < min_price_index:
+                labeled_series.loc[index] = 1
+            else:
+                labeled_series.loc[index] = -1
+
+        elif long_event and not short_event:  # If only long event occurs
+            labeled_series.loc[index] = 1
+
+        elif short_event and not long_event:  # If only short event occurs
+            labeled_series.loc[index] = -1
+
+        else:  # If no event occurs (vertical hit)
+            labeled_series.loc[index] = 0
+
+        # III.6 Update the trade side
+        trade_side = labeled_series.loc[index]
+
+    return labeled_series
+
+# ____________________________________________________________________________________ #
+def lookForward_labeller(price_series: pd.Series, params: dict):
+    # ======= 0. Params extraction & Initialization =======
+    price_series = price_series.dropna()
+
+    size_window_smooth = params["size_window_smooth"]
+    lambda_smooth = params["lambda_smooth"]
+    trend_size = params["trend_size"]
+    volatility_threshold = params["volatility_threshold"]
+
+    results_df = price_series.to_frame()
+    results_df["smooth_close"] = sf.exponential_weightedMA(price_series, size_window_smooth, lambda_smooth)
+
+    # ======= I. Significant look forward Label =======
+    # ------- 1. Get the moving X days returns and the moving X days volatility -------
+    results_df["Xdays_returns"] = (results_df["smooth_close"].shift(-size_window_smooth) - results_df["smooth_close"]) / results_df["smooth_close"]
+    results_df["Xdays_vol"] = results_df["Xdays_returns"].rolling(window=size_window_smooth).std()
+
+    # ------- 2. Compare the X days returns to the volatility  -------
+    results_df["Xdays_score"] = results_df["Xdays_returns"] / results_df["Xdays_vol"]
+    results_df["Xdays_label"] = results_df["Xdays_score"].apply(lambda x: 1 if x > volatility_threshold else (-1 if x < -volatility_threshold else 0))
+
+    # ------- 3. Eliminate the trends that are too small -------
+    results_df["group"] = (results_df["Xdays_label"] != results_df["Xdays_label"].shift()).cumsum()
+    group_sizes = results_df.groupby("group")["Xdays_label"].transform("size")
+
+    results_df["Xdays_label"] = results_df.apply(
+        lambda row: row["Xdays_label"] if group_sizes[row.name] >= trend_size else 0,
+        axis=1,
+    )
+    results_df = results_df.drop(columns=["group"])
+
+    label_series = results_df["Xdays_label"]
+
+    return label_series
+
+# ____________________________________________________________________________________ #
+def regR2rank_labeller(price_series: pd.Series, params: dict):
+    # ======= I. Extract the parameters =======
+    size_window_smooth = int(params["size_window_smooth"])
+    lambda_smooth = params["lambda_smooth"]
+    horizon = int(params["horizon"])
+    horizon_extension = params["horizon_extension"]
+    upper_r2_threshold = params["upper_r2_threshold"]
+    lower_r2_threshold = params["lower_r2_threshold"]
+    r = int(params["r"])
+
+    horizon_max = round(horizon * (1 + horizon_extension))
+
+    # ======= II. Smooth the data using truncated EMA filter =======
+    ema_close = sf.exponential_weightedMA(price_series=price_series, window=size_window_smooth, ind_lambda=lambda_smooth)
+    nan_count_start = np.sum(np.isnan(ema_close))
+    nb_elements = len(ema_close)
+
+    # ======= III. Labelling =======
+    auxiliary_df = pd.DataFrame(columns=["position", "ema_close", "horizon", "slope", "r2", "label"])
+    for idx in range(nan_count_start, nb_elements - horizon + 1):
+
+        maxHorizon_2test = min(horizon_max, nb_elements - idx + 1)
+        
+        best_r2 = -1
+        for tested_horizon in range(horizon, maxHorizon_2test + 1):
+
+            X = np.arange(tested_horizon).reshape(-1, 1)
+            Y = ema_close[idx : idx + tested_horizon]
+
+            regression_model = LinearRegression().fit(X, Y)
+            y_pred = regression_model.predict(X)
+            slope = regression_model.coef_[0]
+            r2 = r2_score(Y, y_pred)
+
+            # Keep the best configuration only
+            if r2 > best_r2:
+                best_r2 = r2
+                best_horizon = tested_horizon
+                best_slope = slope
+
+        auxiliary_df = auxiliary_df.append(
+            {
+                "position": idx,
+                "ema_close": ema_close[idx],
+                "horizon": best_horizon,
+                "slope": best_slope,
+                "r2": best_r2,
+                "label": np.sign(best_slope),
+            },
+            ignore_index=True,
+        )
+
+    # ======= V. Final step: labelling the points in descending order of R2 =======
+    label_reg = np.repeat(0, size_data_array)
+    index_ordered = np.array(pd.Series(results_df[:, results_df_cols.index("r2")]).sort_values(ascending=False).index)
+    results_df_ordered = results_df[index_ordered, :]
+    results_df_cols_ordered = results_df_cols.copy()
+
+    for i in range(1, size_data_array + 1):
+        position = results_df_ordered[i - 1, results_df_cols_ordered.index("position")]
+        horizon = results_df_ordered[i - 1, results_df_cols_ordered.index("horizon")]
+        slope = results_df_ordered[i - 1, results_df_cols_ordered.index("slope")]
+        r2 = results_df_ordered[i - 1, results_df_cols_ordered.index("r2")]
+
+        signal = np.sign(slope)
+
+        if not np.isnan(r2):
+            keep_label = False
+            if signal == 1 and results_df_ordered[i - 1, results_df_cols_ordered.index("r2")] >= upper_r2_threshold:
+                keep_label = True
+
+            if signal == -1 and results_df_ordered[i - 1, results_df_cols_ordered.index("r2")] >= lower_r2_threshold:
+                keep_label = True
+
+            if keep_label:
+                temporary_index = np.array(range(int(horizon))) + position.astype(int) - 1
+                non_zeros_index = np.argwhere(label_reg[temporary_index] != 0).reshape(-1)
+
+                if len(non_zeros_index) == 0:
+                    label_reg[temporary_index] = signal
+                else:
+                    if np.sum(label_reg[temporary_index[non_zeros_index]] != signal) == 0:
+                        label_reg[temporary_index] = signal
+
+    results_df = np.c_[results_df, label_reg.astype(int)]
+    results_df_cols.append("label_reg")
+
+    # ======= VI. Aggregation of labels =======
+    results_df = np.c_[results_df, labels_aggregator(label=label_reg.astype(int), r=r).astype(int)]
+    results_df_cols.append("labelp")
+
+    final_results_df = pd.DataFrame(results_df, columns=results_df_cols).label_reg.values
+
+    return final_results_df
+
+# ____________________________________________________________________________________ #
 def combination_labeller(price_series: pd.Series, params: dict):
-    """
-    labelling_params = {
-        "size_window_smooth": 10,
-        "lambda_smooth": 0.2,
-        "trend_size": 10,
-        "volatility_threshold": 1.5,
-        "horizon": 10,
-        "horizon_extension": 1.5,
-        "upper_r2_threshold": 0.8,
-        "lower_r2_threshold": 0.5,
-        "r": 0,
-    }
-    """
     # ======= 0. Params extraction & Initialization =======
     price_series = price_series.dropna()
 
@@ -101,255 +307,6 @@ def combination_labeller(price_series: pd.Series, params: dict):
     return label_series
 
 
-# ========================== REGR2RANK LABELLER ========================== #
-def regR2rank_labeller(price_series: pd.Series, params: dict):
-    # ======= I. Extract the parameters =======
-    size_window_smooth = int(params["size_window_smooth"])
-    lambda_smooth = params["lambda_smooth"]
-    horizon = int(params["horizon"])
-    horizon_extension = params["horizon_extension"]
-    upper_r2_threshold = params["upper_r2_threshold"]
-    lower_r2_threshold = params["lower_r2_threshold"]
-    r = int(params["r"])
-
-    horizon_max = round(horizon * (1 + horizon_extension))
-
-    # ======= II. Extract the data to numpy array =======
-    data_array = np.array(price_series)
-    data_close = data_array.copy()
-
-    size_data_array = data_array.shape[0]
-    zeros = np.repeat(np.nan, size_data_array)
-
-    # ======= III. Smooth the data using truncated EMA filter =======
-    if size_window_smooth > 1:
-        ema_close = trunc_expon_smooth(values=data_close, window_size=size_window_smooth, ind_lambda=lambda_smooth)
-
-        nan_count_start = np.sum(np.isnan(ema_close))  # Number of NaNs at the beginning, due the smoothing using rolling window
-        nan_count_end = 0
-    else:
-        # As the window size is 1, the smoothed data is the same as the original data
-        ema_close = data_close
-
-        nan_count_start = 0
-        nan_count_end = 0
-
-    # ======= IV. Labelling =======
-    # ------- 1. Dataframe to store the results -------
-    results_df_cols = ["position", "ema_close", "horizon", "slope", "r2", "label"]
-    results_df = np.c_[zeros, ema_close, zeros, zeros, zeros, zeros]
-
-    # ------- 2. Start the labelling process -------
-    starting_index = 1 + nan_count_start
-    iterating_index = starting_index
-    while iterating_index <= size_data_array - horizon - nan_count_end + 1:
-        best_r2 = -1
-
-        # ------- i. Test the regression on different horizon size -------
-        horizon_max_test = min(horizon_max, size_data_array - nan_count_end - iterating_index + 1)
-        for horizon_test in range(horizon, horizon_max_test + 1):
-            index_test = np.array(range(0, horizon_test)) + iterating_index
-
-            y_close = ema_close[index_test - 1]
-
-            X = index_test.reshape(-1, 1)
-            Y = y_close
-
-            regression_model = LinearRegression().fit(X, Y)
-            y_pred = regression_model.predict(X)
-            slope = regression_model.coef_[0]
-            r2 = r2_score(Y, y_pred)
-
-            # Keep the best configuration only
-            if r2 > best_r2:
-                best_r2 = r2
-                best_horizon = horizon_test
-                best_slope = slope
-
-        results_df[iterating_index - 1, results_df_cols.index("position")] = iterating_index
-        results_df[iterating_index - 1, results_df_cols.index("horizon")] = best_horizon
-        results_df[iterating_index - 1, results_df_cols.index("slope")] = best_slope
-        results_df[iterating_index - 1, results_df_cols.index("r2")] = best_r2
-        results_df[iterating_index - 1, results_df_cols.index("label")] = np.sign(best_slope)
-
-        iterating_index += 1
-
-    # ======= V. Final step: labelling the points in descending order of R2 =======
-    label_reg = np.repeat(0, size_data_array)
-    index_ordered = np.array(pd.Series(results_df[:, results_df_cols.index("r2")]).sort_values(ascending=False).index)
-    results_df_ordered = results_df[index_ordered, :]
-    results_df_cols_ordered = results_df_cols.copy()
-
-    for i in range(1, size_data_array + 1):
-        position = results_df_ordered[i - 1, results_df_cols_ordered.index("position")]
-        horizon = results_df_ordered[i - 1, results_df_cols_ordered.index("horizon")]
-        slope = results_df_ordered[i - 1, results_df_cols_ordered.index("slope")]
-        r2 = results_df_ordered[i - 1, results_df_cols_ordered.index("r2")]
-
-        signal = np.sign(slope)
-
-        if not np.isnan(r2):
-            keep_label = False
-            if signal == 1 and results_df_ordered[i - 1, results_df_cols_ordered.index("r2")] >= upper_r2_threshold:
-                keep_label = True
-
-            if signal == -1 and results_df_ordered[i - 1, results_df_cols_ordered.index("r2")] >= lower_r2_threshold:
-                keep_label = True
-
-            if keep_label:
-                temporary_index = np.array(range(int(horizon))) + position.astype(int) - 1
-                non_zeros_index = np.argwhere(label_reg[temporary_index] != 0).reshape(-1)
-
-                if len(non_zeros_index) == 0:
-                    label_reg[temporary_index] = signal
-                else:
-                    if np.sum(label_reg[temporary_index[non_zeros_index]] != signal) == 0:
-                        label_reg[temporary_index] = signal
-
-    results_df = np.c_[results_df, label_reg.astype(int)]
-    results_df_cols.append("label_reg")
-
-    # ======= VI. Aggregation of labels =======
-    results_df = np.c_[results_df, labels_aggregator(label=label_reg.astype(int), r=r).astype(int)]
-    results_df_cols.append("labelp")
-
-    final_results_df = pd.DataFrame(results_df, columns=results_df_cols).label_reg.values
-
-    return final_results_df
-
-
-# ========================== TRIPLE BARRIER LABELLER ========================== #
-def tripleBarrier_labeller(price_series: pd.Series, params: dict):
-    # ======= 0. Auxiliary functions =======
-    def observed_volatility(price_series: pd.Series, window: int):
-        """
-        Computes rolling window volatility using percentage returns.
-
-        Args:
-            price_series (pd.Series): Price series of the asset
-            window (int): Window for the rolling computation
-
-        Returns:
-            volatility_series (pd.Series): Rolling volatility series
-        """
-        returns_series = price_series.pct_change().fillna(0)
-        volatility_series = returns_series.rolling(window).std() * np.sqrt(window)
-
-        return volatility_series
-
-    # ======= I. Compute volatility target =======
-    upper_barrier = params["upper_barrier"]
-    lower_barrier = params["lower_barrier"]
-    vertical_barrier = params["vertical_barrier"]
-    volatility_function = params["volatility_function"]
-
-    if volatility_function == "observed":
-        volatility_series = observed_volatility(price_series=price_series, window=vertical_barrier)
-
-    # ======= II. Initialize the labeled series and trade side =======
-    labeled_series = pd.Series(index=price_series.index, dtype=int)
-    trade_side = 0
-
-    # ======= III. Iterate through the price series =======
-    for index in price_series.index:
-        # III.1 Extract the future prices over the horizon
-        start_idx = price_series.index.get_loc(index)
-        end_idx = min(start_idx + vertical_barrier, len(price_series))
-        future_prices = price_series.iloc[start_idx:end_idx]
-
-        # III.2 Compute the range of future returns over the horizon
-        max_price = future_prices.max()
-        min_price = future_prices.min()
-
-        max_price_index = future_prices.idxmax()
-        min_price_index = future_prices.idxmin()
-
-        max_return = (max_price - price_series.loc[index]) / price_series.loc[index]
-        min_return = (min_price - price_series.loc[index]) / price_series.loc[index]
-
-        # III.3 Adjust the barrier thresholds with the volatility
-        upper_threshold = upper_barrier * volatility_series.loc[index]
-        lower_threshold = lower_barrier * volatility_series.loc[index]
-
-        # III.4 Check if the horiazontal barriers have been hit
-        long_event = False
-        short_event = False
-
-        if trade_side == 1:  # Long trade
-            if max_return > upper_threshold:
-                long_event = True
-            elif min_return < -lower_threshold:
-                short_event = True
-
-        elif trade_side == -1:  # Short trade
-            if min_return < -upper_threshold:
-                short_event = True
-            elif max_return > lower_threshold:
-                long_event = True
-
-        else:  # No position held
-            if max_return > upper_threshold:
-                long_event = True
-            elif min_return < -upper_threshold:
-                short_event = True
-
-        # III.5 Label the events base on the first event that occurs
-        if long_event and short_event:  # If both events occur, choose the first one
-            if max_price_index < min_price_index:
-                labeled_series.loc[index] = 1
-            else:
-                labeled_series.loc[index] = -1
-
-        elif long_event and not short_event:  # If only long event occurs
-            labeled_series.loc[index] = 1
-
-        elif short_event and not long_event:  # If only short event occurs
-            labeled_series.loc[index] = -1
-
-        else:  # If no event occurs (vertical hit)
-            labeled_series.loc[index] = 0
-
-        # III.6 Update the trade side
-        trade_side = labeled_series.loc[index]
-
-    return labeled_series
-
-
-# ========================== LOOK FORWARD LABELLER ========================== #
-def lookForward_labeller(price_series: pd.Series, params: dict):
-    # ======= 0. Params extraction & Initialization =======
-    price_series = price_series.dropna()
-
-    size_window_smooth = params["size_window_smooth"]
-    lambda_smooth = params["lambda_smooth"]
-    trend_size = params["trend_size"]
-    volatility_threshold = params["volatility_threshold"]
-
-    results_df = price_series.to_frame()
-    results_df["smooth_close"] = trunc_expon_smooth(price_series, size_window_smooth, lambda_smooth)
-
-    # ======= I. Significant look forward Label =======
-    # ------- 1. Get the moving X days returns and the moving X days volatility -------
-    results_df["Xdays_returns"] = (results_df["smooth_close"].shift(-size_window_smooth) - results_df["smooth_close"]) / results_df["smooth_close"]
-    results_df["Xdays_vol"] = results_df["Xdays_returns"].rolling(window=size_window_smooth).std()
-
-    # ------- 2. Compare the X days returns to the volatility  -------
-    results_df["Xdays_score"] = results_df["Xdays_returns"] / results_df["Xdays_vol"]
-    results_df["Xdays_label"] = results_df["Xdays_score"].apply(lambda x: 1 if x > volatility_threshold else (-1 if x < -volatility_threshold else 0))
-
-    # ------- 3. Eliminate the trends that are too small -------
-    results_df["group"] = (results_df["Xdays_label"] != results_df["Xdays_label"].shift()).cumsum()
-    group_sizes = results_df.groupby("group")["Xdays_label"].transform("size")
-
-    results_df["Xdays_label"] = results_df.apply(
-        lambda row: row["Xdays_label"] if group_sizes[row.name] >= trend_size else 0,
-        axis=1,
-    )
-    results_df = results_df.drop(columns=["group"])
-
-    label_series = results_df["Xdays_label"]
-
-    return label_series
 
 
 # ========================================================================= #
@@ -668,62 +625,6 @@ def funde_segmentos_rotulos(r: int, segments_df_input: np.array, segments_df_col
 
     return NewStat, NewStat_col
 
-
-# --------------------------------------------------------------------------------------------------------------
-def WMA(values: np.array, weight_range: np.array):
-    """
-    Perform a weighted moving average on a numpy array.
-
-    Args:
-        values (np.array): The array of values to be averaged.
-        weights (int or np.array): The weights to be used in the average. If an integer is passed, the function will use the last n values to calculate the average.
-
-    Returns:
-        wma (np.array): The array of weighted averages.
-    """
-    # ======= I. Check if the weights are valid =======
-    values = values.astype("float64")
-    wma = values.copy()
-
-    if isinstance(weight_range, int):
-        weights = np.array(range(1, weight_range + 1))
-        rolling_window = weight_range
-    else:
-        weights = weight_range
-        rolling_window = len(weight_range)
-
-    # ======= II. Calculate the weighted moving average over a rolling window =======
-    for i in range(0, len(values)):
-        try:
-            wma[i] = values[i - rolling_window + 1 : i + 1].dot(weights) / np.sum(weights)
-        except:
-            wma[i] = np.nan
-
-    return wma
-
-
-# --------------------------------------------------------------------------------------------------------------
-def trunc_expon_smooth(values, window_size, ind_lambda):
-    """
-    Perform a weighted moving average on a numpy array using a truncated exponential function. The objective is to give more importance to the latest values in the array.
-
-    Args:
-        values (np.array): The array of values to be averaged.
-        window_size (int): The size of the window to be used in the moving average.
-        ind_lambda (float): The lambda parameter for the exponential function.
-
-    Returns:
-        wma (np.array): The array of weighted averages.
-    """
-    # ======= I. Create the weights using a truncated exponential function =======
-    weight_range = [(1 - ind_lambda) ** (i - 1) for i in range(1, window_size + 1)]
-    weight_range.reverse()
-    weight_range = np.array(weight_range)
-
-    # ======= II. Perform the weighted moving average =======
-    wma = WMA(values, weight_range)
-
-    return wma
 
 
 # --------------------------------------------------------------------------------------------------------------
