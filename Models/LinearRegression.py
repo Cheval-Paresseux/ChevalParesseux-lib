@@ -72,7 +72,7 @@ class LinearRegression(ABC):
         pass
 
     # -------------------------------- Callable Functions -------------------------------- #
-    def fit(self, X_train, y_train, learning_rate=0.1, epochs=1000):
+    def fit(self, X_train, y_train, learning_rate=0.001, epochs=1000):
         # ======= I. Process Data =======
         X, y = self.process_data(X_train, y_train)
         
@@ -211,6 +211,25 @@ class LinearRegression(ABC):
 
 # ==================================================================================== #
 # ================================ Regression Models ================================= #
+class OLSRegression(LinearRegression):
+
+    def __init__(self):
+        super().__init__()
+    
+    def gradient_descent(self, learning_rate, epochs, features_matrix, target_vector):
+         # Add a column of ones to X to account for the intercept
+        X_with_intercept = np.c_[np.ones((features_matrix.shape[0], 1)), features_matrix]
+
+        # Calculate the coefficients using the normal equation
+        coefficients = np.linalg.inv(X_with_intercept.T @ X_with_intercept) @ X_with_intercept.T @ target_vector
+
+        # Extract the intercept and coefficients
+        intercept = coefficients[0]
+        coefficients = coefficients[1:]
+
+        return coefficients, intercept
+
+# ____________________________________________________________________________________ #
 class MSERegression(LinearRegression):
     
     def __init__(self):
@@ -263,9 +282,7 @@ class MSERegression(LinearRegression):
 
         return coefficients, intercept
 
-
-
-
+# ____________________________________________________________________________________ #
 class RidgeRegression(LinearRegression):
     
     def __init__(self, lambda_: float = 0.1):
@@ -320,9 +337,7 @@ class RidgeRegression(LinearRegression):
 
         return coefficients, intercept
 
-
-
-
+# ____________________________________________________________________________________ #
 class LassoRegression(LinearRegression):
         
     def __init__(self, lambda_: float = 0.1):
@@ -377,9 +392,7 @@ class LassoRegression(LinearRegression):
 
         return coefficients, intercept
 
-
-
-
+# ____________________________________________________________________________________ #
 class ElasticNetRegression(LinearRegression):
         
     def __init__(self, lambda1: float = 0.1, lambda2: float = 0.1):

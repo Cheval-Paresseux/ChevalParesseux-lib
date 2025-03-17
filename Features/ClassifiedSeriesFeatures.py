@@ -1,4 +1,6 @@
-import auxiliary as aux
+import sys
+sys.path.append("../")
+from Features import auxiliary as aux
 
 import pandas as pd
 import numpy as np

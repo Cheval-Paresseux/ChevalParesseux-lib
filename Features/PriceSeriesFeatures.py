@@ -1,11 +1,11 @@
 import sys
 sys.path.append("../")
 from Models import LinearRegression as reg
-import auxiliary as aux
+from Features import auxiliary as aux
 
 import numpy as np
 import pandas as pd
-import pywt
+# import pywt
 
 # ==================================================================================== #
 # ======================= Unscaled Smoothed-like Series Features ===================== #
@@ -341,66 +341,66 @@ def entropy_features(
     return rolling_shannon, rolling_plugin, rolling_lempel_ziv, rolling_kontoyiannis
 
 # ____________________________________________________________________________________ #
-def wavelets_features(
-    price_series: pd.Series,
-    wavelet_window: int,
-    wav_family: list = [],
-    decomposition_level: int = 2,
-):
-    # ======= 0. Initialize the input series as a dataframe to store the wavelets =======
-    if len(wav_family) == 0:
-        wav_family = ["haar", "db1", "db2", "db3", "db4", "sym2", "sym3", "sym4", "sym5", "coif1", "coif2", "coif3", "coif4", "bior1.1", "bior1.3", "bior1.5", "bior2.2", "rbio1.1", "rbio1.3", "rbio1.5"]
+# def wavelets_features(
+#     price_series: pd.Series,
+#     wavelet_window: int,
+#     wav_family: list = [],
+#     decomposition_level: int = 2,
+# ):
+#     # ======= 0. Initialize the input series as a dataframe to store the wavelets =======
+#     if len(wav_family) == 0:
+#         wav_family = ["haar", "db1", "db2", "db3", "db4", "sym2", "sym3", "sym4", "sym5", "coif1", "coif2", "coif3", "coif4", "bior1.1", "bior1.3", "bior1.5", "bior2.2", "rbio1.1", "rbio1.3", "rbio1.5"]
 
-    if price_series.name is None:
-        price_series.name = "close"
-    price_df = price_series.to_frame().copy()
-    price_df.rename(columns={price_series.name: "close"}, inplace=True)
+#     if price_series.name is None:
+#         price_series.name = "close"
+#     price_df = price_series.to_frame().copy()
+#     price_df.rename(columns={price_series.name: "close"}, inplace=True)
 
-    # ======= I. Compute the wavelets for each family =======
-    for wavelet in wav_family:
-        # I.1 Initialize the lists to store the wavelet features
-        mean = [[None] * wavelet_window for _ in range(decomposition_level)]
-        median = [[None] * wavelet_window for _ in range(decomposition_level)]
-        std = [[None] * wavelet_window for _ in range(decomposition_level)]
-        max = [[None] * wavelet_window for _ in range(decomposition_level)]
-        min = [[None] * wavelet_window for _ in range(decomposition_level)]
-        # => Each inside list corresponds to a decomposition level, and each element of those inside lists corresponds to a window
+#     # ======= I. Compute the wavelets for each family =======
+#     for wavelet in wav_family:
+#         # I.1 Initialize the lists to store the wavelet features
+#         mean = [[None] * wavelet_window for _ in range(decomposition_level)]
+#         median = [[None] * wavelet_window for _ in range(decomposition_level)]
+#         std = [[None] * wavelet_window for _ in range(decomposition_level)]
+#         max = [[None] * wavelet_window for _ in range(decomposition_level)]
+#         min = [[None] * wavelet_window for _ in range(decomposition_level)]
+#         # => Each inside list corresponds to a decomposition level, and each element of those inside lists corresponds to a window
 
-        # I.2 Compute the wavelet features
-        for index in range(wavelet_window, price_df.shape[0]):
-            # I.2.i Extract the rolling window of the price series and compute the wavelet coefficients
-            price_window = price_df.iloc[index - wavelet_window : index, 0].copy()
-            coeffs = pywt.wavedec(
-                price_window,
-                wavelet,
-                level=decomposition_level,
-            )
+#         # I.2 Compute the wavelet features
+#         for index in range(wavelet_window, price_df.shape[0]):
+#             # I.2.i Extract the rolling window of the price series and compute the wavelet coefficients
+#             price_window = price_df.iloc[index - wavelet_window : index, 0].copy()
+#             coeffs = pywt.wavedec(
+#                 price_window,
+#                 wavelet,
+#                 level=decomposition_level,
+#             )
 
-            # I.2.ii Compute the wavelet features for each decomposition level
-            for level in range(decomposition_level):
-                # We start at level 1 because the first element of the coeffs list is the approximation coefficients
-                mean[level].append(np.mean(coeffs[level + 1]))
-                median[level].append(np.median(coeffs[level + 1]))
-                std[level].append(np.std(coeffs[level + 1]))
-                max[level].append(np.max(coeffs[level + 1]))
-                min[level].append(np.min(coeffs[level + 1]))
+#             # I.2.ii Compute the wavelet features for each decomposition level
+#             for level in range(decomposition_level):
+#                 # We start at level 1 because the first element of the coeffs list is the approximation coefficients
+#                 mean[level].append(np.mean(coeffs[level + 1]))
+#                 median[level].append(np.median(coeffs[level + 1]))
+#                 std[level].append(np.std(coeffs[level + 1]))
+#                 max[level].append(np.max(coeffs[level + 1]))
+#                 min[level].append(np.min(coeffs[level + 1]))
 
-        # I.3 Store the wavelet features in the dataframe
-        for level in range(decomposition_level):
-            price_df.loc[:, f"{wavelet}_{level + 1}_mean"] = mean[level]
-            price_df.loc[:, f"{wavelet}_{level + 1}_median"] = median[level]
-            price_df.loc[:, f"{wavelet}_{level + 1}_std"] = std[level]
-            price_df.loc[:, f"{wavelet}_{level + 1}_max"] = max[level]
-            price_df.loc[:, f"{wavelet}_{level + 1}_min"] = min[level]
+#         # I.3 Store the wavelet features in the dataframe
+#         for level in range(decomposition_level):
+#             price_df.loc[:, f"{wavelet}_{level + 1}_mean"] = mean[level]
+#             price_df.loc[:, f"{wavelet}_{level + 1}_median"] = median[level]
+#             price_df.loc[:, f"{wavelet}_{level + 1}_std"] = std[level]
+#             price_df.loc[:, f"{wavelet}_{level + 1}_max"] = max[level]
+#             price_df.loc[:, f"{wavelet}_{level + 1}_min"] = min[level]
 
-    #  ======= II. Convert to Series and Center =======
-    price_df.drop(labels="close", axis=1, inplace=True)
-    features_columns = price_df.columns
+#     #  ======= II. Convert to Series and Center =======
+#     price_df.drop(labels="close", axis=1, inplace=True)
+#     features_columns = price_df.columns
 
-    for feature in features_columns:
-        price_df[feature] = price_df[feature] - price_df[feature].rolling(window=252).mean()
+#     for feature in features_columns:
+#         price_df[feature] = price_df[feature] - price_df[feature].rolling(window=252).mean()
 
-    features_tuple = tuple([price_df[feature] for feature in features_columns])
+#     features_tuple = tuple([price_df[feature] for feature in features_columns])
 
-    return features_tuple
+#     return features_tuple
 

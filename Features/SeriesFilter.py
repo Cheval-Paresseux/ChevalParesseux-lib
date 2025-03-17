@@ -1,4 +1,6 @@
-import auxiliary as aux
+import sys
+sys.path.append("../")
+from Features import auxiliary as aux
 
 import pandas as pd
 import numpy as np
@@ -26,8 +28,8 @@ def exponential_weightedMA(price_series: pd.Series, window: int, ind_lambda: flo
     weight_range = np.array(weight_range)
 
     # ======= II. Perform the weighted moving average =======
-    values = np.array(price_series)
-    wma = aux.get_weightedMA(values=values, weight_range=weight_range)
+    series = np.array(price_series)
+    wma = aux.get_weightedMA(series=series, weight_range=weight_range)
 
     # ======= III. Convert to pd.Series =======
     wma = pd.Series(wma, index=price_series.index)

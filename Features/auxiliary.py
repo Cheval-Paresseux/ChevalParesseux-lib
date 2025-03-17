@@ -40,7 +40,7 @@ def get_Z_momentum(series: pd.Series):
 def get_simple_TempReg(series: pd.Series):
     # ======= I. Fit the temporal regression =======
     X = np.arange(len(series))
-    model = reg.MSERegression()
+    model = reg.OLSRegression()
     model.fit(X, series)
     
     # ======= II. Extract the coefficients and statistics =======
@@ -56,7 +56,7 @@ def get_quad_TempReg(series: pd.Series):
     # ======= 1. Fit the temporal regression =======
     X = np.arange(len(series))
     X = np.column_stack((X, X**2))
-    model = reg.MSERegression()
+    model = reg.OLSRegression()
     model.fit(X, series)
     
     # ======= 2. Extract the coefficients and statistics =======
