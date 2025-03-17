@@ -290,7 +290,7 @@ def hurst_exponent_features(
 
             Y = np.append(Y, np.log2(np.average(rs_array)))
 
-        model = reg.MSERegression()
+        model = reg.OLSRegression()
         model.fit(X, Y)
         
         hurst = model.coefficients[0]

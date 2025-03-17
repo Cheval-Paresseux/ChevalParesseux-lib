@@ -120,7 +120,7 @@ def regR2rank_labeller(price_series: pd.Series, params: dict):
     lambda_smooth = params["lambda_smooth"]
     horizon = int(params["horizon"])
     horizon_extension = params["horizon_extension"]
-    r2_threshold = params["upper_r2_threshold"]
+    r2_threshold = params["r2_threshold"]
     trend_size = int(params["trend_size"])
 
     # ======= II. Initialize the series =======
@@ -169,6 +169,11 @@ def boostedLF_labeller(price_series: pd.Series, params_lF: dict, params_r2: dict
     # ======= I. Extract Labels =======
     lookForward_labels = lookForward_labeller(price_series=price_series, params=params_lF)
     regR2rank_labels = regR2rank_labeller(price_series=price_series, params=params_r2)
+    regR2rank_labels = regR2rank_labels.replace(0, np.nan)
+    forward = regR2rank_labels.ffill()
+    backward = regR2rank_labels.bfill()
+    regR2rank_labels = forward + backward
+    regR2rank_labels = regR2rank_labels.replace(1, 0).replace(-1, 0).replace(2, 1).replace(-2, -1)
 
     # ======= II. Labels Ensemble =======
     # ------- 1. Combine the labels  -------
