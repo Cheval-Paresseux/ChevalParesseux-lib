@@ -2,8 +2,8 @@ import pandas as pd
 import numpy as np
 
 
-# ==================================================================================== #
-# ============================= BINARY LABELLERS ===================================== #
+#! ==================================================================================== #
+#! ============================= BINARY LABELLERS ===================================== #
 def right_wrong(preds_labels_df: pd.DataFrame):
     """
     Perform binary labelling of the predictions and labels :
@@ -17,7 +17,7 @@ def right_wrong(preds_labels_df: pd.DataFrame):
 
     return label_series
 
-# ____________________________________________________________________________________ #
+#*____________________________________________________________________________________ #
 def trade_lock(preds_labels_df: pd.DataFrame):
     """
     Perform binary labelling of the predictions and labels :
@@ -31,7 +31,7 @@ def trade_lock(preds_labels_df: pd.DataFrame):
 
     return label_series
 
-# ____________________________________________________________________________________ #
+#*____________________________________________________________________________________ #
 def right_wrong_noZero(preds_labels_df: pd.DataFrame):
     """
     Perform binary labelling of the predictions and labels :
@@ -47,8 +47,8 @@ def right_wrong_noZero(preds_labels_df: pd.DataFrame):
 
 
 
-# ==================================================================================== #
-# ============================= TRINARY LABELLERS ==================================== #
+#! ==================================================================================== #
+#! ============================= TRINARY LABELLERS ==================================== #
 def good_bad_ugly(preds_labels_df: pd.DataFrame):
     """
     Perform trinary labelling of the predictions and labels :
@@ -67,7 +67,7 @@ def good_bad_ugly(preds_labels_df: pd.DataFrame):
 
     return label_series
 
-# ____________________________________________________________________________________ #
+#*____________________________________________________________________________________ #
 def gbu_extended(preds_labels_df: pd.DataFrame):
     """
     Perform trinary labelling of the predictions and labels :
@@ -86,7 +86,7 @@ def gbu_extended(preds_labels_df: pd.DataFrame):
 
     return label_series
 
-# ____________________________________________________________________________________ #
+#*____________________________________________________________________________________ #
 def good_bad_ugly_noZero(preds_labels_df: pd.DataFrame):
     """
     Perform trinary labelling of the predictions and labels :
@@ -105,7 +105,7 @@ def good_bad_ugly_noZero(preds_labels_df: pd.DataFrame):
 
     return label_series
 
-# ____________________________________________________________________________________ #
+#*____________________________________________________________________________________ #
 def gbu_extended_noZero(preds_labels_df: pd.DataFrame):
     """
     Perform trinary labelling of the predictions and labels :

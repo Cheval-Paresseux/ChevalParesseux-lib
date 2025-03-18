@@ -5,8 +5,8 @@ from abc import ABC, abstractmethod
 import matplotlib.pyplot as plt
 
 
-# ==================================================================================== #
-# =============================== Auxiliary Functions ================================ #
+#! ==================================================================================== #
+#! =============================== Auxiliary Functions ================================ #
 def adapt_learning_rate(learning_rate: float, loss: float, last_loss: float):
     new_rate = learning_rate
     if loss > last_loss:
@@ -16,7 +16,7 @@ def adapt_learning_rate(learning_rate: float, loss: float, last_loss: float):
     
     return new_rate
 
-# ____________________________________________________________________________________ #
+#*____________________________________________________________________________________ #
 def early_stopping(loss: float, last_loss: float):
     # ======= I. Check the loss diference =======
     if last_loss == np.inf:
@@ -33,8 +33,8 @@ def early_stopping(loss: float, last_loss: float):
 
 
 
-# ==================================================================================== #
-# =================================== Base Models ==================================== #
+#! ==================================================================================== #
+#! =================================== Base Models ==================================== #
 class LinearRegression(ABC):
 
     def __init__(self):
@@ -209,8 +209,8 @@ class LinearRegression(ABC):
         
 
 
-# ==================================================================================== #
-# ================================ Regression Models ================================= #
+#! ==================================================================================== #
+#! ================================ Regression Models ================================= #
 class OLSRegression(LinearRegression):
 
     def __init__(self):
@@ -229,7 +229,7 @@ class OLSRegression(LinearRegression):
 
         return coefficients, intercept
 
-# ____________________________________________________________________________________ #
+#*____________________________________________________________________________________ #
 class MSERegression(LinearRegression):
     
     def __init__(self):
@@ -282,7 +282,7 @@ class MSERegression(LinearRegression):
 
         return coefficients, intercept
 
-# ____________________________________________________________________________________ #
+#*____________________________________________________________________________________ #
 class RidgeRegression(LinearRegression):
     
     def __init__(self, lambda_: float = 0.1):
@@ -337,7 +337,7 @@ class RidgeRegression(LinearRegression):
 
         return coefficients, intercept
 
-# ____________________________________________________________________________________ #
+#*____________________________________________________________________________________ #
 class LassoRegression(LinearRegression):
         
     def __init__(self, lambda_: float = 0.1):
@@ -392,7 +392,7 @@ class LassoRegression(LinearRegression):
 
         return coefficients, intercept
 
-# ____________________________________________________________________________________ #
+#*____________________________________________________________________________________ #
 class ElasticNetRegression(LinearRegression):
         
     def __init__(self, lambda1: float = 0.1, lambda2: float = 0.1):

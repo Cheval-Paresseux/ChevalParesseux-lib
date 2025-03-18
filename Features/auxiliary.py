@@ -12,9 +12,10 @@ from statsmodels.tsa.stattools import adfuller
 from statsmodels.tsa.stattools import kpss
 import warnings
 
-# ==================================================================================== #
-# ======================= Series Tendency Statistics Functions ======================= #
+#! ==================================================================================== #
+#! ======================= Series Tendency Statistics Functions ======================= #
 def get_momentum(series: pd.Series):
+    
     first_value = series.iloc[0]
     last_value = series.iloc[-1]
     
@@ -22,7 +23,7 @@ def get_momentum(series: pd.Series):
     
     return momentum
 
-# ____________________________________________________________________________________ #
+#*____________________________________________________________________________________ #
 def get_Z_momentum(series: pd.Series):
     # ======= I. Compute Momentum =======
     momentum = get_momentum(series)
@@ -36,7 +37,7 @@ def get_Z_momentum(series: pd.Series):
     
     return Z_momentum
 
-# ____________________________________________________________________________________ #
+#*____________________________________________________________________________________ #
 def get_simple_TempReg(series: pd.Series):
     # ======= I. Fit the temporal regression =======
     X = np.arange(len(series))
@@ -51,7 +52,7 @@ def get_simple_TempReg(series: pd.Series):
 
     return intercept, coefficients, statistics,residuals
 
-# ____________________________________________________________________________________ #
+#*____________________________________________________________________________________ #
 def get_quad_TempReg(series: pd.Series):
     # ======= 1. Fit the temporal regression =======
     X = np.arange(len(series))
@@ -67,7 +68,7 @@ def get_quad_TempReg(series: pd.Series):
 
     return intercept, coefficients, statistics, residuals
 
-# ____________________________________________________________________________________ #
+#*____________________________________________________________________________________ #
 def get_weightedMA(series: pd.Series, weight_range: np.array):
         # ======= I. Check if the weights are valid =======
         values = np.array(series)
@@ -92,8 +93,8 @@ def get_weightedMA(series: pd.Series, weight_range: np.array):
     
     
     
-# ==================================================================================== #
-# =============================== Series Entropy Functions =========================== #
+#! ==================================================================================== #
+#! =============================== Series Entropy Functions =========================== #
 def movements_signs(series: pd.Series):
     # ======= I. Compute the sign of the returns =======
     diff_series = series.diff()
@@ -106,7 +107,7 @@ def movements_signs(series: pd.Series):
 
     return signs_series
 
-# ____________________________________________________________________________________ #
+#*____________________________________________________________________________________ #
 def get_shannon_entropy(signs_series: pd.Series):
     # ======= I. Count the frequency of each symbol in the data =======
     _, counts = np.unique(signs_series, return_counts=True)
@@ -119,7 +120,7 @@ def get_shannon_entropy(signs_series: pd.Series):
 
     return entropy
 
-# ____________________________________________________________________________________ #
+#*____________________________________________________________________________________ #
 def get_plugin_entropy(signs_series: pd.Series, word_length: int = 1):
     # ======= 0. Auxiliary Function =======
     def compute_pmf(message: str, word_length: int):
@@ -170,7 +171,7 @@ def get_plugin_entropy(signs_series: pd.Series, word_length: int = 1):
 
     return entropy
 
-#____________________________________________________________________________________ #
+#*____________________________________________________________________________________ #
 def get_lempel_ziv_entropy(signs_series: pd.Series):
     # ======= 0. Convert the signs series to a list =======
     signs_series_list = list(signs_series)
@@ -201,7 +202,7 @@ def get_lempel_ziv_entropy(signs_series: pd.Series):
 
     return entropy
 
-# ____________________________________________________________________________________ #
+#*____________________________________________________________________________________ #
 def get_kontoyiannis_entropy(signs_series: pd.Series, window=None):
     # ======= 0. Auxiliary Functions =======
     def matchLength(message: str, starting_index: int, maximum_length: int):
@@ -279,8 +280,8 @@ def get_kontoyiannis_entropy(signs_series: pd.Series, window=None):
 
 
 
-# ==================================================================================== #
-# ============================ Series Relationship Functions ========================= #
+#! ==================================================================================== #
+#! ============================ Series Relationship Functions ========================= #
 def cointegration_test(series_1: pd.Series, series_2: pd.Series):
     # ======== I. Perform a Linear Regression ========
     model = reg.MSERegression()
@@ -302,7 +303,7 @@ def cointegration_test(series_1: pd.Series, series_2: pd.Series):
 
     return beta, intercept, adf_results, kpss_results, residuals
 
-# ____________________________________________________________________________________ #
+#*____________________________________________________________________________________ #
 def ornstein_uhlenbeck_estimation(series: pd.Series):
     # ======== I. Initialize series ========
     series_array = np.array(series)
@@ -329,7 +330,7 @@ def ornstein_uhlenbeck_estimation(series: pd.Series):
 
     return mu, theta, sigma, half_life
 
-# ____________________________________________________________________________________ #
+#*____________________________________________________________________________________ #
 def kalmanOU_estimation(series: pd.Series, smooth_coefficient: float):
     # ======== 0. Define Kalman Filter Prediction Step ========
     def make_prediction(observation: float, prior_estimate: float, prior_variance: float,

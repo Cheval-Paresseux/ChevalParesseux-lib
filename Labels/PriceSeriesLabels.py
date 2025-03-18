@@ -7,8 +7,8 @@ import numpy as np
 import pandas as pd
 
 
-# ==================================================================================== #
-# =================================== LABELLERS ====================================== #
+#! ==================================================================================== #
+#! =================================== LABELLERS ====================================== #
 def tripleBarrier_labeller(price_series: pd.Series, params: dict):
     # ======= 0. Params extraction =======
     upper_barrier = params["upper_barrier"]
@@ -87,7 +87,7 @@ def tripleBarrier_labeller(price_series: pd.Series, params: dict):
 
     return labels_series
 
-# ____________________________________________________________________________________ #
+#*____________________________________________________________________________________ #
 def lookForward_labeller(price_series: pd.Series, params: dict):
     # ======= 0. Params extraction =======
     size_window_smooth = params["size_window_smooth"]
@@ -109,11 +109,11 @@ def lookForward_labeller(price_series: pd.Series, params: dict):
     Xdays_label = Xdays_score.apply(lambda x: 1 if x > volatility_threshold else (-1 if x < -volatility_threshold else 0))
 
     # ------- 3. Eliminate the trends that are too small -------
-    labels_series = aux.stabilize_labels(label_series=Xdays_label, window=trend_size)
+    labels_series = aux.trend_filter(label_series=Xdays_label, window=trend_size)
 
     return labels_series
 
-# ____________________________________________________________________________________ #
+#*____________________________________________________________________________________ #
 def regR2rank_labeller(price_series: pd.Series, params: dict):
     # ======= I. Extract the parameters =======
     size_window_smooth = int(params["size_window_smooth"])
@@ -157,11 +157,11 @@ def regR2rank_labeller(price_series: pd.Series, params: dict):
                 labels_series.iloc[idx] = 1 if slope > 0 else -1  # Correction ici
     
     # ------- 3. Eliminate the trends that are too small -------
-    labels_series = aux.stabilize_labels(label_series=labels_series, window=trend_size)
+    labels_series = aux.trend_filter(label_series=labels_series, window=trend_size)
 
     return labels_series
 
-# ____________________________________________________________________________________ #
+#*____________________________________________________________________________________ #
 def boostedLF_labeller(price_series: pd.Series, params_lF: dict, params_r2: dict):
     # ======= 0. Params extraction =======
     trend_size = params_lF["trend_size"]
@@ -169,14 +169,16 @@ def boostedLF_labeller(price_series: pd.Series, params_lF: dict, params_r2: dict
     # ======= I. Extract Labels =======
     lookForward_labels = lookForward_labeller(price_series=price_series, params=params_lF)
     regR2rank_labels = regR2rank_labeller(price_series=price_series, params=params_r2)
+    
+    # ======= II. Linking Trend Holes in regR2rank =======
     regR2rank_labels = regR2rank_labels.replace(0, np.nan)
     forward = regR2rank_labels.ffill()
     backward = regR2rank_labels.bfill()
     regR2rank_labels = forward + backward
     regR2rank_labels = regR2rank_labels.replace(1, 0).replace(-1, 0).replace(2, 1).replace(-2, -1)
 
-    # ======= II. Labels Ensemble =======
-    # ------- 1. Combine the labels  -------
+    # ======= III. Labels Ensemble =======
+    # ------- 1. Combine the labels using lookForward as base -------
     ensemble_labels = lookForward_labels * 2 + regR2rank_labels
     ensemble_labels = ensemble_labels.replace(1, np.nan).replace(-1, np.nan)
     ensemble_labels = ensemble_labels.fillna(method="ffill")
@@ -188,7 +190,7 @@ def boostedLF_labeller(price_series: pd.Series, params_lF: dict, params_r2: dict
     ensemble_labels[mask_positive_to_negative | mask_negative_to_positive] = 0
 
     # ------- 3. Eliminate the trends that are too small -------
-    labels_series = aux.stabilize_labels(label_series=ensemble_labels, window=trend_size)
+    labels_series = aux.trend_filter(label_series=ensemble_labels, window=trend_size)
 
     # ------- 4. Eliminate the last point of each trend -------
     next_label = labels_series.shift(-1)

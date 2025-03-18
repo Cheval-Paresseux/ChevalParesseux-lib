@@ -5,8 +5,8 @@ from Features import auxiliary as aux
 import pandas as pd
 import numpy as np
 
-# ==================================================================================== #
-# =========================== Relationship Measures Features ========================= #
+#! ==================================================================================== #
+#! =========================== Relationship Measures Features ========================= #
 def cointegration_features(series_1: pd.Series, series_2: pd.Series, window: int):
     # ======== I. Initialize Outputs (Pre-allocate for performance) ========
     num_obs = len(series_1) - window
@@ -41,11 +41,18 @@ def cointegration_features(series_1: pd.Series, series_2: pd.Series, window: int
     kpss_p_values_series = pd.Series(kpss_p_values, index=index)
     residuals_series = pd.Series(residuals_values, index=index)
     
+    # ======== IV. Change Names ========
+    beta_series.name = f"beta_{window}"
+    intercept_series.name = f"intercept_{window}"
+    adf_p_values_series.name = f"ADF_pvalue_{window}"
+    kpss_p_values_series.name = f"KPSS_pvalue_{window}"
+    residuals_series.name = f"residuals_{window}"
+    
     return beta_series, intercept_series, adf_p_values_series, kpss_p_values_series, residuals_series
 
 
-# ==================================================================================== #
-# ============================== Spread Series Features ============================== #
+#! ==================================================================================== #
+#! ============================== Spread Series Features ============================== #
 def ornstein_uhlenbeck_features(series_1: pd.Series, series_2: pd.Series, window: int, residuals_weights: np.array = None):
     # ======== I. Initialize Outputs (Pre-allocate for performance) ========
     num_obs = len(series_1) - window
@@ -83,9 +90,15 @@ def ornstein_uhlenbeck_features(series_1: pd.Series, series_2: pd.Series, window
     sigma_series = pd.Series(sigma_values, index=index)
     half_life_series = pd.Series(half_life_values, index=index)
     
+    # ======== IV. Change Names ========
+    mu_series.name = f"OU_mu_{window}"
+    theta_series.name = f"OU_theta_{window}"
+    sigma_series.name = f"OU_sigma_{window}"
+    half_life_series.name = f"OU_half_life_{window}"
+    
     return mu_series, theta_series, sigma_series, half_life_series
 
-# ____________________________________________________________________________________ #
+#*____________________________________________________________________________________ #
 def kalmanOU_features(series_1: pd.Series, series_2: pd.Series, window: int,  smooth_coefficient: float, residuals_weights: np.array = None):
     # ======== I. Initialize Outputs (Pre-allocate for performance) ========
     num_obs = len(series_1) - window
@@ -116,5 +129,9 @@ def kalmanOU_features(series_1: pd.Series, series_2: pd.Series, window: int,  sm
     
     state_series = pd.Series(state_values, index=index)
     variance_series = pd.Series(variance_values, index=index)
+    
+    # ======== IV. Change Names ========
+    state_series.name = f"KF_state_{window}"
+    variance_series.name = f"KF_variance_{window}"
     
     return state_series, variance_series

@@ -6,8 +6,8 @@ import pandas as pd
 import numpy as np
 
 
-# ==================================================================================== #
-# ================================== Series Filters ================================== #
+#! ==================================================================================== #
+#! ================================== Series Filters ================================== #
 def moving_average(
     price_series: pd.Series,
     window: int,
@@ -17,10 +17,13 @@ def moving_average(
 
     # ======= II. Convert to pd.Series and Normalize =======
     moving_avg = pd.Series(moving_avg, index=price_series.index) / (price_series + 1e-8)
+    
+    # ======= III. Change Name =======
+    moving_avg.name = f"MA_{window}"
 
     return moving_avg
 
-# ____________________________________________________________________________________ #
+#*____________________________________________________________________________________ #
 def exponential_weightedMA(price_series: pd.Series, window: int, ind_lambda: float):
     # ======= I. Create the weights using a truncated exponential function =======
     weight_range = [(1 - ind_lambda) ** (i - 1) for i in range(1, window + 1)]
@@ -33,5 +36,8 @@ def exponential_weightedMA(price_series: pd.Series, window: int, ind_lambda: flo
 
     # ======= III. Convert to pd.Series =======
     wma = pd.Series(wma, index=price_series.index)
+    
+    # ======= IV. Change Name =======
+    wma.name = f"WMA_{window}_{ind_lambda}"
 
     return wma

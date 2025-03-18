@@ -5,8 +5,8 @@ from Features import auxiliary as aux
 import pandas as pd
 import numpy as np
 
-# ==================================================================================== #
-# ============================= Evolution Measure Features =========================== #
+#! ==================================================================================== #
+#! ============================= Evolution Measure Features =========================== #
 def average_features(
     predictions_series: pd.Series,
     window: int,
@@ -16,10 +16,13 @@ def average_features(
 
     # ======= II. Convert to pd.Series and Normalize =======
     rolling_avg = pd.Series(rolling_avg, index=predictions_series.index)
+    
+    # ======= III. Change Name =======
+    rolling_avg.name = f"average_{window}"
 
     return rolling_avg
 
-# ____________________________________________________________________________________ #
+#*____________________________________________________________________________________ #
 def volatility_features(
     predictions_series: pd.Series,
     window: int,
@@ -29,10 +32,13 @@ def volatility_features(
 
     # ======= II. Convert to pd.Series and Normalize =======
     rolling_volatility = pd.Series(rolling_volatility, index=predictions_series.index)
+    
+    # ======= III. Change Name =======
+    rolling_volatility.name = f"volatility_{window}"
 
     return rolling_volatility
 
-# ____________________________________________________________________________________ #
+#*____________________________________________________________________________________ #
 def changes_features(
     predictions_series: pd.Series,
     window: int,
@@ -49,10 +55,13 @@ def changes_features(
 
     # ======= II. Convert to pd.Series and Normalize =======
     rolling_changes = pd.Series(rolling_changes, index=predictions_series.index)
+    
+    # ======= III. Change Name =======
+    rolling_changes.name = f"changes_{window}"
 
     return rolling_changes
 
-# ____________________________________________________________________________________ #
+#*____________________________________________________________________________________ #
 def entropy_features(
     predictions_series: pd.Series,
     window: int,
@@ -68,6 +77,12 @@ def entropy_features(
     rolling_plugin = pd.Series(rolling_plugin, index=predictions_series.index)
     rolling_lempel_ziv = pd.Series(rolling_lempel_ziv, index=predictions_series.index)
     rolling_kontoyiannis = pd.Series(rolling_kontoyiannis, index=predictions_series.index)
+    
+    # ======= III. Change Names =======
+    rolling_shannon.name = f"shannon_entropy_{window}"
+    rolling_plugin.name = f"plugin_entropy_{window}"
+    rolling_lempel_ziv.name = f"lempel_ziv_entropy_{window}"
+    rolling_kontoyiannis.name = f"kontoyiannis_entropy_{window}"
 
     return rolling_shannon, rolling_plugin, rolling_lempel_ziv, rolling_kontoyiannis
 

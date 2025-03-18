@@ -7,8 +7,8 @@ import numpy as np
 import pandas as pd
 # import pywt
 
-# ==================================================================================== #
-# ======================= Unscaled Smoothed-like Series Features ===================== #
+#! ==================================================================================== #
+#! ======================= Unscaled Smoothed-like Series Features ===================== #
 def average_features(
     price_series: pd.Series,
     window: int,
@@ -18,10 +18,13 @@ def average_features(
 
     # ======= II. Convert to pd.Series and Center =======
     rolling_average = (pd.Series(rolling_average, index=price_series.index) / (price_series + 1e-8)) - 1
+    
+    # ======= III. Change Name =======
+    rolling_average.name = f"average_{window}"
 
     return rolling_average
 
-# ____________________________________________________________________________________ #
+#*____________________________________________________________________________________ #
 def median_features(
     price_series: pd.Series,
     window: int,
@@ -31,10 +34,13 @@ def median_features(
 
     # ======= II. Convert to pd.Series and Center =======
     rolling_median = (pd.Series(rolling_median, index=price_series.index) / (price_series + 1e-8)) - 1
+    
+    # ======= III. Change Name =======
+    rolling_median.name = f"median_{window}"
 
     return rolling_median
 
-# ____________________________________________________________________________________ #
+#*____________________________________________________________________________________ #
 def minimum_features(
     price_series: pd.Series,
     window: int,
@@ -44,10 +50,13 @@ def minimum_features(
 
     # ======= II. Convert to pd.Series and Center =======
     rolling_min = (pd.Series(rolling_min, index=price_series.index) / (price_series + 1e-8)) - 1
+    
+    # ======= III. Change Name =======
+    rolling_min.name = f"min_{window}"
 
     return rolling_min
 
-# ____________________________________________________________________________________ #
+#*____________________________________________________________________________________ #
 def maximum_features(
     price_series: pd.Series,
     window: int,
@@ -57,13 +66,16 @@ def maximum_features(
 
     # ======= II. Convert to pd.Series and Center =======
     rolling_max = (pd.Series(rolling_max, index=price_series.index) / (price_series + 1e-8)) - 1
+    
+    # ======= III. Change Name =======
+    rolling_max.name = f"max_{window}"
 
     return rolling_max
 
 
 
-# ==================================================================================== #
-# ========================== Returns Distribution Features =========================== #
+#! ==================================================================================== #
+#! ========================== Returns Distribution Features =========================== #
 def volatility_features(
     price_series: pd.Series,
     window: int,
@@ -74,10 +86,13 @@ def volatility_features(
 
     # ======= II. Convert to pd.Series and Center =======
     rolling_vol = pd.Series(rolling_vol, index=price_series.index)
+    
+    # ======= III. Change Name =======
+    rolling_vol.name = f"vol_{window}"
 
     return rolling_vol
 
-# ____________________________________________________________________________________ #
+#*____________________________________________________________________________________ #
 def skewness_features(
     price_series: pd.Series,
     window: int,
@@ -88,10 +103,13 @@ def skewness_features(
 
     # ======= II. Convert to pd.Series and Center =======
     rolling_skew = pd.Series(rolling_skew, index=price_series.index)
+    
+    # ======= III. Change Name =======
+    rolling_skew.name = f"skew_{window}"
 
     return rolling_skew
 
-# ____________________________________________________________________________________ #
+#*____________________________________________________________________________________ #
 def kurtosis_features(
     price_series: pd.Series,
     window: int,
@@ -102,10 +120,13 @@ def kurtosis_features(
 
     # ======= II. Convert to pd.Series and Center =======
     rolling_kurt = pd.Series(rolling_kurt, index=price_series.index)
+    
+    # ======= III. Change Name =======
+    rolling_kurt.name = f"kurt_{window}"
 
     return rolling_kurt
 
-# ____________________________________________________________________________________ #
+#*____________________________________________________________________________________ #
 def quantile_features(
     price_series: pd.Series,
     window: int,
@@ -117,13 +138,16 @@ def quantile_features(
 
     # ======= II. Convert to pd.Series and Center =======
     rolling_quantile = pd.Series(rolling_quantile, index=price_series.index)
+    
+    # ======= III. Change Name =======
+    rolling_quantile.name = f"quantile_{quantile}_{window}"
 
     return rolling_quantile
 
 
 
-# ==================================================================================== #
-# ============================= Series Trending Features ============================= #
+#! ==================================================================================== #
+#! ============================= Series Trending Features ============================= #
 def momentum_features(
     price_series: pd.Series,
     window: int,
@@ -133,10 +157,13 @@ def momentum_features(
     
     # ======= II. Convert to pd.Series and Center =======
     rolling_momentum = pd.Series(rolling_momentum, index=price_series.index)
+    
+    # ======= III. Change Name =======
+    rolling_momentum.name = f"momentum_{window}"
 
     return rolling_momentum
 
-# ____________________________________________________________________________________ #
+#*____________________________________________________________________________________ #
 def Z_momentum_features(
     price_series: pd.Series,
     window: int,
@@ -146,10 +173,13 @@ def Z_momentum_features(
     
     # ======= II. Convert to pd.Series and Center =======
     rolling_Z_momentum = pd.Series(rolling_Z_momentum, index=price_series.index)
+    
+    # ======= III. Change Name =======
+    rolling_Z_momentum.name = f"Z_momentum_{window}"
 
     return rolling_Z_momentum
 
-# ____________________________________________________________________________________ #
+#*____________________________________________________________________________________ #
 def linear_tempReg_features(
     price_series: pd.Series, 
     regression_window: int
@@ -194,10 +224,16 @@ def linear_tempReg_features(
     rolling_tstat = pd.Series(rolling_tstat, index=price_series.index)
     rolling_pvalue = pd.Series(rolling_pvalue, index=price_series.index)
     rolling_r_squared = pd.Series(rolling_r_squared, index=price_series.index)
+    
+    # ======= IV. Change Name =======
+    rolling_slope.name = f"linear_slope_{regression_window}"
+    rolling_tstat.name = f"linear_tstat_{regression_window}"
+    rolling_pvalue.name = f"linear_pvalue_{regression_window}"
+    rolling_r_squared.name = f"linear_r_squared_{regression_window}"
 
     return rolling_slope, rolling_tstat, rolling_pvalue, rolling_r_squared
 
-# ____________________________________________________________________________________ #
+#*____________________________________________________________________________________ #
 def nonlinear_tempReg_features(
     price_series: pd.Series,
     regression_window: int,
@@ -250,15 +286,22 @@ def nonlinear_tempReg_features(
     rolling_tstat = pd.Series(rolling_tstat, index=price_series.index)
     rolling_pvalue = pd.Series(rolling_pvalue, index=price_series.index)
     rolling_r_squared = pd.Series(rolling_r_squared, index=price_series.index)
+    
+    # ======= IV. Change Name =======
+    rolling_slope.name = f"nonlinear_slope_{regression_window}"
+    rolling_acceleration.name = f"nonlinear_acceleration_{regression_window}"
+    rolling_tstat.name = f"nonlinear_tstat_{regression_window}"
+    rolling_pvalue.name = f"nonlinear_pvalue_{regression_window}"
+    rolling_r_squared.name = f"nonlinear_r_squared_{regression_window}"
 
     return rolling_slope, rolling_acceleration, rolling_tstat, rolling_pvalue, rolling_r_squared
 
-# ____________________________________________________________________________________ #
+#*____________________________________________________________________________________ #
 def hurst_exponent_features(
     price_series: pd.Series, 
     power: int
 ):
-    # ======= 0. Initialize the variables =======
+    # ======= I. Initialize the variables =======
     prices_array = np.array(price_series)
     returns_array = prices_array[1:] / prices_array[:-1] - 1
 
@@ -268,7 +311,7 @@ def hurst_exponent_features(
     tstats = np.array([])
     pvalues = np.array([])
 
-    # ======= 1. Compute the Hurst Exponent =======
+    # ======= II. Compute the Hurst Exponent =======
     for t in np.arange(n, len(returns_array) + 1):
         data = returns_array[t - n : t]
         X = np.arange(2, power + 1)
@@ -302,7 +345,7 @@ def hurst_exponent_features(
         tstats = np.append(tstats, tstat)
         pvalues = np.append(pvalues, pvalue)
 
-    # ======= 2. Convert to pd.Series and Center =======
+    # ======= III. Convert to pd.Series and Center =======
     hursts = pd.Series([np.nan] * n + list(hursts), index=price_series.index) - 0.5
     tstats = pd.Series([np.nan] * n + list(tstats), index=price_series.index)
     pvalues = pd.Series([np.nan] * n + list(pvalues), index=price_series.index)
@@ -312,13 +355,18 @@ def hurst_exponent_features(
 
     pvalues_mean = pvalues.rolling(window=252).mean()
     pvalues = pvalues - pvalues_mean
+    
+    # ======= IV. Change Name =======
+    hursts.name = f"hurst_exponent{power}"
+    tstats.name = f"hurst_tstat_{power}"
+    pvalues.name = f"hurst_pvalue_{power}"
 
     return hursts, tstats, pvalues
 
 
 
-# ==================================================================================== #
-# ============================= Signal Processing Features ============================= #
+#! ==================================================================================== #
+#! ============================= Signal Processing Features ============================= #
 def entropy_features(
     price_series: pd.Series,
     window: int,
@@ -337,10 +385,16 @@ def entropy_features(
     rolling_plugin = pd.Series(rolling_plugin, index=price_series.index)
     rolling_lempel_ziv = pd.Series(rolling_lempel_ziv, index=price_series.index)
     rolling_kontoyiannis = pd.Series(rolling_kontoyiannis, index=price_series.index)
+    
+    # ======= IV. Change Name =======
+    rolling_shannon.name = f"shannon_entropy_{window}"
+    rolling_plugin.name = f"plugin_entropy_{window}"
+    rolling_lempel_ziv.name = f"lempel_ziv_entropy_{window}"
+    rolling_kontoyiannis.name = f"kontoyiannis_entropy_{window}"
 
     return rolling_shannon, rolling_plugin, rolling_lempel_ziv, rolling_kontoyiannis
 
-# ____________________________________________________________________________________ #
+#*____________________________________________________________________________________ #
 # def wavelets_features(
 #     price_series: pd.Series,
 #     wavelet_window: int,

@@ -7,8 +7,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-# ==================================================================================== #
-# ============================== Feature description ================================= #
+#! ==================================================================================== #
+#! ============================== Feature description ================================= #
 def feature_data(feature_series: pd.Series):
     # ======= I. Extract Basic Information =======
     data_type = feature_series.dtype
@@ -36,7 +36,7 @@ def feature_data(feature_series: pd.Series):
     
     return basic_info
 
-# ____________________________________________________________________________________ #
+#*____________________________________________________________________________________ #
 def feature_distribution(feature_series: pd.Series, feature_name: str = None):
     # ======= O. Feature name =======
     if feature_name is None:
@@ -74,7 +74,7 @@ def feature_distribution(feature_series: pd.Series, feature_name: str = None):
     
     return descriptive_df
 
-# ____________________________________________________________________________________ #
+#*____________________________________________________________________________________ #
 
     
     
