@@ -16,7 +16,7 @@ def moving_average(
     moving_avg = price_series.rolling(window=window + 1).mean()
 
     # ======= II. Convert to pd.Series and Normalize =======
-    moving_avg = pd.Series(moving_avg, index=price_series.index) / (price_series + 1e-8)
+    moving_avg = pd.Series(moving_avg, index=price_series.index)
     
     # ======= III. Change Name =======
     moving_avg.name = f"MA_{window}"
