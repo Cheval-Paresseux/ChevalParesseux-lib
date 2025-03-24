@@ -2,6 +2,7 @@ import sys
 sys.path.append("../")
 import Measures as aux
 from Features import common as cm
+from Models import LinearRegression as reg
 
 import numpy as np
 import pandas as pd
@@ -20,7 +21,10 @@ class average_feature(cm.Feature):
         # ======= 0. Initialize params if necessary =========
         if params is None:
             params = {
-                "window_sizes": [5, 10, 30, 60, 120, 240],
+                "window": [5, 10, 30, 60, 120, 240],
+                "smoothing_method": [None, "ewma", "average"],
+                "window_smooth": [5, 10, 15, 20, 25, 30],
+                "lambda_smooth": [0.1, 0.2, 0.3, 0.5, 0.7, 0.9],
             }
 
         # ======= I. Get Base Model init =========
@@ -32,26 +36,43 @@ class average_feature(cm.Feature):
             )
 
     #?____________________________________________________________________________________ #
-    def process_data(self):
-        self.processed_data = self.data.copy()
-
-        return self.processed_data
+    def process_data(self, smoothing_method: str = None, window_smooth: int = None, lambda_smooth: float = None):
+        if smoothing_method is None:
+            processed_data = self.data
+            
+        elif smoothing_method == "ewma":
+            processed_data = aux.ewma_smoothing(price_series=self.data, window=window_smooth, ind_lambda=lambda_smooth)
+            
+        elif smoothing_method == "average":
+            processed_data = aux.average_smoothing(price_series=self.data, window=window_smooth)
+            
+        else:
+            raise ValueError("Smoothing method not recognized")
+        
+        self.processed_data = processed_data
+        
+        return processed_data
     
     #?____________________________________________________________________________________ #
     def get_feature(
-        price_series: pd.Series,
+        self,
         window: int,
+        smoothing_method: str,
+        window_smooth: int,
+        lambda_smooth: float,
     ):
         # ======= I. Compute the different smoothed series =======
-        rolling_average = price_series.rolling(window=window + 1).apply(lambda x: np.mean(x[:window]))
+        series = self.process_data(smoothing_method=smoothing_method, window_smooth=window_smooth, lambda_smooth=lambda_smooth).dropna().copy()
+        rolling_average = series.rolling(window=window + 1).apply(lambda x: np.mean(x[:window]))
 
         # ======= II. Convert to pd.Series and Center =======
-        rolling_average = (pd.Series(rolling_average, index=price_series.index) / (price_series + 1e-8)) - 1
+        rolling_average = (pd.Series(rolling_average, index=series.index) / (series + 1e-8)) - 1
         
         # ======= III. Change Name =======
-        rolling_average.name = f"average_{window}"
+        rolling_average.name = f"average_{window}_{smoothing_method}_{window_smooth}_{lambda_smooth}"
 
         return rolling_average
+
 
 #*____________________________________________________________________________________ #
 class median_feature(cm.Feature):
@@ -65,7 +86,10 @@ class median_feature(cm.Feature):
         # ======= 0. Initialize params if necessary =========
         if params is None:
             params = {
-                "window_sizes": [5, 10, 30, 60, 120, 240],
+                "window": [5, 10, 30, 60, 120, 240],
+                "smoothing_method": [None, "ewma", "average"],
+                "window_smooth": [5, 10, 15, 20, 25, 30],
+                "lambda_smooth": [0.1, 0.2, 0.3, 0.5, 0.7, 0.9],
             }
 
         # ======= I. Get Base Model init =========
@@ -77,26 +101,43 @@ class median_feature(cm.Feature):
             )
 
     #?____________________________________________________________________________________ #
-    def process_data(self):
-        self.processed_data = self.data.copy()
-
-        return self.processed_data
+    def process_data(self, smoothing_method: str = None, window_smooth: int = None, lambda_smooth: float = None):
+        if smoothing_method is None:
+            processed_data = self.data
+            
+        elif smoothing_method == "ewma":
+            processed_data = aux.ewma_smoothing(price_series=self.data, window=window_smooth, ind_lambda=lambda_smooth)
+            
+        elif smoothing_method == "average":
+            processed_data = aux.average_smoothing(price_series=self.data, window=window_smooth)
+            
+        else:
+            raise ValueError("Smoothing method not recognized")
+        
+        self.processed_data = processed_data
+        
+        return processed_data
     
     #?____________________________________________________________________________________ #
     def get_feature(
-        price_series: pd.Series,
+        self,
         window: int,
+        smoothing_method: str,
+        window_smooth: int,
+        lambda_smooth: float,
     ):
         # ======= I. Compute the different smoothed series =======
-        rolling_median = price_series.rolling(window=window + 1).apply(lambda x: np.median(x[:window]))
+        series = self.process_data(smoothing_method=smoothing_method, window_smooth=window_smooth, lambda_smooth=lambda_smooth).dropna().copy()
+        rolling_median = series.rolling(window=window + 1).apply(lambda x: np.median(x[:window]))
 
         # ======= II. Convert to pd.Series and Center =======
-        rolling_median = (pd.Series(rolling_median, index=price_series.index) / (price_series + 1e-8)) - 1
+        rolling_median = (pd.Series(rolling_median, index=series.index) / (series + 1e-8)) - 1
         
         # ======= III. Change Name =======
-        rolling_median.name = f"median_{window}"
+        rolling_median.name = f"median_{window}_{smoothing_method}_{window_smooth}_{lambda_smooth}"
 
         return rolling_median
+
 
 #*____________________________________________________________________________________ #
 class minimum_feature(cm.Feature):
@@ -110,7 +151,10 @@ class minimum_feature(cm.Feature):
         # ======= 0. Initialize params if necessary =========
         if params is None:
             params = {
-                "window_sizes": [5, 10, 30, 60, 120, 240],
+                "window": [5, 10, 30, 60, 120, 240],
+                "smoothing_method": [None, "ewma", "average"],
+                "window_smooth": [5, 10, 15, 20, 25, 30],
+                "lambda_smooth": [0.1, 0.2, 0.3, 0.5, 0.7, 0.9],
             }
 
         # ======= I. Get Base Model init =========
@@ -122,26 +166,43 @@ class minimum_feature(cm.Feature):
             )
 
     #?____________________________________________________________________________________ #
-    def process_data(self):
-        self.processed_data = self.data.copy()
-
-        return self.processed_data
+    def process_data(self, smoothing_method: str = None, window_smooth: int = None, lambda_smooth: float = None):
+        if smoothing_method is None:
+            processed_data = self.data
+            
+        elif smoothing_method == "ewma":
+            processed_data = aux.ewma_smoothing(price_series=self.data, window=window_smooth, ind_lambda=lambda_smooth)
+            
+        elif smoothing_method == "average":
+            processed_data = aux.average_smoothing(price_series=self.data, window=window_smooth)
+            
+        else:
+            raise ValueError("Smoothing method not recognized")
+        
+        self.processed_data = processed_data
+        
+        return processed_data
     
     #?____________________________________________________________________________________ #
     def get_feature(
-        price_series: pd.Series,
+        self,
         window: int,
+        smoothing_method: str,
+        window_smooth: int,
+        lambda_smooth: float,
     ):
-        # ======= I. Compute the rolling maximum and minimum =======
-        rolling_min = price_series.rolling(window=window + 1).apply(lambda x: np.min(x[:window]))
+        # ======= I. Compute the different smoothed series =======
+        series = self.process_data(smoothing_method=smoothing_method, window_smooth=window_smooth, lambda_smooth=lambda_smooth).dropna().copy()
+        rolling_min = series.rolling(window=window + 1).apply(lambda x: np.min(x[:window]))
 
         # ======= II. Convert to pd.Series and Center =======
-        rolling_min = (pd.Series(rolling_min, index=price_series.index) / (price_series + 1e-8)) - 1
+        rolling_min = (pd.Series(rolling_min, index=series.index) / (series + 1e-8)) - 1
         
         # ======= III. Change Name =======
-        rolling_min.name = f"min_{window}"
+        rolling_min.name = f"min_{window}_{smoothing_method}_{window_smooth}_{lambda_smooth}"
 
         return rolling_min
+    
     
 #*____________________________________________________________________________________ #
 class maximum_feature(cm.Feature):
@@ -155,7 +216,10 @@ class maximum_feature(cm.Feature):
         # ======= 0. Initialize params if necessary =========
         if params is None:
             params = {
-                "window_sizes": [5, 10, 30, 60, 120, 240],
+                "window": [5, 10, 30, 60, 120, 240],
+                "smoothing_method": [None, "ewma", "average"],
+                "window_smooth": [5, 10, 15, 20, 25, 30],
+                "lambda_smooth": [0.1, 0.2, 0.3, 0.5, 0.7, 0.9],
             }
 
         # ======= I. Get Base Model init =========
@@ -167,24 +231,40 @@ class maximum_feature(cm.Feature):
             )
 
     #?____________________________________________________________________________________ #
-    def process_data(self):
-        self.processed_data = self.data.copy()
-
-        return self.processed_data
+    def process_data(self, smoothing_method: str = None, window_smooth: int = None, lambda_smooth: float = None):
+        if smoothing_method is None:
+            processed_data = self.data
+            
+        elif smoothing_method == "ewma":
+            processed_data = aux.ewma_smoothing(price_series=self.data, window=window_smooth, ind_lambda=lambda_smooth)
+            
+        elif smoothing_method == "average":
+            processed_data = aux.average_smoothing(price_series=self.data, window=window_smooth)
+            
+        else:
+            raise ValueError("Smoothing method not recognized")
+        
+        self.processed_data = processed_data
+        
+        return processed_data
     
     #?____________________________________________________________________________________ #
     def get_feature(
-        price_series: pd.Series,
+        self,
         window: int,
+        smoothing_method: str,
+        window_smooth: int,
+        lambda_smooth: float,
     ):
-        # ======= I. Compute the rolling maximum and minimum =======
-        rolling_max = price_series.rolling(window=window + 1).apply(lambda x: np.max(x[:window]))
+        # ======= I. Compute the different smoothed series =======
+        series = self.process_data(smoothing_method=smoothing_method, window_smooth=window_smooth, lambda_smooth=lambda_smooth).dropna().copy()
+        rolling_max = series.rolling(window=window + 1).apply(lambda x: np.max(x[:window]))
 
         # ======= II. Convert to pd.Series and Center =======
-        rolling_max = (pd.Series(rolling_max, index=price_series.index) / (price_series + 1e-8)) - 1
+        rolling_max = (pd.Series(rolling_max, index=series.index) / (series + 1e-8)) - 1
         
         # ======= III. Change Name =======
-        rolling_max.name = f"max_{window}"
+        rolling_max.name = f"max_{window}_{smoothing_method}_{window_smooth}_{lambda_smooth}"
 
         return rolling_max
 
@@ -203,7 +283,10 @@ class volatility_feature(cm.Feature):
         # ======= 0. Initialize params if necessary =========
         if params is None:
             params = {
-                "window_sizes": [5, 10, 30, 60, 120, 240],
+                "window": [5, 10, 30, 60, 120, 240],
+                "smoothing_method": [None, "ewma", "average"],
+                "window_smooth": [5, 10, 15, 20, 25, 30],
+                "lambda_smooth": [0.1, 0.2, 0.3, 0.5, 0.7, 0.9],
             }
 
         # ======= I. Get Base Model init =========
@@ -215,27 +298,44 @@ class volatility_feature(cm.Feature):
             )
 
     #?____________________________________________________________________________________ #
-    def process_data(self):
-        self.processed_data = self.data.copy()
-
-        return self.processed_data
+    def process_data(self, smoothing_method: str = None, window_smooth: int = None, lambda_smooth: float = None):
+        if smoothing_method is None:
+            processed_data = self.data
+            
+        elif smoothing_method == "ewma":
+            processed_data = aux.ewma_smoothing(price_series=self.data, window=window_smooth, ind_lambda=lambda_smooth)
+            
+        elif smoothing_method == "average":
+            processed_data = aux.average_smoothing(price_series=self.data, window=window_smooth)
+            
+        else:
+            raise ValueError("Smoothing method not recognized")
+        
+        self.processed_data = processed_data
+        
+        return processed_data
     
     #?____________________________________________________________________________________ #
     def get_feature(
-        price_series: pd.Series,
+        self,
         window: int,
+        smoothing_method: str,
+        window_smooth: int,
+        lambda_smooth: float,
     ):
-        # ======= I. Compute the rolling adjusted volatility =======
-        returns_series = price_series.pct_change().dropna()
+        # ======= I. Compute the different smoothed series =======
+        series = self.process_data(smoothing_method=smoothing_method, window_smooth=window_smooth, lambda_smooth=lambda_smooth).dropna().copy()
+        returns_series = series.pct_change().dropna()
         rolling_vol = returns_series.rolling(window=window + 1).apply(lambda x: np.std(x[:window]))
 
         # ======= II. Convert to pd.Series and Center =======
-        rolling_vol = pd.Series(rolling_vol, index=price_series.index)
+        rolling_vol = pd.Series(rolling_vol, index=series.index)
         
         # ======= III. Change Name =======
-        rolling_vol.name = f"vol_{window}"
+        rolling_vol.name = f"vol_{window}_{smoothing_method}_{window_smooth}_{lambda_smooth}"
 
         return rolling_vol
+
 
 #*____________________________________________________________________________________ #
 class skewness_feature(cm.Feature):
@@ -249,7 +349,10 @@ class skewness_feature(cm.Feature):
         # ======= 0. Initialize params if necessary =========
         if params is None:
             params = {
-                "window_sizes": [5, 10, 30, 60, 120, 240],
+                "window": [5, 10, 30, 60, 120, 240],
+                "smoothing_method": [None, "ewma", "average"],
+                "window_smooth": [5, 10, 15, 20, 25, 30],
+                "lambda_smooth": [0.1, 0.2, 0.3, 0.5, 0.7, 0.9],
             }
 
         # ======= I. Get Base Model init =========
@@ -261,27 +364,44 @@ class skewness_feature(cm.Feature):
             )
 
     #?____________________________________________________________________________________ #
-    def process_data(self):
-        self.processed_data = self.data.copy()
-
-        return self.processed_data
+    def process_data(self, smoothing_method: str = None, window_smooth: int = None, lambda_smooth: float = None):
+        if smoothing_method is None:
+            processed_data = self.data
+            
+        elif smoothing_method == "ewma":
+            processed_data = aux.ewma_smoothing(price_series=self.data, window=window_smooth, ind_lambda=lambda_smooth)
+            
+        elif smoothing_method == "average":
+            processed_data = aux.average_smoothing(price_series=self.data, window=window_smooth)
+            
+        else:
+            raise ValueError("Smoothing method not recognized")
+        
+        self.processed_data = processed_data
+        
+        return processed_data
     
     #?____________________________________________________________________________________ #
     def get_feature(
-        price_series: pd.Series,
+        self,
         window: int,
+        smoothing_method: str,
+        window_smooth: int,
+        lambda_smooth: float,
     ):
-        # ======= I. Compute the rolling skewness =======
-        returns_series = price_series.pct_change().dropna()
+        # ======= I. Compute the different smoothed series =======
+        series = self.process_data(smoothing_method=smoothing_method, window_smooth=window_smooth, lambda_smooth=lambda_smooth).dropna().copy()
+        returns_series = series.pct_change().dropna()
         rolling_skew = returns_series.rolling(window=window + 1).apply(lambda x: (x[:window]).skew())
 
         # ======= II. Convert to pd.Series and Center =======
-        rolling_skew = pd.Series(rolling_skew, index=price_series.index)
+        rolling_skew = pd.Series(rolling_skew, index=series.index)
         
         # ======= III. Change Name =======
-        rolling_skew.name = f"skew_{window}"
+        rolling_skew.name = f"skew_{window}_{smoothing_method}_{window_smooth}_{lambda_smooth}"
 
         return rolling_skew
+
 
 #*____________________________________________________________________________________ #
 class kurtosis_feature(cm.Feature):
@@ -295,7 +415,10 @@ class kurtosis_feature(cm.Feature):
         # ======= 0. Initialize params if necessary =========
         if params is None:
             params = {
-                "window_sizes": [5, 10, 30, 60, 120, 240],
+                "window": [5, 10, 30, 60, 120, 240],
+                "smoothing_method": [None, "ewma", "average"],
+                "window_smooth": [5, 10, 15, 20, 25, 30],
+                "lambda_smooth": [0.1, 0.2, 0.3, 0.5, 0.7, 0.9],
             }
 
         # ======= I. Get Base Model init =========
@@ -307,27 +430,44 @@ class kurtosis_feature(cm.Feature):
             )
 
     #?____________________________________________________________________________________ #
-    def process_data(self):
-        self.processed_data = self.data.copy()
-
-        return self.processed_data
+    def process_data(self, smoothing_method: str = None, window_smooth: int = None, lambda_smooth: float = None):
+        if smoothing_method is None:
+            processed_data = self.data
+            
+        elif smoothing_method == "ewma":
+            processed_data = aux.ewma_smoothing(price_series=self.data, window=window_smooth, ind_lambda=lambda_smooth)
+            
+        elif smoothing_method == "average":
+            processed_data = aux.average_smoothing(price_series=self.data, window=window_smooth)
+            
+        else:
+            raise ValueError("Smoothing method not recognized")
+        
+        self.processed_data = processed_data
+        
+        return processed_data
     
     #?____________________________________________________________________________________ #
     def get_feature(
-        price_series: pd.Series,
+        self,
         window: int,
+        smoothing_method: str,
+        window_smooth: int,
+        lambda_smooth: float,
     ):
-        # ======= I. Compute the rolling kurtosis =======
-        returns_series = price_series.pct_change().dropna()
+        # ======= I. Compute the different smoothed series =======
+        series = self.process_data(smoothing_method=smoothing_method, window_smooth=window_smooth, lambda_smooth=lambda_smooth).dropna().copy()
+        returns_series = series.pct_change().dropna()
         rolling_kurt = returns_series.rolling(window=window + 1).apply(lambda x: (x[:window]).kurtosis())
 
         # ======= II. Convert to pd.Series and Center =======
-        rolling_kurt = pd.Series(rolling_kurt, index=price_series.index)
+        rolling_kurt = pd.Series(rolling_kurt, index=series.index)
         
         # ======= III. Change Name =======
-        rolling_kurt.name = f"kurt_{window}"
+        rolling_kurt.name = f"kurt_{window}_{smoothing_method}_{window_smooth}_{lambda_smooth}"
 
         return rolling_kurt
+
 
 #*____________________________________________________________________________________ #
 class quantile_feature(cm.Feature):
@@ -341,8 +481,11 @@ class quantile_feature(cm.Feature):
         # ======= 0. Initialize params if necessary =========
         if params is None:
             params = {
-                "window_sizes": [5, 10, 30, 60, 120, 240],
-                "quantiles": [0.01, 0.05, 0.25, 0.75, 0.95, 0.99]
+                "window": [5, 10, 30, 60, 120, 240],
+                "quantile": [0.01, 0.05, 0.25, 0.75, 0.95, 0.99],
+                "smoothing_method": [None, "ewma", "average"],
+                "window_smooth": [5, 10, 15, 20, 25, 30],
+                "lambda_smooth": [0.1, 0.2, 0.3, 0.5, 0.7, 0.9],
             }
 
         # ======= I. Get Base Model init =========
@@ -354,26 +497,42 @@ class quantile_feature(cm.Feature):
             )
 
     #?____________________________________________________________________________________ #
-    def process_data(self):
-        self.processed_data = self.data.copy()
-
-        return self.processed_data
+    def process_data(self, smoothing_method: str = None, window_smooth: int = None, lambda_smooth: float = None):
+        if smoothing_method is None:
+            processed_data = self.data
+            
+        elif smoothing_method == "ewma":
+            processed_data = aux.ewma_smoothing(price_series=self.data, window=window_smooth, ind_lambda=lambda_smooth)
+            
+        elif smoothing_method == "average":
+            processed_data = aux.average_smoothing(price_series=self.data, window=window_smooth)
+            
+        else:
+            raise ValueError("Smoothing method not recognized")
+        
+        self.processed_data = processed_data
+        
+        return processed_data
     
     #?____________________________________________________________________________________ #
     def get_feature(
-        price_series: pd.Series,
+        self,
         window: int,
-        quantile: float
+        quantile: float,
+        smoothing_method: str,
+        window_smooth: int,
+        lambda_smooth: float,
     ):
-        # ======= I. Compute the rolling quantile =======
-        returns_series = price_series.pct_change().dropna()
+        # ======= I. Compute the different smoothed series =======
+        series = self.process_data(smoothing_method=smoothing_method, window_smooth=window_smooth, lambda_smooth=lambda_smooth).dropna().copy()
+        returns_series = series.pct_change().dropna()
         rolling_quantile = returns_series.rolling(window=window + 1).apply(lambda x: np.quantile(x[:window], quantile))
 
         # ======= II. Convert to pd.Series and Center =======
-        rolling_quantile = pd.Series(rolling_quantile, index=price_series.index)
+        rolling_quantile = pd.Series(rolling_quantile, index=series.index)
         
         # ======= III. Change Name =======
-        rolling_quantile.name = f"quantile_{quantile}_{window}"
+        rolling_quantile.name = f"quantile_{quantile}_{window}_{smoothing_method}_{window_smooth}_{lambda_smooth}"
 
         return rolling_quantile
 
@@ -392,7 +551,10 @@ class momentum_feature(cm.Feature):
         # ======= 0. Initialize params if necessary =========
         if params is None:
             params = {
-                "window_sizes": [5, 10, 30, 60, 120, 240],
+                "window": [5, 10, 30, 60, 120, 240],
+                "smoothing_method": [None, "ewma", "average"],
+                "window_smooth": [5, 10, 15, 20, 25, 30],
+                "lambda_smooth": [0.1, 0.2, 0.3, 0.5, 0.7, 0.9],
             }
 
         # ======= I. Get Base Model init =========
@@ -404,26 +566,43 @@ class momentum_feature(cm.Feature):
             )
 
     #?____________________________________________________________________________________ #
-    def process_data(self):
-        self.processed_data = self.data.copy()
-
-        return self.processed_data
+    def process_data(self, smoothing_method: str = None, window_smooth: int = None, lambda_smooth: float = None):
+        if smoothing_method is None:
+            processed_data = self.data
+            
+        elif smoothing_method == "ewma":
+            processed_data = aux.ewma_smoothing(price_series=self.data, window=window_smooth, ind_lambda=lambda_smooth)
+            
+        elif smoothing_method == "average":
+            processed_data = aux.average_smoothing(price_series=self.data, window=window_smooth)
+            
+        else:
+            raise ValueError("Smoothing method not recognized")
+        
+        self.processed_data = processed_data
+        
+        return processed_data
     
     #?____________________________________________________________________________________ #
     def get_feature(
-        price_series: pd.Series,
+        self,
         window: int,
+        smoothing_method: str,
+        window_smooth: int,
+        lambda_smooth: float,
     ):
-        # ======= I. Compute the rolling momentum =======
-        rolling_momentum = price_series.rolling(window=window + 1).apply(lambda x: aux.get_momentum(x[:window]))
+        # ======= I. Compute the different smoothed series =======
+        series = self.process_data(smoothing_method=smoothing_method, window_smooth=window_smooth, lambda_smooth=lambda_smooth).dropna().copy()
+        rolling_momentum = series.rolling(window=window + 1).apply(lambda x: aux.get_momentum(x[:window]))
         
         # ======= II. Convert to pd.Series and Center =======
-        rolling_momentum = pd.Series(rolling_momentum, index=price_series.index)
+        rolling_momentum = pd.Series(rolling_momentum, index=series.index)
         
         # ======= III. Change Name =======
-        rolling_momentum.name = f"momentum_{window}"
+        rolling_momentum.name = f"momentum_{window}_{smoothing_method}_{window_smooth}_{lambda_smooth}"
 
         return rolling_momentum
+
 
 #*____________________________________________________________________________________ #
 class Z_momentum_feature(cm.Feature):
@@ -437,7 +616,10 @@ class Z_momentum_feature(cm.Feature):
         # ======= 0. Initialize params if necessary =========
         if params is None:
             params = {
-                "window_sizes": [5, 10, 30, 60, 120, 240],
+                "window": [5, 10, 30, 60, 120, 240],
+                "smoothing_method": [None, "ewma", "average"],
+                "window_smooth": [5, 10, 15, 20, 25, 30],
+                "lambda_smooth": [0.1, 0.2, 0.3, 0.5, 0.7, 0.9],
             }
 
         # ======= I. Get Base Model init =========
@@ -449,26 +631,43 @@ class Z_momentum_feature(cm.Feature):
             )
 
     #?____________________________________________________________________________________ #
-    def process_data(self):
-        self.processed_data = self.data.copy()
-
-        return self.processed_data
+    def process_data(self, smoothing_method: str = None, window_smooth: int = None, lambda_smooth: float = None):
+        if smoothing_method is None:
+            processed_data = self.data
+            
+        elif smoothing_method == "ewma":
+            processed_data = aux.ewma_smoothing(price_series=self.data, window=window_smooth, ind_lambda=lambda_smooth)
+            
+        elif smoothing_method == "average":
+            processed_data = aux.average_smoothing(price_series=self.data, window=window_smooth)
+            
+        else:
+            raise ValueError("Smoothing method not recognized")
+        
+        self.processed_data = processed_data
+        
+        return processed_data
     
     #?____________________________________________________________________________________ #
     def get_feature(
-        price_series: pd.Series,
+        self,
         window: int,
+        smoothing_method: str,
+        window_smooth: int,
+        lambda_smooth: float,
     ):
-        # ======= I. Compute the rolling Z-momentum =======
-        rolling_Z_momentum = price_series.rolling(window=window + 1).apply(lambda x: aux.get_Z_momentum(x[:window]))
+        # ======= I. Compute the different smoothed series =======
+        series = self.process_data(smoothing_method=smoothing_method, window_smooth=window_smooth, lambda_smooth=lambda_smooth).dropna().copy()
+        rolling_Z_momentum = series.rolling(window=window + 1).apply(lambda x: aux.get_Z_momentum(x[:window]))
         
         # ======= II. Convert to pd.Series and Center =======
-        rolling_Z_momentum = pd.Series(rolling_Z_momentum, index=price_series.index)
+        rolling_Z_momentum = pd.Series(rolling_Z_momentum, index=series.index)
         
         # ======= III. Change Name =======
-        rolling_Z_momentum.name = f"Z_momentum_{window}"
+        rolling_Z_momentum.name = f"Z_momentum_{window}_{smoothing_method}_{window_smooth}_{lambda_smooth}"
 
         return rolling_Z_momentum
+
 
 #*____________________________________________________________________________________ #
 class linear_tempReg_feature(cm.Feature):
@@ -482,7 +681,10 @@ class linear_tempReg_feature(cm.Feature):
         # ======= 0. Initialize params if necessary =========
         if params is None:
             params = {
-                "window_sizes": [5, 10, 30, 60, 120, 240],
+                "window": [5, 10, 30, 60, 120, 240],
+                "smoothing_method": [None, "ewma", "average"],
+                "window_smooth": [5, 10, 15, 20, 25, 30],
+                "lambda_smooth": [0.1, 0.2, 0.3, 0.5, 0.7, 0.9],
             }
 
         # ======= I. Get Base Model init =========
@@ -494,15 +696,30 @@ class linear_tempReg_feature(cm.Feature):
             )
 
     #?____________________________________________________________________________________ #
-    def process_data(self):
-        self.processed_data = self.data.copy()
-
-        return self.processed_data
+    def process_data(self, smoothing_method: str = None, window_smooth: int = None, lambda_smooth: float = None):
+        if smoothing_method is None:
+            processed_data = self.data
+            
+        elif smoothing_method == "ewma":
+            processed_data = aux.ewma_smoothing(price_series=self.data, window=window_smooth, ind_lambda=lambda_smooth)
+            
+        elif smoothing_method == "average":
+            processed_data = aux.average_smoothing(price_series=self.data, window=window_smooth)
+            
+        else:
+            raise ValueError("Smoothing method not recognized")
+        
+        self.processed_data = processed_data
+        
+        return processed_data
     
     #?____________________________________________________________________________________ #
     def get_feature(
-        price_series: pd.Series,
+        self,
         window: int,
+        smoothing_method: str,
+        window_smooth: int,
+        lambda_smooth: float,
     ):
         # ======= 0. Intermediate functions =======
         def compute_slope(series):
@@ -529,29 +746,31 @@ class linear_tempReg_feature(cm.Feature):
             
             return R_squared
 
-        # ======= I. Verify the price series is large enough =======
-        if len(price_series) < window:
-            raise ValueError("Price series length must be greater than or equal to the regression window.")
+        # ======= I. Compute the different smoothed series =======
+        series = self.process_data(smoothing_method=smoothing_method, window_smooth=window_smooth, lambda_smooth=lambda_smooth).dropna().copy()
 
         # ======= II. Compute the rolling regression statistics =======
-        rolling_slope = price_series.rolling(window=window + 1).apply(compute_slope, raw=False)
-        rolling_tstat = price_series.rolling(window=window + 1).apply(compute_T_stats, raw=False)
-        rolling_pvalue = price_series.rolling(window=window + 1).apply(compute_Pvalue, raw=False)
-        rolling_r_squared = price_series.rolling(window=window + 1).apply(compute_R_squared, raw=False)
+        rolling_slope = series.rolling(window=window + 1).apply(compute_slope, raw=False)
+        rolling_tstat = series.rolling(window=window + 1).apply(compute_T_stats, raw=False)
+        rolling_pvalue = series.rolling(window=window + 1).apply(compute_Pvalue, raw=False)
+        rolling_r_squared = series.rolling(window=window + 1).apply(compute_R_squared, raw=False)
 
         # ======= III. Convert to pd.Series and Unscale =======
-        rolling_slope = pd.Series(rolling_slope, index=price_series.index) / (price_series + 1e-8)
-        rolling_tstat = pd.Series(rolling_tstat, index=price_series.index)
-        rolling_pvalue = pd.Series(rolling_pvalue, index=price_series.index)
-        rolling_r_squared = pd.Series(rolling_r_squared, index=price_series.index)
+        rolling_slope = pd.Series(rolling_slope, index=series.index) / (series + 1e-8)
+        rolling_tstat = pd.Series(rolling_tstat, index=series.index)
+        rolling_pvalue = pd.Series(rolling_pvalue, index=series.index)
+        rolling_r_squared = pd.Series(rolling_r_squared, index=series.index)
         
         # ======= IV. Change Name =======
-        rolling_slope.name = f"linear_slope_{window}"
-        rolling_tstat.name = f"linear_tstat_{window}"
-        rolling_pvalue.name = f"linear_pvalue_{window}"
-        rolling_r_squared.name = f"linear_r_squared_{window}"
+        features_df = pd.DataFrame({
+            f"linear_slope_{window}_{smoothing_method}_{window_smooth}_{lambda_smooth}": rolling_slope,
+            f"linear_tstat_{window}_{smoothing_method}_{window_smooth}_{lambda_smooth}": rolling_tstat,
+            f"linear_pvalue_{window}_{smoothing_method}_{window_smooth}_{lambda_smooth}": rolling_pvalue,
+            f"linear_r_squared_{window}_{smoothing_method}_{window_smooth}_{lambda_smooth}": rolling_r_squared,
+        })
+        
+        return features_df
 
-        return rolling_slope, rolling_tstat, rolling_pvalue, rolling_r_squared
 
 #*____________________________________________________________________________________ #
 class nonlinear_tempReg_feature(cm.Feature):
@@ -565,7 +784,10 @@ class nonlinear_tempReg_feature(cm.Feature):
         # ======= 0. Initialize params if necessary =========
         if params is None:
             params = {
-                "window_sizes": [5, 10, 30, 60, 120, 240],
+                "window": [5, 10, 30, 60, 120, 240],
+                "smoothing_method": [None, "ewma", "average"],
+                "window_smooth": [5, 10, 15, 20, 25, 30],
+                "lambda_smooth": [0.1, 0.2, 0.3, 0.5, 0.7, 0.9],
             }
 
         # ======= I. Get Base Model init =========
@@ -577,15 +799,30 @@ class nonlinear_tempReg_feature(cm.Feature):
             )
 
     #?____________________________________________________________________________________ #
-    def process_data(self):
-        self.processed_data = self.data.copy()
-
-        return self.processed_data
+    def process_data(self, smoothing_method: str = None, window_smooth: int = None, lambda_smooth: float = None):
+        if smoothing_method is None:
+            processed_data = self.data
+            
+        elif smoothing_method == "ewma":
+            processed_data = aux.ewma_smoothing(price_series=self.data, window=window_smooth, ind_lambda=lambda_smooth)
+            
+        elif smoothing_method == "average":
+            processed_data = aux.average_smoothing(price_series=self.data, window=window_smooth)
+            
+        else:
+            raise ValueError("Smoothing method not recognized")
+        
+        self.processed_data = processed_data
+        
+        return processed_data
     
     #?____________________________________________________________________________________ #
     def get_feature(
-        price_series: pd.Series,
+        self,
         window: int,
+        smoothing_method: str,
+        window_smooth: int,
+        lambda_smooth: float,
     ):
         # ======= 0. Intermediate functions =======
         def compute_slope(series):
@@ -618,32 +855,34 @@ class nonlinear_tempReg_feature(cm.Feature):
             
             return R_squared
 
-        # ======= I. Verify the price series is large enough =======
-        if len(price_series) < window:
-            raise ValueError("Price series length must be greater than or equal to the regression window.")
+        # ======= I. Compute the different smoothed series =======
+        series = self.process_data(smoothing_method=smoothing_method, window_smooth=window_smooth, lambda_smooth=lambda_smooth).dropna().copy()
 
         # ======= II. Compute the rolling regression statistics =======
-        rolling_slope = price_series.rolling(window=window + 1).apply(compute_slope, raw=False)
-        rolling_acceleration = price_series.rolling(window=window + 1).apply(compute_acceleration, raw=False)
-        rolling_tstat = price_series.rolling(window=window + 1).apply(compute_T_stats, raw=False)
-        rolling_pvalue = price_series.rolling(window=window + 1).apply(compute_Pvalue, raw=False)
-        rolling_r_squared = price_series.rolling(window=window + 1).apply(compute_R_squared, raw=False)
+        rolling_slope = series.rolling(window=window + 1).apply(compute_slope, raw=False)
+        rolling_acceleration = series.rolling(window=window + 1).apply(compute_acceleration, raw=False)
+        rolling_tstat = series.rolling(window=window + 1).apply(compute_T_stats, raw=False)
+        rolling_pvalue = series.rolling(window=window + 1).apply(compute_Pvalue, raw=False)
+        rolling_r_squared = series.rolling(window=window + 1).apply(compute_R_squared, raw=False)
 
         # ======= III. Convert to pd.Series and Unscale =======
-        rolling_slope = pd.Series(rolling_slope, index=price_series.index) / (price_series + 1e-8)
-        rolling_acceleration = pd.Series(rolling_acceleration, index=price_series.index) / (price_series + 1e-8)
-        rolling_tstat = pd.Series(rolling_tstat, index=price_series.index)
-        rolling_pvalue = pd.Series(rolling_pvalue, index=price_series.index)
-        rolling_r_squared = pd.Series(rolling_r_squared, index=price_series.index)
+        rolling_slope = pd.Series(rolling_slope, index=series.index) / (series + 1e-8)
+        rolling_acceleration = pd.Series(rolling_acceleration, index=series.index) / (series + 1e-8)
+        rolling_tstat = pd.Series(rolling_tstat, index=series.index)
+        rolling_pvalue = pd.Series(rolling_pvalue, index=series.index)
+        rolling_r_squared = pd.Series(rolling_r_squared, index=series.index)
         
         # ======= IV. Change Name =======
-        rolling_slope.name = f"nonlinear_slope_{window}"
-        rolling_acceleration.name = f"nonlinear_acceleration_{window}"
-        rolling_tstat.name = f"nonlinear_tstat_{window}"
-        rolling_pvalue.name = f"nonlinear_pvalue_{window}"
-        rolling_r_squared.name = f"nonlinear_r_squared_{window}"
+        features_df = pd.DataFrame({
+            f"nonlinear_slope_{window}_{smoothing_method}_{window_smooth}_{lambda_smooth}": rolling_slope,
+            f"nonlinear_acceleration_{window}_{smoothing_method}_{window_smooth}_{lambda_smooth}": rolling_acceleration,
+            f"nonlinear_tstat_{window}_{smoothing_method}_{window_smooth}_{lambda_smooth}": rolling_tstat,
+            f"nonlinear_pvalue_{window}_{smoothing_method}_{window_smooth}_{lambda_smooth}": rolling_pvalue,
+            f"nonlinear_r_squared_{window}_{smoothing_method}_{window_smooth}_{lambda_smooth}": rolling_r_squared,
+        })
 
-        return rolling_slope, rolling_acceleration, rolling_tstat, rolling_pvalue, rolling_r_squared
+        return features_df
+
 
 #*____________________________________________________________________________________ #
 class hurst_exponent_feature(cm.Feature):
@@ -658,6 +897,9 @@ class hurst_exponent_feature(cm.Feature):
         if params is None:
             params = {
                 "power": [3, 4, 5, 6, 7, 8],
+                "smoothing_method": [None, "ewma", "average"],
+                "window_smooth": [5, 10, 15, 20, 25, 30],
+                "lambda_smooth": [0.1, 0.2, 0.3, 0.5, 0.7, 0.9],
             }
 
         # ======= I. Get Base Model init =========
@@ -669,18 +911,34 @@ class hurst_exponent_feature(cm.Feature):
             )
 
     #?____________________________________________________________________________________ #
-    def process_data(self):
-        self.processed_data = self.data.copy()
-
-        return self.processed_data
+    def process_data(self, smoothing_method: str = None, window_smooth: int = None, lambda_smooth: float = None):
+        if smoothing_method is None:
+            processed_data = self.data
+            
+        elif smoothing_method == "ewma":
+            processed_data = aux.ewma_smoothing(price_series=self.data, window=window_smooth, ind_lambda=lambda_smooth)
+            
+        elif smoothing_method == "average":
+            processed_data = aux.average_smoothing(price_series=self.data, window=window_smooth)
+            
+        else:
+            raise ValueError("Smoothing method not recognized")
+        
+        self.processed_data = processed_data
+        
+        return processed_data
     
     #?____________________________________________________________________________________ #
     def get_feature(
-        price_series: pd.Series,
+        self,
         power: int,
+        smoothing_method: str,
+        window_smooth: int,
+        lambda_smooth: float,
     ):
-        # ======= I. Initialize the variables =======
-        prices_array = np.array(price_series)
+        # ======= I. Compute the different smoothed series =======
+        series = self.process_data(smoothing_method=smoothing_method, window_smooth=window_smooth, lambda_smooth=lambda_smooth).dropna().copy()
+        prices_array = np.array(series)
         returns_array = prices_array[1:] / prices_array[:-1] - 1
 
         n = 2**power
@@ -724,9 +982,9 @@ class hurst_exponent_feature(cm.Feature):
             pvalues = np.append(pvalues, pvalue)
 
         # ======= III. Convert to pd.Series and Center =======
-        hursts = pd.Series([np.nan] * n + list(hursts), index=price_series.index) - 0.5
-        tstats = pd.Series([np.nan] * n + list(tstats), index=price_series.index)
-        pvalues = pd.Series([np.nan] * n + list(pvalues), index=price_series.index)
+        hursts = pd.Series([np.nan] * n + list(hursts), index=series.index) - 0.5
+        tstats = pd.Series([np.nan] * n + list(tstats), index=series.index)
+        pvalues = pd.Series([np.nan] * n + list(pvalues), index=series.index)
 
         tstats_mean = tstats.rolling(window=252).mean()
         tstats = tstats - tstats_mean
@@ -735,11 +993,13 @@ class hurst_exponent_feature(cm.Feature):
         pvalues = pvalues - pvalues_mean
         
         # ======= IV. Change Name =======
-        hursts.name = f"hurst_exponent{power}"
-        tstats.name = f"hurst_tstat_{power}"
-        pvalues.name = f"hurst_pvalue_{power}"
-
-        return hursts, tstats, pvalues
+        features_df = pd.DataFrame({
+            f"hurst_exponent{power}_{smoothing_method}_{window_smooth}_{lambda_smooth}": hursts,
+            f"hurst_tstat_{power}_{smoothing_method}_{window_smooth}_{lambda_smooth}": tstats,
+            f"hurst_pvalue_{power}_{smoothing_method}_{window_smooth}_{lambda_smooth}": pvalues,
+        })
+        
+        return features_df
 
 
 
@@ -756,7 +1016,10 @@ class entropy_feature(cm.Feature):
         # ======= 0. Initialize params if necessary =========
         if params is None:
             params = {
-                "window_sizes": [5, 10, 30, 60, 120, 240],
+                "window": [5, 10, 30, 60, 120, 240],
+                "smoothing_method": [None, "ewma", "average"],
+                "window_smooth": [5, 10, 15, 20, 25, 30],
+                "lambda_smooth": [0.1, 0.2, 0.3, 0.5, 0.7, 0.9],
             }
 
         # ======= I. Get Base Model init =========
@@ -768,18 +1031,34 @@ class entropy_feature(cm.Feature):
             )
 
     #?____________________________________________________________________________________ #
-    def process_data(self):
-        self.processed_data = self.data.copy()
-
-        return self.processed_data
+    def process_data(self, smoothing_method: str = None, window_smooth: int = None, lambda_smooth: float = None):
+        if smoothing_method is None:
+            processed_data = self.data
+            
+        elif smoothing_method == "ewma":
+            processed_data = aux.ewma_smoothing(price_series=self.data, window=window_smooth, ind_lambda=lambda_smooth)
+            
+        elif smoothing_method == "average":
+            processed_data = aux.average_smoothing(price_series=self.data, window=window_smooth)
+            
+        else:
+            raise ValueError("Smoothing method not recognized")
+        
+        self.processed_data = processed_data
+        
+        return processed_data
     
     #?____________________________________________________________________________________ #
     def get_feature(
-        price_series: pd.Series,
+        self,
         window: int,
+        smoothing_method: str,
+        window_smooth: int,
+        lambda_smooth: float,
     ):
-        # ======= I. Extract the signs series =======
-        signs_series = aux.movements_signs(series=price_series)
+        # ======= I. Compute the different smoothed series =======
+        series = self.process_data(smoothing_method=smoothing_method, window_smooth=window_smooth, lambda_smooth=lambda_smooth).dropna().copy()
+        signs_series = aux.get_movements_signs(series=series)
 
         # ======= II. Compute the rolling entropy features =======
         rolling_shannon = signs_series.rolling(window=window + 1).apply(aux.get_shannon_entropy, raw=False)
@@ -788,18 +1067,21 @@ class entropy_feature(cm.Feature):
         rolling_kontoyiannis = signs_series.rolling(window=window + 1).apply(aux.get_kontoyiannis_entropy, raw=False)
 
         # ======= III. Convert to pd.Series and Center =======
-        rolling_shannon = pd.Series(rolling_shannon, index=price_series.index)
-        rolling_plugin = pd.Series(rolling_plugin, index=price_series.index)
-        rolling_lempel_ziv = pd.Series(rolling_lempel_ziv, index=price_series.index)
-        rolling_kontoyiannis = pd.Series(rolling_kontoyiannis, index=price_series.index)
+        rolling_shannon = pd.Series(rolling_shannon, index=series.index)
+        rolling_plugin = pd.Series(rolling_plugin, index=series.index)
+        rolling_lempel_ziv = pd.Series(rolling_lempel_ziv, index=series.index)
+        rolling_kontoyiannis = pd.Series(rolling_kontoyiannis, index=series.index)
         
         # ======= IV. Change Name =======
-        rolling_shannon.name = f"shannon_entropy_{window}"
-        rolling_plugin.name = f"plugin_entropy_{window}"
-        rolling_lempel_ziv.name = f"lempel_ziv_entropy_{window}"
-        rolling_kontoyiannis.name = f"kontoyiannis_entropy_{window}"
+        features_df = pd.DataFrame({
+            f"shannon_entropy_{window}_{smoothing_method}_{window_smooth}_{lambda_smooth}": rolling_shannon,
+            f"plugin_entropy_{window}_{smoothing_method}_{window_smooth}_{lambda_smooth}": rolling_plugin,
+            f"lempel_ziv_entropy_{window}_{smoothing_method}_{window_smooth}_{lambda_smooth}": rolling_lempel_ziv,
+            f"kontoyiannis_entropy_{window}_{smoothing_method}_{window_smooth}_{lambda_smooth}": rolling_kontoyiannis,
+        })
 
-        return rolling_shannon, rolling_plugin, rolling_lempel_ziv, rolling_kontoyiannis
+        return features_df
+
 
 #*____________________________________________________________________________________ #
 # def wavelets_features(

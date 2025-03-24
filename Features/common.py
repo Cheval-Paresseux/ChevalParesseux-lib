@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+from typing import Union
 from abc import ABC, abstractmethod
 from joblib import Parallel, delayed
 
@@ -9,7 +10,7 @@ class Feature(ABC):
     @abstractmethod
     def __init__(
         self, 
-        data: pd.Series | pd.DataFrame, 
+        data: Union[tuple, pd.Series, pd.DataFrame], 
         name: str, 
         params: dict, 
         n_jobs: int = 1
@@ -61,21 +62,18 @@ class Feature(ABC):
 
             - max_correlation (float): The maximum correlation allowed between two features.
         """
-        # ======= 0. Process data & extract params_grid =========
-        data = self.process_data()
+        # ======= 0. Extract params_grid =========
         params_grid = extract_universe(self.params)
 
         # ======= I. Compute the different feature series =========
-        features = Parallel(n_jobs=self.n_jobs)(delayed(self.get_feature)(data, params) for params in params_grid)
+        features = Parallel(n_jobs=self.n_jobs)(delayed(self.get_feature)(**params) for params in params_grid)
 
         # ======= II. Eliminate the features that are too correlated =========
         features_df = pd.concat(features, axis=1)
-        correlation_matrix = features_df.corr().abs()
-        upper_triangle = correlation_matrix.where(np.triu(np.ones(correlation_matrix.shape), k=1).astype(np.bool))
-        to_drop = [column for column in upper_triangle.columns if any(upper_triangle[column] > max_correlation)]
+        features_df = correlation_filter(features_df, max_correlation)
 
         # ======= III. Save the features =======
-        self.features = features_df.drop(columns=to_drop)
+        self.features = features_df
 
         return self.features
     
@@ -85,11 +83,11 @@ class Feature(ABC):
         This method is the main one to be called to extract the features.
         If the features have been fitted before, it will return the filtered features. Otherwise it returns all the grid features.
         """
-        if self.features:
+        if self.features is not None:
             return self.features
         else:
             params_grid = extract_universe(self.params)
-            features = Parallel(n_jobs=self.n_jobs)(delayed(self.get_feature)(self.processed_data, params) for params in params_grid)
+            features = Parallel(n_jobs=self.n_jobs)(delayed(self.get_feature)(**params) for params in params_grid)
             features_df = pd.concat(features, axis=1)
 
             return features_df
@@ -122,3 +120,21 @@ def extract_universe(params_grid: dict):
     return params_list
 
 #*____________________________________________________________________________________ #
+def correlation_filter(features_df: pd.DataFrame, max_correlation: float = 0.95):
+    """
+    This function filters the features based on the correlation between them.
+
+        - features_df (pd.DataFrame): The features to be filtered.
+        - max_correlation (float): The maximum correlation allowed between two features.
+    """
+    corr_matrix = features_df.corr().abs()
+
+    to_drop = set()
+    for i in range(len(corr_matrix.columns)):
+        for j in range(i+1, len(corr_matrix.columns)):
+            if corr_matrix.iloc[i, j] > max_correlation:
+                to_drop.add(corr_matrix.columns[j])  
+    
+    filtered_features = features_df.drop(columns=to_drop).copy()
+
+    return filtered_features

@@ -1,6 +1,6 @@
 import sys
 sys.path.append("../")
-from Models import LinearRegression as reg
+from Models import linearRegression as reg
 
 import numpy as np
 import pandas as pd
@@ -41,8 +41,8 @@ def get_simple_TempReg(series: pd.Series):
     # ======= II. Extract the coefficients and statistics =======
     coefficients = model.coefficients
     intercept = model.intercept
-    
-    statistics, residuals = model.get_statistics()
+    statistics = model.statistics
+    residuals = model.residuals
 
     return intercept, coefficients, statistics,residuals
 
@@ -57,8 +57,9 @@ def get_quad_TempReg(series: pd.Series):
     # ======= 2. Extract the coefficients and statistics =======
     coefficients = model.coefficients
     intercept = model.intercept
+    statistics = model.statistics
+    residuals = model.residuals
     
-    statistics, residuals = model.get_statistics()
 
     return intercept, coefficients, statistics, residuals
 
@@ -79,7 +80,7 @@ def get_OU_estimation(series: pd.Series):
     # ======== III. Extract Parameters ========
     theta = -model.coefficients[0]
     if theta > 0:
-        _, residuals = model.get_statistics()
+        residuals = model.residuals
         sigma = np.sqrt(np.var(residuals) * 2 * theta)
         half_life = np.log(2) / theta
     else:

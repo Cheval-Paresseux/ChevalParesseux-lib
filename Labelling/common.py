@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
 from abc import ABC, abstractmethod
 from joblib import Parallel, delayed
 
@@ -20,7 +21,7 @@ class Labeller(ABC):
 
         # ======= II. Initialize Auxilaries =======
         self.processed_data = None
-        self.labels_series = None
+        self.labels = None
     
     #?____________________________________________________________________________________ #
     @abstractmethod
@@ -38,14 +39,46 @@ class Labeller(ABC):
     
     #?____________________________________________________________________________________ #
     def extract(self):
-        if self.labels_series:
-            return self.labels_series
+        if self.labels:
+            return self.labels
         else:
             params_grid = extract_universe(self.params)
-            labels = Parallel(n_jobs=self.n_jobs)(delayed(self.get_labels)(self.processed_data, params) for params in params_grid)
-            labels_df = pd.concat(labels, axis=1)
+            labels = Parallel(n_jobs=self.n_jobs)(delayed(self.get_labels)(**params) for params in params_grid)
+            labels_df = pd.concat([series.to_frame().rename(lambda col: f"set_{i}", axis=1) for i, series in enumerate(labels)], axis=1)
+            
+            self.labels = labels_df
 
             return labels_df
+    
+    #?____________________________________________________________________________________ #
+    def plot_labels(self, labels_series: pd.Series):
+        # ======= I. Extract the series =======
+        price_series = self.data
+        label_series = labels_series.reindex(price_series.index, fill_value=np.nan)
+
+        
+        # ======= II. Plot the labels =======
+        plt.figure(figsize=(17, 4))
+        plt.plot(price_series, label="Prix", color="blue", linewidth=1)
+        
+        plt.scatter(price_series.index[label_series == 1], 
+                    price_series[label_series == 1], 
+                    color='green', label="Tendance haussière (+1)", marker="^", s=50)
+        
+        plt.scatter(price_series.index[label_series == -1], 
+                    price_series[label_series == -1], 
+                    color='red', label="Tendance baissière (-1)", marker="v", s=50)
+        
+        plt.scatter(price_series.index[label_series == 0], 
+                    price_series[label_series == 0], 
+                    color='gray', label="Neutre (0)", marker="o", s=10, alpha=0.5)
+
+        plt.title("Prix avec Labels de Tendance")
+        plt.xlabel("Date")
+        plt.ylabel("Prix")
+        plt.legend()
+        plt.grid(True)
+        plt.show()
 
 
 

@@ -29,13 +29,13 @@ def get_pearson_correlation(series_1: pd.Series, series_2: pd.Series):
 def get_distance_correlation(series_1: pd.Series, series_2: pd.Series, distance_measure: str = "manhattan", p: int = 2):
     # ======== I. Define the distance function ========
     distances = {
-        "euclidean": euclidean_distance,
-        "manhattan": manhattan_distance,
-        "chebyshev": chebyshev_distance,
-        "minkowski": lambda x, y: minkowski_distance(x, y, p),
-        "hamming": hamming_distance,
-        "angular": angular_distance,
-        "jaccard": jaccard_distance,
+        "euclidean": get_euclidean_distance,
+        "manhattan": get_manhattan_distance,
+        "chebyshev": get_chebyshev_distance,
+        "minkowski": lambda x, y: get_minkowski_distance(x, y, p),
+        "hamming": get_hamming_distance,
+        "angular": get_angular_distance,
+        "jaccard": get_jaccard_distance,
     }
     if distance_measure not in distances:
         raise ValueError("Unsupported distance measure. Choose from 'euclidean', 'manhattan', 'chebyshev', 'minkowski', 'hamming', 'cosine', 'jaccard'.")
