@@ -94,3 +94,5 @@ class DecisionTree(aux.ML_Model):
     def predict(self, X):
         return np.array([self.predict_one(row, self.tree) for _, row in X.iterrows()])
 
+def test(y):
+    pass
