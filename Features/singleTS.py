@@ -1,7 +1,7 @@
 import sys
 sys.path.append("../")
+import Measures as aux
 from Features import common as cm
-from Features import auxiliary as aux
 
 import numpy as np
 import pandas as pd

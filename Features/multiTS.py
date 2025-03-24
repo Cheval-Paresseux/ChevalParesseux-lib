@@ -1,6 +1,6 @@
 import sys
 sys.path.append("../")
-from Features import auxiliary as aux
+import Measures as aux
 from Features import common as cm
 
 import pandas as pd
@@ -182,7 +182,7 @@ class OU_feature(cm.Feature):
         return mu_series, theta_series, sigma_series, half_life_series
 
 #*____________________________________________________________________________________ #
-class OU_feature(cm.Feature):
+class kalmanOU_feature(cm.Feature):
     def __init__(
         self, 
         data: tuple | pd.DataFrame, 

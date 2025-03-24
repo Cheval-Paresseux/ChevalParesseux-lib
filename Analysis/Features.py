@@ -1,10 +1,7 @@
-import sys
-sys.path.append("../")
-from Features import auxiliary as aux
-
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.colors import LinearSegmentedColormap
 import seaborn as sns
 
 #! ==================================================================================== #
@@ -53,7 +50,6 @@ def feature_distribution(feature_series: pd.Series, feature_name: str = None):
     
     # ======= II. Store Descriptive Statistics =======
     descriptive_df = pd.DataFrame({"Mean": [mean], "Median": [median], "Min": [min_val], "Max": [max_val], "Std. Dev": [std_dev], "Skewness": [skewness], "Kurtosis": [kurtosis]}, index=[feature_name])
-    print(descriptive_df)
     
     # ======= III. Visualizing Descriptive Statistics =======
     plt.figure(figsize=(17, 5))
@@ -74,7 +70,47 @@ def feature_distribution(feature_series: pd.Series, feature_name: str = None):
     
     return descriptive_df
 
-#*____________________________________________________________________________________ #
+#! ==================================================================================== #
+#! ============================== Feature Analysis ==================================== #
+def feature_plot(feature_series: pd.Series, label_series: pd.Series, feature_name: str = None):
+    # ======= I. Visualization of the feature against labels =======
+    plt.figure(figsize=(17, 5))
+    plt.plot(label_series.index, feature_series, label=feature_name, linewidth=2)
 
+    for i, label in label_series.items():
+        if label == 1:
+            plt.scatter(i, 0, color='green', label='Reg: Upward Movement', s=10, zorder=5)
+        elif label == 0:
+            plt.scatter(i, 0, color='black', label='Reg: Neutral Movement', s=10, zorder=5)
+        elif label == -1:
+            plt.scatter(i, 0, color='red', label='Reg: Downward Movement', s=10, zorder=5)
+
+    plt.title(f'Feature {feature_name} against Labels')
+    plt.xlabel('Date')
+    plt.ylabel('Value')
+    plt.grid(False)
+    plt.show()
     
-    
+    label_feature_df = pd.DataFrame({'label': label_series, feature_name: feature_series})
+    plt.figure(figsize=(17, 5))
+    sns.boxplot(x='label', y=feature_name, data=label_feature_df)
+    plt.title(f'Boxplot of {feature_name} by Label')
+    plt.xlabel('Labels')
+    plt.ylabel(f'{feature_name} Values')
+    plt.show()
+
+#*____________________________________________________________________________________ #
+def features_correlation(label_feature_df: pd.DataFrame):
+    # ======= I. Correlation between the feature and the labels =======
+    light_green = (0, 0.7, 0.3, 0.2)
+    colors = [(0, 'green'), (0.5, light_green), (0.99, 'green'), (1, 'grey')]
+    n_bins = 1000
+    cmap_name = 'green_white'
+    cm = LinearSegmentedColormap.from_list(cmap_name, colors, N=n_bins)
+
+    corr_matrix = label_feature_df.corr()
+    plt.figure(figsize=(17, 5))
+    sns.heatmap(corr_matrix, annot=True, cmap=cm, vmin=-1, vmax=1, fmt='.2f', linewidths=0.5)
+    plt.title('Correlation Matrix')
+    plt.show()
+
