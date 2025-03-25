@@ -24,7 +24,7 @@ class OLSRegression(aux.ML_Model):
         self.statistics = None
         self.residuals = None
         
-    #?____________________________________________________________________________________ #
+    #?_____________________________ Build Functions ______________________________________ #
     def process_data(self, X_train, y_train):
         # ======= I. Convert X and y to numpy arrays =======
         X = np.array(X_train).reshape(-1, 1) if len(np.array(X_train).shape) == 1 else np.array(X_train)
@@ -53,7 +53,7 @@ class OLSRegression(aux.ML_Model):
 
         return coefficients, intercept
     
-    #?____________________________________________________________________________________ #
+    #?_____________________________ User Functions _______________________________________ #
     def fit(self, X_train, y_train):
         # ======= I. Process Data =======
         X, y = self.process_data(X_train, y_train)
@@ -99,7 +99,7 @@ class MSERegression(aux.ML_Model):
         self.residuals = None
         self.loss_history = None
         
-    #?____________________________________________________________________________________ #
+    #?_____________________________ Build Functions ______________________________________ #
     def process_data(self, X_train, y_train):
         # ======= I. Convert X and y to numpy arrays =======
         X = np.array(X_train).reshape(-1, 1) if len(np.array(X_train).shape) == 1 else np.array(X_train)
@@ -158,7 +158,7 @@ class MSERegression(aux.ML_Model):
 
         return coefficients, intercept
     
-    #?____________________________________________________________________________________ #
+    #?_____________________________ User Functions _______________________________________ #
     def fit(self, X_train, y_train, learning_rate: float = 0.01, epochs: int = 1000):
         # ======= I. Process Data =======
         X, y = self.process_data(X_train, y_train)
@@ -205,7 +205,7 @@ class RidgeRegression(aux.ML_Model):
         self.residuals = None
         self.loss_history = None
         
-    #?____________________________________________________________________________________ #
+    #?_____________________________ Build Functions ______________________________________ #
     def process_data(self, X_train, y_train):
         # ======= I. Convert X and y to numpy arrays =======
         X = np.array(X_train).reshape(-1, 1) if len(np.array(X_train).shape) == 1 else np.array(X_train)
@@ -265,7 +265,7 @@ class RidgeRegression(aux.ML_Model):
 
         return coefficients, intercept
     
-    #?____________________________________________________________________________________ #
+    #?_____________________________ User Functions _______________________________________ #
     def fit(self, X_train, y_train, learning_rate: float = 0.01, epochs: int = 1000):
         # ======= I. Process Data =======
         X, y = self.process_data(X_train, y_train)
@@ -312,7 +312,7 @@ class LassoRegression(aux.ML_Model):
         self.residuals = None
         self.loss_history = None
         
-    #?____________________________________________________________________________________ #
+    #?_____________________________ Build Functions ______________________________________ #
     def process_data(self, X_train, y_train):
         # ======= I. Convert X and y to numpy arrays =======
         X = np.array(X_train).reshape(-1, 1) if len(np.array(X_train).shape) == 1 else np.array(X_train)
@@ -372,7 +372,7 @@ class LassoRegression(aux.ML_Model):
 
         return coefficients, intercept
     
-    #?____________________________________________________________________________________ #
+    #?_____________________________ User Functions _______________________________________ #
     def fit(self, X_train, y_train, learning_rate: float = 0.01, epochs: int = 1000):
         # ======= I. Process Data =======
         X, y = self.process_data(X_train, y_train)
@@ -420,7 +420,7 @@ class ElasticNetRegression(aux.ML_Model):
         self.residuals = None
         self.loss_history = None
         
-    #?____________________________________________________________________________________ #
+    #?_____________________________ Build Functions ______________________________________ #
     def process_data(self, X_train, y_train):
         # ======= I. Convert X and y to numpy arrays =======
         X = np.array(X_train).reshape(-1, 1) if len(np.array(X_train).shape) == 1 else np.array(X_train)
@@ -481,7 +481,7 @@ class ElasticNetRegression(aux.ML_Model):
 
         return coefficients, intercept
     
-    #?____________________________________________________________________________________ #
+    #?_____________________________ User Functions _______________________________________ #
     def fit(self, X_train, y_train, learning_rate: float = 0.01, epochs: int = 1000):
         # ======= I. Process Data =======
         X, y = self.process_data(X_train, y_train)

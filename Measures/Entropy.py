@@ -186,4 +186,11 @@ def get_kontoyiannis_entropy(signs_series: pd.Series, window=None):
 
     return entropy
 
-
+#*____________________________________________________________________________________ #
+def get_gini_impurity(signs_series: pd.Series):
+    """
+    Computes Gini Impurity
+    """
+    classes, counts = np.unique(signs_series, return_counts=True)
+    probs = counts / counts.sum()
+    return 1 - np.sum(probs**2)

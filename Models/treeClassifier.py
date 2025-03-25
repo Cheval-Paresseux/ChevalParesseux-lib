@@ -1,98 +1,246 @@
 import sys
 sys.path.append("../")
 from Models import common as aux
+from Measures import Entropy as ent
 
 import numpy as np
+import pandas as pd
+from joblib import Parallel, delayed
 
+np.random.seed(72) # Time to take a beer ! 
 
 
 #! ==================================================================================== #
-#! ================================ Tree Classifiers ================================= #
-import numpy as np
-import pandas as pd
+#! ================================ Tree Classifiers ================================== #
+class Node:
+    """
+    This class represents a node in a Decision Tree. It can be a leaf node or a decision node.
+    It holds the following attributes:
+        - feature: The feature to split on
+        - threshold: The threshold to split the feature
+        - left: The left child node
+        - right: The right child node
+        - value: The predicted value if the node is a leaf node
+    """
+    def __init__(self, feature = None, threshold = None, left = None, right = None, *, value=None):
+        self.feature = feature
+        self.threshold = threshold
+        self.left = left
+        self.right = right
+        self.value = value
+    
+    def is_leaf_node(self):
+        return self.value is not None
 
-class DecisionTree(aux.ML_Model):
+#*____________________________________________________________________________________ #
+class DecisionTreeClassifier(aux.ML_Model):
     def __init__(
         self, 
-        max_depth=None, 
-        min_samples_split=2,  
-        n_features=None        
+        criterion: str = "gini", 
+        max_depth: int = None, 
+        min_samples_split: int = 2, 
+        min_samples_leaf: int = 1, 
+        max_features: int = None,
+        n_jobs: int = 1
     ):
+        # ======= I. Hyper Parameters ======= #
+        self.criterion = criterion
         self.max_depth = max_depth
         self.min_samples_split = min_samples_split
-        self.n_features = n_features
+        self.min_samples_leaf = min_samples_leaf
+        self.max_features = max_features
+        self.n_jobs = n_jobs
+        
+        # ======= II. Available Entropies ======= #
+        self.available_entropies = {
+            "gini": ent.get_gini_impurity,
+            "entropy": ent.get_shannon_entropy,
+        }
+        
+        # ======= III. Variables ======= #
         self.root = None
-
-    def gini_impurity(self, y):
-        classes, counts = np.unique(y, return_counts=True)
-        probs = counts / counts.sum()
-        return 1 - np.sum(probs ** 2)
-
-    def best_split(self, X, y, n_features, feature_indices, loss_function):
-        best_loss = float("inf")
-        best_feature = None
-        best_threshold = None
-
-        # If n_features is provided, use a subset of features
-        if n_features:
-            feature_indices = np.random.choice(X.columns, n_features, replace=False)
-
-        for feature in feature_indices:
-            values = X[feature].unique()
-            for val in values:
-                left_mask = X[feature] <= val
-                right_mask = ~left_mask
-                
-                if left_mask.sum() < self.min_samples_split or right_mask.sum() < self.min_samples_split:
-                    continue
-                
-                loss_left = loss_function(y[left_mask])
-                loss_right = loss_function(y[right_mask])
-                loss_split = (left_mask.sum() * loss_left + right_mask.sum() * loss_right) / len(y)
-
-                if loss_split < best_loss:
-                    best_loss = loss_split
-                    best_feature = feature
-                    best_threshold = val
+        self.feature_importances = None
         
-        return best_feature, best_threshold
+    #?_____________________________ Build Functions ______________________________________ #
+    def process_data(self, X_train, y_train):
+        X, y = np.array(X_train), np.array(y_train)
+        
+        return X, y
+    
+    #?____________________________________________________________________________________ #
+    def get_impurity(self, y):
+        """
+        This function computes the impurity of a node.
+            - y (np.array): The target values of the node.
+            - self.criterion (str): The criterion to use to compute the impurity.
+        """
+        if self.criterion in self.available_entropies:
+            impurity = self.available_entropies[self.criterion](y)
+        else:
+            raise ValueError(f"Unknown criterion '{self.criterion}'")
 
-    # Build tree recursively
+        return impurity
+    
+    #?____________________________________________________________________________________ #
+    def test_split(self, feature, y_sorted, threshold, nb_labels, parent_impurity):
+        # ======= I. Initialize the variables ======= #
+        left_mask = feature <= threshold
+        right_mask = ~left_mask
+        
+        # ======= II. Check if the split is valid ======= #
+        if np.sum(left_mask) < self.min_samples_leaf or np.sum(right_mask) < self.min_samples_leaf:
+            return (-1, threshold)
+        
+        # ======= III. Compute the impurities and the information gain ======= #
+        left_impurity = self.get_impurity(y_sorted[left_mask])
+        right_impurity = self.get_impurity(y_sorted[right_mask])
+        
+        # ======= IV. Compute the information gain ======= #
+        child_impurity = (np.sum(left_mask) / nb_labels) * left_impurity + (np.sum(right_mask) / nb_labels) * right_impurity
+        information_gain = parent_impurity - child_impurity
+        
+        return (information_gain, threshold)
+    
+    #?____________________________________________________________________________________ #
+    def get_best_split(self, X, y, features_indexes):
+        # ======= I. Initialize the variables ======= #
+        best_gain = -1
+        split_feature, split_threshold = None, None
+        parent_impurity = self.get_impurity(y)
+        nb_labels = len(y)
+
+        # ======= II. Precompute sorted features ======= #
+        sorted_features = {}
+        for feature_idx in features_indexes:
+            feature = X[:, feature_idx]
+            sorted_idx = np.argsort(feature)
+            sorted_features[feature_idx] = (feature[sorted_idx], y[sorted_idx])
+        
+        # ======= III. Define the Process Feature funciton ======= #
+        def process_feature(feature_idx):
+            # Get the sorted feature and target values
+            feature, y_sorted = sorted_features[feature_idx]
+            unique_values = np.unique(feature)
+            
+            # Check if there is no variance
+            if len(unique_values) == 1:
+                return None 
+
+            # Compute the possible splits and their information gain
+            possible_thresholds = (unique_values[:-1] + unique_values[1:]) / 2
+            thresholds_results = [self.test_split(feature, y_sorted, threshold, nb_labels, parent_impurity) for threshold in possible_thresholds]
+            
+            return feature_idx, thresholds_results
+        
+        # ======= IV. Process the features in parallel ======= #
+        feature_results = Parallel(n_jobs=self.n_jobs)(delayed(process_feature)(feature_idx) for feature_idx in features_indexes)
+
+        # ======= V. Check each result for best gain ======= #
+        for feature_idx, thresholds_results in feature_results:
+            if thresholds_results is None:
+                continue  # Skip if no valid results
+            
+            for information_gain, threshold in thresholds_results:
+                if information_gain > best_gain:
+                    best_gain = information_gain
+                    split_feature, split_threshold = feature_idx, threshold
+
+        return split_feature, split_threshold, best_gain
+    
+    #?____________________________________________________________________________________ #
     def build_tree(self, X, y, depth=0):
-        if len(np.unique(y)) == 1 or (self.max_depth and depth >= self.max_depth):
-            return np.argmax(np.bincount(y))
+        # ======= I. Initialize the variables ======= #
+        nb_samples, nb_features = X.shape
+        num_labels = len(np.unique(y))
 
-        best_feature, best_threshold = self.best_split(X, y, self.n_features, X.columns, self.gini_impurity)
+        # ======= II. Check Stopping Criteria ======= #
+        if (depth >= self.max_depth or num_labels == 1 or nb_samples < self.min_samples_split):
+            leaf_value = np.argmax(np.bincount(y))
+            node = Node(value=leaf_value)
+            return node
+
+        # ======= III. Get a random subset of the features ======= #
+        max_features = min(nb_features, self.max_features) if self.max_features else nb_features
+        features_subset_indexes = np.random.choice(nb_features, max_features, replace=False)
+
+        # ======= IV. Get the best split ======= #
+        best_feature, best_threshold, best_gain = self.get_best_split(X, y, features_subset_indexes)
         
-        if best_feature is None:
-            return np.argmax(np.bincount(y))
+        # ======= V. Check if the current split can't be improved ======= #
+        if best_gain == -1:
+            # If no good split, return leaf node
+            leaf_value = np.argmax(np.bincount(y))
+            node = Node(value=leaf_value)
+            return node
 
-        left_mask = X[best_feature] <= best_threshold
+        # ======= VI. Split the data and build the subtrees ======= #
+        left_mask = X[:, best_feature] <= best_threshold
         right_mask = ~left_mask
 
-        return {
-            "feature": best_feature,
-            "threshold": best_threshold,
-            "left": self.build_tree(X[left_mask], y[left_mask], depth + 1),
-            "right": self.build_tree(X[right_mask], y[right_mask], depth + 1),
-        }
+        left_subtree = self.build_tree(X[left_mask], y[left_mask], depth + 1)
+        right_subtree = self.build_tree(X[right_mask], y[right_mask], depth + 1)
+        
+        # ======= VII. Return the decision node ======= #
+        node = Node(best_feature, best_threshold, left_subtree, right_subtree)
 
-    # Fit the model to the data
-    def fit(self, X, y):
-        self.tree = self.build_tree(X, y)
+        return node
 
-    # Predict a single sample recursively
-    def predict_one(self, x, tree):
-        if isinstance(tree, dict):
-            if x[tree["feature"]] <= tree["threshold"]:
-                return self.predict_one(x, tree["left"])
-            else:
-                return self.predict_one(x, tree["right"])
-        return tree
+    #?____________________________________________________________________________________ #
+    def traverse_tree(self, row, node):
+        if node.is_leaf_node():
+            # We found a leaf node
+            return node.value
+        
+        elif row[node.feature] <= node.threshold:
+            # We go left
+            return self.traverse_tree(row, node.left)
+        
+        else:
+            # We go right
+            return self.traverse_tree(row, node.right)
+    
+    #?____________________________________________________________________________________ #
+    def get_features_importances(self, X, y):
+        # ======= 0. Define the recursive function ======= #
+        def compute_importance(node, total_samples):
+            # Base case: we reached a leaf node
+            if node is None or node.is_leaf_node():
+                return
 
-    # Predict for a batch of data
-    def predict(self, X):
-        return np.array([self.predict_one(row, self.tree) for _, row in X.iterrows()])
+            # Update the importance of the feature used to split the node
+            left_samples = np.sum(X[:, node.feature] <= node.threshold)
+            right_samples = total_samples - left_samples
 
-def test(y):
-    pass
+            self.features_importances[node.feature] += left_samples + right_samples
+            compute_importance(node.left, left_samples)
+            compute_importance(node.right, right_samples)
+
+        # ======= I. Initialize the feature importances ======= #
+        self.features_importances = np.zeros(X.shape[1])
+        
+        # ======= II. Compute the feature importances ======= #
+        compute_importance(self.root, len(y))
+        
+        # ======= III. Normalize the feature importances ======= #
+        self.features_importances /= np.sum(self.features_importances)
+        
+        return self.features_importances
+    
+    #?_____________________________ User Functions _______________________________________ #
+    def fit(self, X_train: pd.DataFrame, y_train: pd.Series):
+        # ======= I. Process the data ======= #
+        X, y = self.process_data(X_train, y_train)
+        
+        # ======= II. Build the tree ======= #
+        self.root = self.build_tree(X, y)
+        
+        # ======= III. Compute the key model statistics ======= #
+        features_importances = self.get_features_importances(X, y)
+        
+        return features_importances
+
+    #?____________________________________________________________________________________ #
+    def predict(self, X: pd.DataFrame):
+        predictions = np.array([self.traverse_tree(row, self.root) for row in np.array(X)])
+        return predictions
+
