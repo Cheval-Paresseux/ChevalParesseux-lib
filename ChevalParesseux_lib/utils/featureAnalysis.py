@@ -109,7 +109,7 @@ def features_correlation(label_feature_df: pd.DataFrame):
     cm = LinearSegmentedColormap.from_list(cmap_name, colors, N=n_bins)
 
     corr_matrix = label_feature_df.corr()
-    plt.figure(figsize=(17, 5))
+    plt.figure(figsize=(17, 3))
     sns.heatmap(corr_matrix, annot=True, cmap=cm, vmin=-1, vmax=1, fmt='.2f', linewidths=0.5)
     plt.title('Correlation Matrix')
     plt.show()

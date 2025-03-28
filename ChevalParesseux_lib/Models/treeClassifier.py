@@ -20,12 +20,13 @@ class Node:
         - right: The right child node
         - value: The predicted value if the node is a leaf node
     """
-    def __init__(self, feature = None, threshold = None, left = None, right = None, *, value=None):
+    def __init__(self, feature = None, threshold = None, left = None, right = None, *, value=None, samples=None):
         self.feature = feature
         self.threshold = threshold
         self.left = left
         self.right = right
         self.value = value
+        self.samples = samples
     
     def is_leaf_node(self):
         return self.value is not None
@@ -153,8 +154,9 @@ class DecisionTreeClassifier(com.ML_Model):
 
         # ======= II. Check Stopping Criteria ======= #
         if (depth >= self.max_depth or num_labels == 1 or nb_samples < self.min_samples_split):
-            leaf_value = np.argmax(np.bincount(y))
-            node = Node(value=leaf_value)
+            leaf_value = pd.Series(y).value_counts().idxmax()
+            leaf_samples = pd.Series(y).groupby(y).count().tolist()
+            node = Node(value=leaf_value, samples=leaf_samples)
             return node
 
         # ======= III. Get a random subset of the features ======= #
@@ -167,8 +169,9 @@ class DecisionTreeClassifier(com.ML_Model):
         # ======= V. Check if the current split can't be improved ======= #
         if best_gain == -1:
             # If no good split, return leaf node
-            leaf_value = np.argmax(np.bincount(y))
-            node = Node(value=leaf_value)
+            leaf_value = pd.Series(y).value_counts().idxmax()
+            leaf_samples = pd.Series(y).groupby(y).count().tolist()
+            node = Node(value=leaf_value, samples=leaf_samples)
             return node
 
         # ======= VI. Split the data and build the subtrees ======= #
@@ -179,7 +182,7 @@ class DecisionTreeClassifier(com.ML_Model):
         right_subtree = self.build_tree(X[right_mask], y[right_mask], depth + 1)
         
         # ======= VII. Return the decision node ======= #
-        node = Node(best_feature, best_threshold, left_subtree, right_subtree)
+        node = Node(best_feature, best_threshold, left_subtree, right_subtree, samples=[np.sum(left_mask), np.sum(right_mask)])
 
         return node
 

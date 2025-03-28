@@ -1,5 +1,5 @@
 from ..StrategyBacktest import Strategies as st
-from ..utils import PortfolioStatistics as ft
+from ..utils import financialMetrics as ft
 
 import pandas as pd
 import numpy as np

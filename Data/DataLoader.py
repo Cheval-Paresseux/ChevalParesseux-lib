@@ -47,8 +47,8 @@ def load_dataList(ticker_list: list = None):
         # Remove duplicates by converting the list to a set and back to a list
         ticker_list = list(set(ticker_list))
 
-    data_list = []
+    data_list = {}
     for ticker in ticker_list:
-        data_list.append(load_data(ticker))
+        data_list[ticker] = (load_data(ticker))
 
     return data_list

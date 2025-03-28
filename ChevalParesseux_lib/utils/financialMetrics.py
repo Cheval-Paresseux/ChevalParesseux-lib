@@ -3,8 +3,8 @@ import pandas as pd
 
 
 
-# ==================================================================================== #
-# ============================== Strategy Statistics  ================================ #
+#! ==================================================================================== #
+#! ============================== Strategy Statistics  ================================ #
 def get_distribution(returns_series: pd.Series, frequence: str = "daily"):
     """
     - Expected Return: The annualized mean return, indicating average performance.
@@ -37,7 +37,7 @@ def get_distribution(returns_series: pd.Series, frequence: str = "daily"):
     
     return distribution_stats
 
-# ____________________________________________________________________________________ #
+#*____________________________________________________________________________________ #
 def get_risk_measures(returns_series: pd.Series):
     """
     - Maximum Drawdown: Largest observed loss from peak to trough, a measure of downside risk.
@@ -71,7 +71,7 @@ def get_risk_measures(returns_series: pd.Series):
     
     return risk_stats
 
-# ____________________________________________________________________________________ #
+#*____________________________________________________________________________________ #
 def get_market_sensitivity(returns_series: pd.Series, market_returns: pd.Series, frequence: str = "daily"):
     """
     - Beta: Sensitivity to market movements.
@@ -106,7 +106,7 @@ def get_market_sensitivity(returns_series: pd.Series, market_returns: pd.Series,
     
     return market_sensitivity_stats
 
-# ____________________________________________________________________________________ #
+#*____________________________________________________________________________________ #
 def get_performance_measures(returns_series: pd.Series, market_returns: pd.Series, risk_free_rate: float = 0.0, frequence: str = "daily"):
     """
     - Sharpe Ratio: Risk-adjusted returns per unit of volatility.
