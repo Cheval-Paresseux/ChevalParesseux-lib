@@ -130,7 +130,7 @@ def get_performance_measures(returns_series: pd.Series, market_returns: pd.Serie
     drawdown = risk_stats["drawdown"]
     maximum_drawdown = risk_stats["maximum_drawdown"]
     
-    market_sensitivity_stats = get_market_sensitivity(returns_series, market_returns, risk_free_rate, frequence)
+    market_sensitivity_stats = get_market_sensitivity(returns_series, market_returns, frequence)
     beta = market_sensitivity_stats["beta"]
     tracking_error = market_sensitivity_stats["tracking_error"]
     

@@ -63,13 +63,12 @@ class Backtest():
         self.strategy_params = strategy_params
     
     #*____________________________________________________________________________________ #
-    def run_strategy(self):
+    def run_strategy(self, data):
         """
         This method is used to run the strategy and extract the operations.
         """
         # ======= I. Set up Parameters and Data =======
         self.strategy.set_params(**self.strategy_params)
-        data = self.strategy.load_data(self.ticker, self.start_date, self.end_date)
         processed_data = self.strategy.process_data()
         
         # I.2 Store the data

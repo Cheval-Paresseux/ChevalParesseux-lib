@@ -1,8 +1,3 @@
-import sys
-sys.path.append("../")
-import Data as dt
-import Features as ft
-
 import pandas as pd
 import numpy as np
 from abc import ABC, abstractmethod
@@ -40,12 +35,6 @@ class Strategy(ABC):
         """This method should be used to set the different parameters of the model."""
         pass
     
-    #*____________________________________________________________________________________ #
-    @abstractmethod
-    def load_data(self):
-        """This method should be used to load the data."""
-        pass
-
     #*____________________________________________________________________________________ #
     @abstractmethod
     def process_data(self):
@@ -160,18 +149,6 @@ class MA_crossover(Strategy):
     #*____________________________________________________________________________________ #
     def set_params(self, window: int):
         self.window = window
-    
-    #*____________________________________________________________________________________ #
-    def load_data(self, ticker: str, start_date: str, end_date: str):
-        data = dt.load_data(ticker)
-        data = data.loc[start_date:end_date]
-        
-        data['date'] = data.index
-        data.reset_index(drop=True, inplace=True)
-
-        self.data = data
-
-        return data
     
     #*____________________________________________________________________________________ #
     def process_data(self):

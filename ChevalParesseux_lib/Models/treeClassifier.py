@@ -20,13 +20,14 @@ class Node:
         - right: The right child node
         - value: The predicted value if the node is a leaf node
     """
-    def __init__(self, feature = None, threshold = None, left = None, right = None, *, value=None, samples=None):
+    def __init__(self, feature = None, threshold = None, left = None, right = None, *, value=None, samples=None, impurity=None):
         self.feature = feature
         self.threshold = threshold
         self.left = left
         self.right = right
         self.value = value
         self.samples = samples
+        self.impurity = impurity
     
     def is_leaf_node(self):
         return self.value is not None
@@ -151,12 +152,13 @@ class DecisionTreeClassifier(com.ML_Model):
         # ======= I. Initialize the variables ======= #
         nb_samples, nb_features = X.shape
         num_labels = len(np.unique(y))
+        impurity = self.get_impurity(y)
 
         # ======= II. Check Stopping Criteria ======= #
         if (depth >= self.max_depth or num_labels == 1 or nb_samples < self.min_samples_split):
             leaf_value = pd.Series(y).value_counts().idxmax()
             leaf_samples = pd.Series(y).groupby(y).count().tolist()
-            node = Node(value=leaf_value, samples=leaf_samples)
+            node = Node(value=leaf_value, samples=leaf_samples, impurity=impurity)
             return node
 
         # ======= III. Get a random subset of the features ======= #
@@ -171,7 +173,7 @@ class DecisionTreeClassifier(com.ML_Model):
             # If no good split, return leaf node
             leaf_value = pd.Series(y).value_counts().idxmax()
             leaf_samples = pd.Series(y).groupby(y).count().tolist()
-            node = Node(value=leaf_value, samples=leaf_samples)
+            node = Node(value=leaf_value, samples=leaf_samples, impurity=impurity)
             return node
 
         # ======= VI. Split the data and build the subtrees ======= #
@@ -182,7 +184,7 @@ class DecisionTreeClassifier(com.ML_Model):
         right_subtree = self.build_tree(X[right_mask], y[right_mask], depth + 1)
         
         # ======= VII. Return the decision node ======= #
-        node = Node(best_feature, best_threshold, left_subtree, right_subtree, samples=[np.sum(left_mask), np.sum(right_mask)])
+        node = Node(best_feature, best_threshold, left_subtree, right_subtree, samples=[np.sum(left_mask), np.sum(right_mask)], impurity=impurity)
 
         return node
 
@@ -244,4 +246,7 @@ class DecisionTreeClassifier(com.ML_Model):
     def predict(self, X: pd.DataFrame):
         predictions = np.array([self.traverse_tree(row, self.root) for row in np.array(X)])
         return predictions
+
+
+
 
