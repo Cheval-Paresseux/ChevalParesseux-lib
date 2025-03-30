@@ -15,7 +15,7 @@ class Strategy(ABC):
         self.data = None
         self.processed_data = None
     
-    #*____________________________________________________________________________________ #
+    #?____________________________________________________________________________________ #
     def set_names(self, date_name: str, bid_open_name: str, ask_open_name: str):
         """
         Set the names of the columns used in the data, it is important to ensure the operations are done using the correct price. 
@@ -29,13 +29,13 @@ class Strategy(ABC):
         self.bid_open_name = bid_open_name
         self.ask_open_name = ask_open_name
     
-    #*____________________________________________________________________________________ #
+    #?____________________________________________________________________________________ #
     @abstractmethod
     def set_params(self):
         """This method should be used to set the different parameters of the model."""
         pass
     
-    #*____________________________________________________________________________________ #
+    #?____________________________________________________________________________________ #
     @abstractmethod
     def process_data(self):
         """
@@ -45,7 +45,7 @@ class Strategy(ABC):
         """
         pass
     
-    #*____________________________________________________________________________________ #
+    #?____________________________________________________________________________________ #
     @abstractmethod
     def fit(self):
         """
@@ -54,7 +54,7 @@ class Strategy(ABC):
         """
         pass
     
-    #*____________________________________________________________________________________ #
+    #?____________________________________________________________________________________ #
     @abstractmethod
     def predict(self):
         """
@@ -63,7 +63,7 @@ class Strategy(ABC):
         """
         pass
 
-    #*____________________________________________________________________________________ #
+    #?____________________________________________________________________________________ #
     def operate(self, df: pd.DataFrame):
         """
         This method is common to all strategies and is used to extract the operations from the signals.
@@ -80,15 +80,15 @@ class Strategy(ABC):
         # II.1 Set first and last signal to 0 to ensure that the operations are closed
         signals_df.reset_index(drop=True, inplace=True)
 
-        signals_df.loc[0, "signal"] = 0
-        signals_df.loc[len(signals_df) - 1, "signal"] = 0
-        signals_df.loc[len(signals_df) - 2, "signal"] = 0
+        signals_df.loc[0, "signals"] = 0
+        signals_df.loc[len(signals_df) - 1, "signals"] = 0
+        signals_df.loc[len(signals_df) - 2, "signals"] = 0
 
         # II.2 Extract the Signal Change and the Entry Points
-        signals_df["Signal Change"] = signals_df["signal"].diff()
-        signals_df["Signal Change"] = signals_df["Signal Change"].shift(1) #! Shifted to avoid look-ahead bias
+        signals_df["signal_change"] = signals_df["signals"].diff()
+        signals_df["signal_change"] = signals_df["signal_change"].shift(1) #! Shifted to avoid look-ahead bias
 
-        entry_points = signals_df[signals_df["Signal Change"] != 0].copy()
+        entry_points = signals_df[signals_df["signal_change"] != 0].copy()
         nb_entry = len(entry_points)
         
         # ======= III. Create an Operation for each entry point =======
@@ -100,7 +100,7 @@ class Strategy(ABC):
             previous_row = signals_df.iloc[current_row.name - 1]
 
             # III.2 Extract Information for a Long Operation
-            if (current_row["Signal Change"] > 0 and previous_row["signal"] == 1):
+            if (current_row["signal_change"] > 0 and previous_row["signals"] == 1):
                 side = 1
                 entry_date = current_row[self.date_name]
                 entry_price = current_row[self.ask_open_name]
@@ -109,7 +109,7 @@ class Strategy(ABC):
                 pnl = (exit_price - entry_price)
 
             # III.3 Extract Information for a Short Operation
-            elif (current_row["Signal Change"] < 0 and previous_row["signal"] == -1):
+            elif (current_row["signal_change"] < 0 and previous_row["signals"] == -1):
                 side = -1
                 entry_date = current_row[self.date_name]
                 entry_price = current_row[self.bid_open_name]
@@ -135,45 +135,3 @@ class Strategy(ABC):
             sequential_id += 1
         
         return operations_df, signals_df
-
-
-
-#! ==================================================================================== #
-#! ====================================== Strategies ================================== #
-class MA_crossover(Strategy):
-    def __init__(self):
-        super().__init__()
-
-        self.window = None
-    
-    #*____________________________________________________________________________________ #
-    def set_params(self, window: int):
-        self.window = window
-    
-    #*____________________________________________________________________________________ #
-    def process_data(self):
-        data = self.data.copy()
-        close_series = data['close']
-
-        moving_average = ft.average_features(price_series=close_series, window=self.window)
-        data['MA'] = moving_average
-
-        processed_data = [data]
-
-        self.processed_data = processed_data
-
-        return processed_data
-    
-    #*____________________________________________________________________________________ #
-    def fit(self):
-        pass
-
-    #*____________________________________________________________________________________ #
-    def predict(self, df: pd.DataFrame):
-        signals_df = df.copy()
-        signals_df['signal'] = 0
-
-        signals_df.loc[signals_df['MA'] < 0, 'signal'] = 1
-        signals_df.loc[signals_df['MA'] > 0, 'signal'] = -1
-
-        return signals_df

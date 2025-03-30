@@ -11,20 +11,16 @@ from joblib import Parallel, delayed
 #! ==================================================================================== #
 #! ================================== Backtest Model ================================== #
 class Backtest():
-    def __init__(self, strategy: st.Strategy, brokerage_cost: float = 0.0, slippage_cost: float = 0.0):
+    def __init__(self, strategy: st.Strategy):
         # ======= Backtest parameters =======
-        self.ticker = None
-        self.start_date = None
-        self.end_date = None
-        self.strategy_params = None
-        
-        self.brokerage_cost = brokerage_cost
-        self.slippage_cost = slippage_cost
+        self.brokerage_cost = None
+        self.slippage_cost = None
         
         self.n_jobs = 1
         
         # ======= Strategy inputs=======
         self.strategy = strategy
+        self.strategy_params = None
         self.data = None
         self.processed_data = None
 
@@ -34,7 +30,7 @@ class Backtest():
         self.full_operations_df = None
         self.full_signals_df = None
 
-    #*____________________________________________________________________________________ #
+    #?_____________________________ Params Functions _____________________________________ #
     def set_computingParams(self, date_name: str, bid_open_name: str, ask_open_name: str, n_jobs: int = 1):
         """
         This method is used to set the different parameters to ensure the correct computation of the operations.
@@ -47,32 +43,21 @@ class Backtest():
         self.strategy.set_names(date_name=date_name, bid_open_name=bid_open_name, ask_open_name=ask_open_name)
         self.n_jobs = n_jobs
     
-    #*____________________________________________________________________________________ #
-    def set_backtestParams(self, ticker: str, start_date: str, end_date: str, strategy_params: dict):
-        """
-        This method is used to set the different parameters of the backtest.
+    #?____________________________________________________________________________________ #
+    def set_backtestParams(self, strategy_params: dict, brokerage_cost: float = 0.0, slippage_cost: float = 0.0):
         
-            - ticker (str) : ticker of the asset to backtest
-            - start_date (str) : start date of the backtest
-            - end_date (str) : end date of the backtest
-            - strategy_params (dict) : parameters of the strategy
-        """
-        self.ticker = ticker
-        self.start_date = start_date
-        self.end_date = end_date
         self.strategy_params = strategy_params
+        self.brokerage_cost = brokerage_cost
+        self.slippage_cost = slippage_cost
     
-    #*____________________________________________________________________________________ #
-    def run_strategy(self, data):
-        """
-        This method is used to run the strategy and extract the operations.
-        """
+    #?_____________________________ Build Functions ______________________________________ #
+    def run_strategy(self):
         # ======= I. Set up Parameters and Data =======
+        data = self.data.copy()
         self.strategy.set_params(**self.strategy_params)
-        processed_data = self.strategy.process_data()
+        processed_data = self.strategy.process_data(data)
         
         # I.2 Store the data
-        self.data = data
         self.processed_data = processed_data
         
         # ======= II. Run the Strategy =======
@@ -92,7 +77,7 @@ class Backtest():
         
         return full_operations_df, full_signals_df, operations_dfs, signals_dfs
     
-    #*____________________________________________________________________________________ #
+    #?____________________________________________________________________________________ #
     def apply_slippage(self, operations_df: pd.DataFrame):
         """
         This method is used to apply the slippage on the operations by modifying the entry and exit prices.
@@ -120,7 +105,7 @@ class Backtest():
 
         return adjusted_operations_df
     
-    #*____________________________________________________________________________________ #
+    #?____________________________________________________________________________________ #
     def apply_brokerage(self, operations_df: pd.DataFrame):
         """
         This method is used to apply the brokerage cost on the operations by modifying the PnL.
@@ -137,11 +122,14 @@ class Backtest():
 
         return adjusted_operations_df
 
-    #*____________________________________________________________________________________ #
-    def run_backtest(self):
+    #?_____________________________ User Functions _______________________________________ #
+    def run_backtest(self, data: pd.DataFrame):
         """
         This method is used to run the backtest.
         """
+        # ======= 0. Initialize Data =======
+        self.data = data
+        
         # ======= I. Run the Strategy =======
         full_operations_df, full_signals_df, operations_dfs, signals_dfs = self.run_strategy()
         full_operations_df = self.apply_slippage(full_operations_df)
@@ -165,7 +153,7 @@ class Backtest():
         name_series = self.strategy.ask_open_name
         full_signals_df['BuyAndHold_returns'] = (full_signals_df[name_series].shift(-1) - full_signals_df[name_series]) / full_signals_df[name_series]
         full_signals_df['BuyAndHold_cumret'] = (1 + full_signals_df['BuyAndHold_returns']).cumprod()
-        full_signals_df['strategy_returns'] = full_signals_df['signal'].shift(-1) * full_signals_df['BuyAndHold_returns']
+        full_signals_df['strategy_returns'] = full_signals_df['signals'].shift(-1) * full_signals_df['BuyAndHold_returns']
         full_signals_df['strategy_cumret'] = (1 + full_signals_df['strategy_returns']).cumprod()
         
         # ======= IV. Store the results =======
@@ -176,7 +164,7 @@ class Backtest():
         
         return full_operations_df, full_signals_df
         
-    #*____________________________________________________________________________________ #
+    #?____________________________________________________________________________________ #
     def plot_operationsBars(self, by_date: bool = False, BuyAndHold: bool = True, NoFees: bool = True, Fees: bool = True):
         """
         Plots the strategy's cumulative returns based on executed trades.  
@@ -219,7 +207,7 @@ class Backtest():
 
         return performance_stats
     
-    #*____________________________________________________________________________________ #
+    #?____________________________________________________________________________________ #
     def plot_timeBars(self):
         """
         This method is used to plot the strategy's cumulative returns based on time bars.
