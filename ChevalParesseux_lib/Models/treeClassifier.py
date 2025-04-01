@@ -4,8 +4,6 @@ from ..Measures import Entropy as ent
 import numpy as np
 import pandas as pd
 from joblib import Parallel, delayed
-
-np.random.seed(72) # Time to take a beer ! 
  
 
 #! ==================================================================================== #
@@ -41,7 +39,8 @@ class DecisionTreeClassifier(com.ML_Model):
         min_samples_split: int = 2, 
         min_samples_leaf: int = 1, 
         max_features: int = None,
-        n_jobs: int = 1
+        n_jobs: int = 1,
+        random_state: int = 72
     ):
         # ======= I. Hyper Parameters ======= #
         self.criterion = criterion
@@ -50,6 +49,7 @@ class DecisionTreeClassifier(com.ML_Model):
         self.min_samples_leaf = min_samples_leaf
         self.max_features = max_features
         self.n_jobs = n_jobs
+        np.random.seed(random_state)
         
         # ======= II. Available Entropies ======= #
         self.available_entropies = {

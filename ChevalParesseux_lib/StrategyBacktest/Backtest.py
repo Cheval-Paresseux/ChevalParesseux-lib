@@ -153,7 +153,7 @@ class Backtest():
         name_series = self.strategy.ask_open_name
         full_signals_df['BuyAndHold_returns'] = (full_signals_df[name_series].shift(-1) - full_signals_df[name_series]) / full_signals_df[name_series]
         full_signals_df['BuyAndHold_cumret'] = (1 + full_signals_df['BuyAndHold_returns']).cumprod()
-        full_signals_df['strategy_returns'] = full_signals_df['signals'].shift(-1) * full_signals_df['BuyAndHold_returns']
+        full_signals_df['strategy_returns'] = full_signals_df['signals'] * full_signals_df['BuyAndHold_returns'].shift(-1)
         full_signals_df['strategy_cumret'] = (1 + full_signals_df['strategy_returns']).cumprod()
         
         # ======= IV. Store the results =======
