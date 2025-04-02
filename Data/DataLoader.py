@@ -8,19 +8,23 @@ def load_data(ticker: str):
 
     data_nyse_dir = os.path.join(current_dir, 'dataNYSE')
     data_nasdaq_dir = os.path.join(current_dir, 'dataNASDAQ')
+    data_wdo_dir = os.path.join(current_dir, 'dataWDO')
 
     # ======= II. Construct the full paths to the CSV files  =======
     file_name = f'{ticker}.csv'
 
     csv_path_nyse = os.path.join(data_nyse_dir, file_name)
     csv_path_nasdaq = os.path.join(data_nasdaq_dir, file_name)
+    csv_path_wdo = os.path.join(data_wdo_dir, file_name)
 
     # ======= III. Load the data =======
-    try:
-        data = pd.read_csv(csv_path_nyse, index_col=0, parse_dates=True)
-    except FileNotFoundError:
-        data = pd.read_csv(csv_path_nasdaq, index_col=0, parse_dates=True)
-
+    for path in [csv_path_nyse, csv_path_nasdaq, csv_path_wdo]:
+        try:
+            data = pd.read_csv(path, parse_dates=True)
+            break  
+        except FileNotFoundError:
+            continue
+    
     return data
 
 

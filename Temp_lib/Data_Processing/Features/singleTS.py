@@ -15,7 +15,7 @@ class average_feature(com.Feature):
         self, 
         data: pd.Series, 
         name: str = "average" , 
-        params: list = None, 
+        params: dict = None, 
         n_jobs: int = 1
     ):
         # ======= 0. Initialize params if necessary =========
@@ -108,7 +108,7 @@ class median_feature(com.Feature):
         self, 
         data: pd.Series, 
         name: str = "median" , 
-        params: list = None, 
+        params: dict = None, 
         n_jobs: int = 1
     ):
         # ======= 0. Initialize params if necessary =========
@@ -201,7 +201,7 @@ class minimum_feature(com.Feature):
         self, 
         data: pd.Series, 
         name: str = "minimum" , 
-        params: list = None, 
+        params: dict = None, 
         n_jobs: int = 1
     ):
         # ======= 0. Initialize params if necessary =========
@@ -294,7 +294,7 @@ class maximum_feature(com.Feature):
         self, 
         data: pd.Series, 
         name: str = "maximum" , 
-        params: list = None, 
+        params: dict = None, 
         n_jobs: int = 1
     ):
         # ======= 0. Initialize params if necessary =========
@@ -389,7 +389,7 @@ class volatility_feature(com.Feature):
         self, 
         data: pd.Series, 
         name: str = "volatility" , 
-        params: list = None, 
+        params: dict = None, 
         n_jobs: int = 1
     ):
         # ======= 0. Initialize params if necessary =========
@@ -483,7 +483,7 @@ class skewness_feature(com.Feature):
         self, 
         data: pd.Series, 
         name: str = "skewness" , 
-        params: list = None, 
+        params: dict = None, 
         n_jobs: int = 1
     ):
         # ======= 0. Initialize params if necessary =========
@@ -577,7 +577,7 @@ class kurtosis_feature(com.Feature):
         self, 
         data: pd.Series, 
         name: str = "kurtosis" , 
-        params: list = None, 
+        params: dict = None, 
         n_jobs: int = 1
     ):
         # ======= 0. Initialize params if necessary =========
@@ -671,7 +671,7 @@ class quantile_feature(com.Feature):
         self, 
         data: pd.Series, 
         name: str = "quantile" , 
-        params: list = None, 
+        params: dict = None, 
         n_jobs: int = 1
     ):
         # ======= 0. Initialize params if necessary =========
@@ -770,7 +770,7 @@ class momentum_feature(com.Feature):
         self, 
         data: pd.Series, 
         name: str = "momentum" , 
-        params: list = None, 
+        params: dict = None, 
         n_jobs: int = 1
     ):
         # ======= 0. Initialize params if necessary =========
@@ -863,7 +863,7 @@ class Z_momentum_feature(com.Feature):
         self, 
         data: pd.Series, 
         name: str = "Z_momentum" , 
-        params: list = None, 
+        params: dict = None, 
         n_jobs: int = 1
     ):
         # ======= 0. Initialize params if necessary =========
@@ -956,7 +956,7 @@ class linear_tempReg_feature(com.Feature):
         self, 
         data: pd.Series, 
         name: str = "linear_tempreg" , 
-        params: list = None, 
+        params: dict = None, 
         n_jobs: int = 1
     ):
         # ======= 0. Initialize params if necessary =========
@@ -1087,7 +1087,7 @@ class nonlinear_tempReg_feature(com.Feature):
         self, 
         data: pd.Series, 
         name: str = "nonlinear_tempreg" , 
-        params: list = None, 
+        params: dict = None, 
         n_jobs: int = 1
     ):
         # ======= 0. Initialize params if necessary =========
@@ -1227,7 +1227,7 @@ class hurst_exponent_feature(com.Feature):
         self, 
         data: pd.Series, 
         name: str = "hurst_exponent" , 
-        params: list = None, 
+        params: dict = None, 
         n_jobs: int = 1
     ):
         # ======= 0. Initialize params if necessary =========
@@ -1374,7 +1374,7 @@ class entropy_feature(com.Feature):
         self, 
         data: pd.Series, 
         name: str = "entropy" , 
-        params: list = None, 
+        params: dict = None, 
         n_jobs: int = 1
     ):
         # ======= 0. Initialize params if necessary =========

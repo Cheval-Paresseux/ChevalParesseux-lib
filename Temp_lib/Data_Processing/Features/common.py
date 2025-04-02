@@ -48,7 +48,7 @@ class Feature(ABC):
     
     #?____________________________________________________________________________________ #
     @abstractmethod
-    def process_data(self) -> pd.DataFrame | pd.Series:
+    def process_data(self) -> Union[pd.DataFrame, pd.Series]:
         """
         This method is defined for each feature to process the data before extracting the features.
         It usually serves to clean the data, fill missing values..., etc. apply filters to the data.
