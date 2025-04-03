@@ -1,5 +1,3 @@
-from ..Prepping import common as com
-
 import os
 
 os.environ["MKL_NUM_THREADS"] = "1"
@@ -7,6 +5,63 @@ from statsmodels.tsa.stattools import adfuller, kpss
 import warnings
 import pandas as pd
 import numpy as np
+
+#! ==================================================================================== #
+#! ================================= Main Function ==================================== #
+def check_feature(
+    feature_series: pd.Series,
+    stationarity_threshold: float = 0.05, 
+    outliers_threshold: float = 5, 
+    mean_tolerance: float = 0.01, 
+    std_tolerance: float = 0.01, 
+):
+    """
+    This function checks a given feature series for various characteristics and store the results in a DataFrame.
+    Those values should be used to determine if the feature is suitable for training.
+    If some transformations are applied, you should use the transformation values for the testing data.
+    Parameters:
+        - feature_series (pd.Series): The feature series to be checked.
+        - stationarity_threshold (float): The threshold for stationarity tests.
+        - outliers_threshold (float): The threshold for outlier detection.
+        - mean_tolerance (float): The tolerance for the mean value.
+        - std_tolerance (float): The tolerance for the standard deviation.
+        - range_tolerance (float): The tolerance for the range of values.
+    
+    Returns:
+        - scaled_series (pd.Series): The normalized series.
+        - results_df (pd.DataFrame): A DataFrame containing the results of the checks.
+    """
+    # ======= I. Check for error values =======
+    clean_series, error_proportion, beginning_nans, middle_nans, infinite_indexes = check_for_error_values(feature_series=feature_series)
+    
+    # ======= II. Check for outliers =======
+    filtered_series, outliers_df = check_for_outliers(feature_series=clean_series,  threshold=outliers_threshold)
+    
+    # ======= III. Check for scale =======
+    scaled_series, mean, std = check_for_scale(feature_series=filtered_series, mean_tolerance=mean_tolerance, std_tolerance=std_tolerance)
+    
+    # ======= IV. Check for stationarity =======
+    dropped_series = scaled_series.dropna()
+    is_adf_stationary, is_kpss_stationary = check_for_stationarity(feature_series=dropped_series, threshold=stationarity_threshold)
+
+    outliers_proportion = len(outliers_df) / len(dropped_series) if len(dropped_series) > 0 else 0
+    # ======= V. Store results inside a DataFrame =======
+    results_df = pd.DataFrame({
+        "feature_name": feature_series.name,
+        "error_proportion": error_proportion,
+        "beginning_nans": len(beginning_nans),
+        "middle_nans": len(middle_nans),
+        "infinite_indexes": len(infinite_indexes),
+        "outliers_count": len(outliers_df),
+        "outliers_proportion": outliers_proportion,
+        "outliers_threshold": outliers_df["threshold"],
+        "mean": mean,
+        "std": std,
+        "is_adf_stationary": is_adf_stationary,
+        "is_kpss_stationary": is_kpss_stationary
+    }, index=[0])
+    
+    return scaled_series, results_df
 
 
 #! ==================================================================================== #
@@ -105,7 +160,6 @@ def check_for_scale(
     feature_series: pd.Series, 
     mean_tolerance: float = 0.01, 
     std_tolerance: float = 0.01, 
-    range_tolerance: float = 0.1
 ) -> tuple:
     """
     This function checks for scale in a given feature series.
@@ -113,36 +167,27 @@ def check_for_scale(
         - feature_series (pd.Series): The feature series to be checked for scale.
         - mean_tolerance (float): The tolerance for the mean value.
         - std_tolerance (float): The tolerance for the standard deviation.
-        - range_tolerance (float): The tolerance for the range of values.
     
     Returns:
         - auxiliary_series (pd.Series): The normalized series.
         - mean (float): The mean of the series.
         - std (float): The standard deviation of the series.
-        - min_val (float): The minimum value of the series.
-        - max_val (float): The maximum value of the series.
     """
     # ======= I. Check feature characteristics =======
     auxiliary_series = feature_series.copy()
     mean = auxiliary_series.mean()
     std = auxiliary_series.std()
-    min_val = auxiliary_series.min()
-    max_val = auxiliary_series.max()
 
     is_mean_near_zero = abs(mean) < mean_tolerance
     is_std_near_one = abs(std - 1) < std_tolerance
-    is_values_in_range = auxiliary_series.between(-1 - range_tolerance, 1 + range_tolerance).all()
 
     # ======= II. Apply necessary normalization =======
     if not is_mean_near_zero:
         auxiliary_series -= mean
     if not is_std_near_one:
         auxiliary_series /= std
-    if not is_values_in_range:
-        auxiliary_series = (auxiliary_series - min_val) / (max_val - min_val)
-        auxiliary_series = auxiliary_series * 2 - 1
     
-    return auxiliary_series, mean, std, min_val, max_val
+    return auxiliary_series, mean, std
 
 #*____________________________________________________________________________________ #
 def check_for_stationarity(
