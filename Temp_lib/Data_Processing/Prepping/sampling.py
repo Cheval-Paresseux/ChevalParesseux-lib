@@ -1,5 +1,6 @@
-import pandas as pd 
 import numpy as np
+import pandas as pd
+
 
 #! ==================================================================================== #
 #! ============================= Sampling Functions =================================== #
@@ -91,4 +92,3 @@ def get_cumsum_resample(
     auxiliary_df.reset_index(drop=True, inplace=True)
     
     return auxiliary_df
-

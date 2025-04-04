@@ -109,7 +109,7 @@ def check_for_error_values(
     
     # ======= VII. Create a Clean Series =======
     clean_series = auxiliary_series.replace([np.inf, -np.inf], np.nan)  
-    clean_series = clean_series.fillna(method="ffill") 
+    clean_series = clean_series.ffill()
     
     return clean_series, error_proportion, beginning_nans.tolist(), middle_nans.tolist(), infinite_indexes.tolist()
     
