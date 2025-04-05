@@ -1,3 +1,3 @@
 from .common import *
-from .cross_validation import *
+from .set_generator import *
 from .grid_search import *
