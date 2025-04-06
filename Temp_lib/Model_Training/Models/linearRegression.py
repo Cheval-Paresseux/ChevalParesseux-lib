@@ -11,9 +11,6 @@ class OLSRegression(com.ML_Model):
         self.X_train = None
         self.y_train = None
         
-        self.X_test = None
-        self.predictions = None
-        
         # --- Model Parameters ---
         self.coefficients = None
         self.intercept = None
@@ -65,7 +62,7 @@ class OLSRegression(com.ML_Model):
         # ======= IV. Compute Statistics =======
         self.statistics, self.residuals = com.get_regression_stats(train_predictions, X, y, self.coefficients)
         
-        return train_predictions
+        return self.statistics
         
     #?____________________________________________________________________________________ #
     def predict(self, X_test):
@@ -74,20 +71,25 @@ class OLSRegression(com.ML_Model):
         
         # ======= II. Make predictions =======
         predictions = self.intercept + np.dot(X, self.coefficients)
-        self.predictions = predictions
         
         return predictions
     
 #*____________________________________________________________________________________ #
 class MSERegression(com.ML_Model):
-    def __init__(self):
+    def __init__(self, params: dict = None):
         # --- Data Fitted ---
         self.X_train = None
         self.y_train = None
-        
-        self.X_test = None
-        self.predictions = None
-        
+
+        # --- Model Hyper Parameters ---
+        if params is None:
+            self.params = {
+                'learning_rate': 0.01,
+                'epochs': 1000
+            }
+        else:
+            self.params = params
+
         # --- Model Parameters ---
         self.coefficients = None
         self.intercept = None
@@ -157,9 +159,11 @@ class MSERegression(com.ML_Model):
         return coefficients, intercept
     
     #?_____________________________ User Functions _______________________________________ #
-    def fit(self, X_train, y_train, learning_rate: float = 0.01, epochs: int = 1000):
+    def fit(self, X_train, y_train):
         # ======= I. Process Data =======
         X, y = self.process_data(X_train, y_train)
+        learning_rate = self.params['learning_rate']
+        epochs = self.params['epochs']
         
         # ======= II. Solve for coefficients =======
         self.coefficients, self.intercept = self.gradient_descent(learning_rate, epochs, X, y)
@@ -170,7 +174,7 @@ class MSERegression(com.ML_Model):
         # ======= IV. Compute Statistics =======
         self.statistics, self.residuals = com.get_regression_stats(train_predictions, X, y, self.coefficients)
         
-        return train_predictions
+        return self.statistics
         
     #?____________________________________________________________________________________ #
     def predict(self, X_test):

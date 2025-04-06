@@ -1,6 +1,3 @@
-from . import common as com
-from ...utils import classification_metrics as metrics
-
 import pandas as pd
 import numpy as np
 from joblib import Parallel, delayed
@@ -14,6 +11,7 @@ class SetGenerator:
         
         # ===== II. Initialize the Attributes =======
         self.balanced_dfs = None
+        self.folds = None
         
         # ===== III. Initialize the Parameters =======
         self.labels_name = 'labels'
@@ -70,34 +68,38 @@ class SetGenerator:
         Returns:
             - balanced_dfs (list): A list of balanced DataFrames.
         """
+        np.random.seed(self.random_state)
+
         balanced_dfs = []
-        i = 0
         for df in df_list:
-            print(f'fold {i}')
-            i += 1
-            # ======= I. Separate Classes =======
-            available_labels = df[self.labels_name].unique()
-            labels_specific_dfs = [df[df[self.labels_name] == label].copy() for label in available_labels]
+            # ======= I. Extract the sample weights =======
+            training_df = df.copy()
+            training_df.dropna(inplace=True)
             
-            # ======= II. Get Random Samples of each Class =======
+            sample_weights, _ = get_samples_weights(
+                labels_series=training_df[self.labels_name], 
+                price_series=training_df[self.price_name], 
+                vol_window=self.vol_window, 
+                upper_barrier=self.upper_barrier, 
+                vertical_barrier=self.vertical_barrier,
+                n_jobs=self.n_jobs
+            )
+            training_df = pd.concat([training_df, sample_weights], axis=1)
+            training_df = training_df.dropna(axis=0)
+
+            # ======= II. Separate Classes =======
+            available_labels = training_df[self.labels_name].unique()
+            labels_specific_dfs = [training_df[training_df[self.labels_name] == label].copy() for label in available_labels]
+
+            # ======= III. Sample Each Class =======
             sampled_dfs = []
             for unique_df in labels_specific_dfs:
-                sampled_df = create_random_sample(
-                    df=unique_df,
-                    n_samples=self.n_samples,
-                    replacement=self.replacement,
-                    vol_window=self.vol_window,
-                    upper_barrier=self.upper_barrier,
-                    vertical_barrier=self.vertical_barrier,
-                    labels_name=self.labels_name,
-                    price_name=self.price_name,
-                    n_jobs=self.n_jobs,
-                    random_state=self.random_state
-                )
-                
-                sampled_dfs.append(sampled_df)
+                unique_df['sample_weights'] = unique_df['sample_weights'] / unique_df['sample_weights'].sum()
+                sampled_indices = np.random.choice(unique_df.index, size=self.n_samples, replace=self.replacement, p=unique_df["sample_weights"])
+                df_sampled = unique_df.loc[sampled_indices].reset_index(drop=True)
+                sampled_dfs.append(df_sampled)
             
-            # ======= III. Concatenate the Sampled DataFrames =======
+            # ======= IV. Concatenate the Sampled DataFrames =======
             df_sampled = pd.concat(sampled_dfs, axis=0).reset_index(drop=True)
             balanced_dfs.append(df_sampled)
         

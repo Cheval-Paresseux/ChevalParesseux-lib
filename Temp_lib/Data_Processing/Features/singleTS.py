@@ -15,25 +15,38 @@ class average_feature(com.Feature):
         self, 
         data: pd.Series, 
         name: str = "average" , 
-        params: dict = None, 
         n_jobs: int = 1
     ):
-        # ======= 0. Initialize params if necessary =========
-        if params is None:
-            params = {
-                "window": [5, 10, 30, 60],
-                "smoothing_method": [None, "ewma", "average"],
-                "window_smooth": [5, 10],
-                "lambda_smooth": [0.1, 0.2, 0.5],
-            }
-
-        # ======= I. Get Base Model init =========
         super().__init__(
             data=data, 
             name=name,
-            params=params,
             n_jobs=n_jobs,
-            )
+        )
+    
+    #?____________________________________________________________________________________ #
+    def set_params(
+        self,
+        window: list = [5, 10, 30, 60],
+        smoothing_method: list = [None, "ewma", "average"],
+        window_smooth: list = [5, 10],
+        lambda_smooth: list = [0.1, 0.2, 0.5],
+    ):
+        """
+        This method sets the parameters for the feature extraction.
+        Parameters:
+            - window (list): The window size for the rolling measure.
+            - smoothing_method (list): The smoothing method to be applied. Options are "ewma" or "average".
+            - window_smooth (list): The window size for the smoothing method. It should a number of bars.
+            - lambda_smooth (list): The lambda parameter for the ewma method. It should be in [0, 1].
+        """
+        self.params = {
+            "window": window,
+            "smoothing_method": smoothing_method,
+            "window_smooth": window_smooth,
+            "lambda_smooth": lambda_smooth,
+        }
+
+        return self.params
 
     #?____________________________________________________________________________________ #
     def process_data(
@@ -108,25 +121,38 @@ class median_feature(com.Feature):
         self, 
         data: pd.Series, 
         name: str = "median" , 
-        params: dict = None, 
         n_jobs: int = 1
     ):
-        # ======= 0. Initialize params if necessary =========
-        if params is None:
-            params = {
-                "window": [5, 10, 30, 60],
-                "smoothing_method": [None, "ewma", "average"],
-                "window_smooth": [5, 10],
-                "lambda_smooth": [0.1, 0.2, 0.5],
-            }
-
-        # ======= I. Get Base Model init =========
         super().__init__(
             data=data, 
             name=name,
-            params=params,
             n_jobs=n_jobs,
-            )
+        )
+    
+    #?____________________________________________________________________________________ #
+    def set_params(
+        self,
+        window: list = [5, 10, 30, 60],
+        smoothing_method: list = [None, "ewma", "average"],
+        window_smooth: list = [5, 10],
+        lambda_smooth: list = [0.1, 0.2, 0.5],
+    ):
+        """
+        This method sets the parameters for the feature extraction.
+        Parameters:
+            - window (list): The window size for the rolling measure.
+            - smoothing_method (list): The smoothing method to be applied. Options are "ewma" or "average".
+            - window_smooth (list): The window size for the smoothing method. It should a number of bars.
+            - lambda_smooth (list): The lambda parameter for the ewma method. It should be in [0, 1].
+        """
+        self.params = {
+            "window": window,
+            "smoothing_method": smoothing_method,
+            "window_smooth": window_smooth,
+            "lambda_smooth": lambda_smooth,
+        }
+
+        return self.params
 
     #?____________________________________________________________________________________ #
     def process_data(
@@ -201,25 +227,38 @@ class minimum_feature(com.Feature):
         self, 
         data: pd.Series, 
         name: str = "minimum" , 
-        params: dict = None, 
         n_jobs: int = 1
     ):
-        # ======= 0. Initialize params if necessary =========
-        if params is None:
-            params = {
-                "window": [5, 10, 30, 60],
-                "smoothing_method": [None, "ewma", "average"],
-                "window_smooth": [5, 10],
-                "lambda_smooth": [0.1, 0.2, 0.5],
-            }
-
-        # ======= I. Get Base Model init =========
         super().__init__(
             data=data, 
             name=name,
-            params=params,
             n_jobs=n_jobs,
-            )
+        )
+        
+    #?____________________________________________________________________________________ #
+    def set_params(
+        self,
+        window: list = [5, 10, 30, 60],
+        smoothing_method: list = [None, "ewma", "average"],
+        window_smooth: list = [5, 10],
+        lambda_smooth: list = [0.1, 0.2, 0.5],
+    ):
+        """
+        This method sets the parameters for the feature extraction.
+        Parameters:
+            - window (list): The window size for the rolling measure.
+            - smoothing_method (list): The smoothing method to be applied. Options are "ewma" or "average".
+            - window_smooth (list): The window size for the smoothing method. It should a number of bars.
+            - lambda_smooth (list): The lambda parameter for the ewma method. It should be in [0, 1].
+        """
+        self.params = {
+            "window": window,
+            "smoothing_method": smoothing_method,
+            "window_smooth": window_smooth,
+            "lambda_smooth": lambda_smooth,
+        }
+
+        return self.params
 
     #?____________________________________________________________________________________ #
     def process_data(
@@ -294,25 +333,38 @@ class maximum_feature(com.Feature):
         self, 
         data: pd.Series, 
         name: str = "maximum" , 
-        params: dict = None, 
         n_jobs: int = 1
     ):
-        # ======= 0. Initialize params if necessary =========
-        if params is None:
-            params = {
-                "window": [5, 10, 30, 60],
-                "smoothing_method": [None, "ewma", "average"],
-                "window_smooth": [5, 10],
-                "lambda_smooth": [0.1, 0.2, 0.5],
-            }
-
-        # ======= I. Get Base Model init =========
         super().__init__(
             data=data, 
             name=name,
-            params=params,
             n_jobs=n_jobs,
-            )
+        )
+    
+    #?____________________________________________________________________________________ #
+    def set_params(
+        self,
+        window: list = [5, 10, 30, 60],
+        smoothing_method: list = [None, "ewma", "average"],
+        window_smooth: list = [5, 10],
+        lambda_smooth: list = [0.1, 0.2, 0.5],
+    ):
+        """
+        This method sets the parameters for the feature extraction.
+        Parameters:
+            - window (list): The window size for the rolling measure.
+            - smoothing_method (list): The smoothing method to be applied. Options are "ewma" or "average".
+            - window_smooth (list): The window size for the smoothing method. It should a number of bars.
+            - lambda_smooth (list): The lambda parameter for the ewma method. It should be in [0, 1].
+        """
+        self.params = {
+            "window": window,
+            "smoothing_method": smoothing_method,
+            "window_smooth": window_smooth,
+            "lambda_smooth": lambda_smooth,
+        }
+
+        return self.params
 
     #?____________________________________________________________________________________ #
     def process_data(
@@ -389,25 +441,38 @@ class volatility_feature(com.Feature):
         self, 
         data: pd.Series, 
         name: str = "volatility" , 
-        params: dict = None, 
         n_jobs: int = 1
     ):
-        # ======= 0. Initialize params if necessary =========
-        if params is None:
-            params = {
-                "window": [5, 10, 30, 60],
-                "smoothing_method": [None, "ewma", "average"],
-                "window_smooth": [5, 10],
-                "lambda_smooth": [0.1, 0.2, 0.5],
-            }
-
-        # ======= I. Get Base Model init =========
         super().__init__(
             data=data, 
             name=name,
-            params=params,
             n_jobs=n_jobs,
-            )
+        )
+        
+    #?____________________________________________________________________________________ #
+    def set_params(
+        self,
+        window: list = [5, 10, 30, 60],
+        smoothing_method: list = [None, "ewma", "average"],
+        window_smooth: list = [5, 10],
+        lambda_smooth: list = [0.1, 0.2, 0.5],
+    ):
+        """
+        This method sets the parameters for the feature extraction.
+        Parameters:
+            - window (list): The window size for the rolling measure.
+            - smoothing_method (list): The smoothing method to be applied. Options are "ewma" or "average".
+            - window_smooth (list): The window size for the smoothing method. It should a number of bars.
+            - lambda_smooth (list): The lambda parameter for the ewma method. It should be in [0, 1].
+        """
+        self.params = {
+            "window": window,
+            "smoothing_method": smoothing_method,
+            "window_smooth": window_smooth,
+            "lambda_smooth": lambda_smooth,
+        }
+
+        return self.params
 
     #?____________________________________________________________________________________ #
     def process_data(
@@ -483,25 +548,38 @@ class skewness_feature(com.Feature):
         self, 
         data: pd.Series, 
         name: str = "skewness" , 
-        params: dict = None, 
         n_jobs: int = 1
     ):
-        # ======= 0. Initialize params if necessary =========
-        if params is None:
-            params = {
-                "window": [5, 10, 30, 60],
-                "smoothing_method": [None, "ewma", "average"],
-                "window_smooth": [5, 10],
-                "lambda_smooth": [0.1, 0.2, 0.5],
-            }
-
-        # ======= I. Get Base Model init =========
         super().__init__(
             data=data, 
             name=name,
-            params=params,
             n_jobs=n_jobs,
-            )
+        )
+
+    #?____________________________________________________________________________________ #
+    def set_params(
+        self,
+        window: list = [5, 10, 30, 60],
+        smoothing_method: list = [None, "ewma", "average"],
+        window_smooth: list = [5, 10],
+        lambda_smooth: list = [0.1, 0.2, 0.5],
+    ):
+        """
+        This method sets the parameters for the feature extraction.
+        Parameters:
+            - window (list): The window size for the rolling measure.
+            - smoothing_method (list): The smoothing method to be applied. Options are "ewma" or "average".
+            - window_smooth (list): The window size for the smoothing method. It should a number of bars.
+            - lambda_smooth (list): The lambda parameter for the ewma method. It should be in [0, 1].
+        """
+        self.params = {
+            "window": window,
+            "smoothing_method": smoothing_method,
+            "window_smooth": window_smooth,
+            "lambda_smooth": lambda_smooth,
+        }
+
+        return self.params
 
     #?____________________________________________________________________________________ #
     def process_data(
@@ -577,26 +655,39 @@ class kurtosis_feature(com.Feature):
         self, 
         data: pd.Series, 
         name: str = "kurtosis" , 
-        params: dict = None, 
         n_jobs: int = 1
     ):
-        # ======= 0. Initialize params if necessary =========
-        if params is None:
-            params = {
-                "window": [5, 10, 30, 60],
-                "smoothing_method": [None, "ewma", "average"],
-                "window_smooth": [5, 10],
-                "lambda_smooth": [0.1, 0.2, 0.5],
-            }
-
-        # ======= I. Get Base Model init =========
         super().__init__(
             data=data, 
             name=name,
-            params=params,
             n_jobs=n_jobs,
-            )
+        )
 
+    #?____________________________________________________________________________________ #
+    def set_params(
+        self,
+        window: list = [5, 10, 30, 60],
+        smoothing_method: list = [None, "ewma", "average"],
+        window_smooth: list = [5, 10],
+        lambda_smooth: list = [0.1, 0.2, 0.5],
+    ):
+        """
+        This method sets the parameters for the feature extraction.
+        Parameters:
+            - window (list): The window size for the rolling measure.
+            - smoothing_method (list): The smoothing method to be applied. Options are "ewma" or "average".
+            - window_smooth (list): The window size for the smoothing method. It should a number of bars.
+            - lambda_smooth (list): The lambda parameter for the ewma method. It should be in [0, 1].
+        """
+        self.params = {
+            "window": window,
+            "smoothing_method": smoothing_method,
+            "window_smooth": window_smooth,
+            "lambda_smooth": lambda_smooth,
+        }
+
+        return self.params
+    
     #?____________________________________________________________________________________ #
     def process_data(
         self, 
@@ -671,26 +762,41 @@ class quantile_feature(com.Feature):
         self, 
         data: pd.Series, 
         name: str = "quantile" , 
-        params: dict = None, 
         n_jobs: int = 1
     ):
-        # ======= 0. Initialize params if necessary =========
-        if params is None:
-            params = {
-                "window": [5, 10, 30, 60],
-                "quantile": [0.01, 0.05, 0.1, 0.9, 0.95, 0.99],
-                "smoothing_method": [None, "ewma", "average"],
-                "window_smooth": [5, 10],
-                "lambda_smooth": [0.1, 0.2, 0.5],
-            }
-
-        # ======= I. Get Base Model init =========
         super().__init__(
             data=data, 
             name=name,
-            params=params,
             n_jobs=n_jobs,
-            )
+        )
+        
+    #?____________________________________________________________________________________ #
+    def set_params(
+        self,
+        window: list = [5, 10, 30, 60],
+        quantile: list = [0.01, 0.05, 0.1, 0.9, 0.95, 0.99],
+        smoothing_method: list = [None, "ewma", "average"],
+        window_smooth: list = [5, 10],
+        lambda_smooth: list = [0.1, 0.2, 0.5],
+    ):
+        """
+        This method sets the parameters for the feature extraction.
+        Parameters:
+            - window (list): The window size for the rolling measure.
+            - quantile (list): The quantile to be computed. It should be in [0, 1].
+            - smoothing_method (list): The smoothing method to be applied. Options are "ewma" or "average".
+            - window_smooth (list): The window size for the smoothing method. It should a number of bars.
+            - lambda_smooth (list): The lambda parameter for the ewma method. It should be in [0, 1].
+        """
+        self.params = {
+            "window": window,
+            "quantile": quantile,
+            "smoothing_method": smoothing_method,
+            "window_smooth": window_smooth,
+            "lambda_smooth": lambda_smooth,
+        }
+
+        return self.params
 
     #?____________________________________________________________________________________ #
     def process_data(
@@ -770,25 +876,38 @@ class momentum_feature(com.Feature):
         self, 
         data: pd.Series, 
         name: str = "momentum" , 
-        params: dict = None, 
         n_jobs: int = 1
     ):
-        # ======= 0. Initialize params if necessary =========
-        if params is None:
-            params = {
-                "window": [5, 10, 30, 60],
-                "smoothing_method": [None, "ewma", "average"],
-                "window_smooth": [5, 10],
-                "lambda_smooth": [0.1, 0.2, 0.5],
-            }
-
-        # ======= I. Get Base Model init =========
         super().__init__(
             data=data, 
             name=name,
-            params=params,
             n_jobs=n_jobs,
-            )
+        )
+    
+    #?____________________________________________________________________________________ #
+    def set_params(
+        self,
+        window: list = [5, 10, 30, 60],
+        smoothing_method: list = [None, "ewma", "average"],
+        window_smooth: list = [5, 10],
+        lambda_smooth: list = [0.1, 0.2, 0.5],
+    ):
+        """
+        This method sets the parameters for the feature extraction.
+        Parameters:
+            - window (list): The window size for the rolling measure.
+            - smoothing_method (list): The smoothing method to be applied. Options are "ewma" or "average".
+            - window_smooth (list): The window size for the smoothing method. It should a number of bars.
+            - lambda_smooth (list): The lambda parameter for the ewma method. It should be in [0, 1].
+        """
+        self.params = {
+            "window": window,
+            "smoothing_method": smoothing_method,
+            "window_smooth": window_smooth,
+            "lambda_smooth": lambda_smooth,
+        }
+
+        return self.params
 
     #?____________________________________________________________________________________ #
     def process_data(
@@ -863,25 +982,38 @@ class Z_momentum_feature(com.Feature):
         self, 
         data: pd.Series, 
         name: str = "Z_momentum" , 
-        params: dict = None, 
         n_jobs: int = 1
     ):
-        # ======= 0. Initialize params if necessary =========
-        if params is None:
-            params = {
-                "window": [5, 10, 30, 60],
-                "smoothing_method": [None, "ewma", "average"],
-                "window_smooth": [5, 10],
-                "lambda_smooth": [0.1, 0.2, 0.5],
-            }
-
-        # ======= I. Get Base Model init =========
         super().__init__(
             data=data, 
             name=name,
-            params=params,
             n_jobs=n_jobs,
-            )
+        )
+    
+    #?____________________________________________________________________________________ #
+    def set_params(
+        self,
+        window: list = [5, 10, 30, 60],
+        smoothing_method: list = [None, "ewma", "average"],
+        window_smooth: list = [5, 10],
+        lambda_smooth: list = [0.1, 0.2, 0.5],
+    ):
+        """
+        This method sets the parameters for the feature extraction.
+        Parameters:
+            - window (list): The window size for the rolling measure.
+            - smoothing_method (list): The smoothing method to be applied. Options are "ewma" or "average".
+            - window_smooth (list): The window size for the smoothing method. It should a number of bars.
+            - lambda_smooth (list): The lambda parameter for the ewma method. It should be in [0, 1].
+        """
+        self.params = {
+            "window": window,
+            "smoothing_method": smoothing_method,
+            "window_smooth": window_smooth,
+            "lambda_smooth": lambda_smooth,
+        }
+
+        return self.params
 
     #?____________________________________________________________________________________ #
     def process_data(
@@ -956,25 +1088,38 @@ class linear_tempReg_feature(com.Feature):
         self, 
         data: pd.Series, 
         name: str = "linear_tempreg" , 
-        params: dict = None, 
         n_jobs: int = 1
     ):
-        # ======= 0. Initialize params if necessary =========
-        if params is None:
-            params = {
-                "window": [5, 10, 30, 60],
-                "smoothing_method": [None, "ewma", "average"],
-                "window_smooth": [5, 10],
-                "lambda_smooth": [0.1, 0.2, 0.5],
-            }
-
-        # ======= I. Get Base Model init =========
         super().__init__(
             data=data, 
             name=name,
-            params=params,
             n_jobs=n_jobs,
-            )
+        )
+    
+    #?____________________________________________________________________________________ #
+    def set_params(
+        self,
+        window: list = [5, 10, 30, 60],
+        smoothing_method: list = [None, "ewma", "average"],
+        window_smooth: list = [5, 10],
+        lambda_smooth: list = [0.1, 0.2, 0.5],
+    ):
+        """
+        This method sets the parameters for the feature extraction.
+        Parameters:
+            - window (list): The window size for the rolling measure.
+            - smoothing_method (list): The smoothing method to be applied. Options are "ewma" or "average".
+            - window_smooth (list): The window size for the smoothing method. It should a number of bars.
+            - lambda_smooth (list): The lambda parameter for the ewma method. It should be in [0, 1].
+        """
+        self.params = {
+            "window": window,
+            "smoothing_method": smoothing_method,
+            "window_smooth": window_smooth,
+            "lambda_smooth": lambda_smooth,
+        }
+
+        return self.params
 
     #?____________________________________________________________________________________ #
     def process_data(
@@ -1087,25 +1232,38 @@ class nonlinear_tempReg_feature(com.Feature):
         self, 
         data: pd.Series, 
         name: str = "nonlinear_tempreg" , 
-        params: dict = None, 
         n_jobs: int = 1
     ):
-        # ======= 0. Initialize params if necessary =========
-        if params is None:
-            params = {
-                "window": [5, 10, 30, 60],
-                "smoothing_method": [None, "ewma", "average"],
-                "window_smooth": [5, 10],
-                "lambda_smooth": [0.1, 0.2, 0.5],
-            }
-
-        # ======= I. Get Base Model init =========
         super().__init__(
             data=data, 
             name=name,
-            params=params,
             n_jobs=n_jobs,
-            )
+        )
+    
+    #?____________________________________________________________________________________ #
+    def set_params(
+        self,
+        window: list = [5, 10, 30, 60],
+        smoothing_method: list = [None, "ewma", "average"],
+        window_smooth: list = [5, 10],
+        lambda_smooth: list = [0.1, 0.2, 0.5],
+    ):
+        """
+        This method sets the parameters for the feature extraction.
+        Parameters:
+            - window (list): The window size for the rolling measure.
+            - smoothing_method (list): The smoothing method to be applied. Options are "ewma" or "average".
+            - window_smooth (list): The window size for the smoothing method. It should a number of bars.
+            - lambda_smooth (list): The lambda parameter for the ewma method. It should be in [0, 1].
+        """
+        self.params = {
+            "window": window,
+            "smoothing_method": smoothing_method,
+            "window_smooth": window_smooth,
+            "lambda_smooth": lambda_smooth,
+        }
+
+        return self.params
 
     #?____________________________________________________________________________________ #
     def process_data(
@@ -1227,25 +1385,38 @@ class hurst_exponent_feature(com.Feature):
         self, 
         data: pd.Series, 
         name: str = "hurst_exponent" , 
-        params: dict = None, 
         n_jobs: int = 1
     ):
-        # ======= 0. Initialize params if necessary =========
-        if params is None:
-            params = {
-                "power": [3, 4, 5, 6],
-                "smoothing_method": [None, "ewma", "average"],
-                "window_smooth": [5, 10],
-                "lambda_smooth": [0.1, 0.2, 0.5],
-            }
-
-        # ======= I. Get Base Model init =========
         super().__init__(
             data=data, 
             name=name,
-            params=params,
             n_jobs=n_jobs,
-            )
+        )
+    
+    #?____________________________________________________________________________________ #
+    def set_params(
+        self,
+        power: list = [3, 4, 5, 6],
+        smoothing_method: list = [None, "ewma", "average"],
+        window_smooth: list = [5, 10],
+        lambda_smooth: list = [0.1, 0.2, 0.5],
+    ):
+        """
+        This method sets the parameters for the feature extraction.
+        Parameters:
+            - power (list): The power of 2 to be used to determine the window size for the rolling regression.
+            - smoothing_method (list): The smoothing method to be applied. Options are "ewma" or "average".
+            - window_smooth (list): The window size for the smoothing method. It should a number of bars.
+            - lambda_smooth (list): The lambda parameter for the ewma method. It should be in [0, 1].
+        """
+        self.params = {
+            "power": power,
+            "smoothing_method": smoothing_method,
+            "window_smooth": window_smooth,
+            "lambda_smooth": lambda_smooth,
+        }
+
+        return self.params
 
     #?____________________________________________________________________________________ #
     def process_data(
@@ -1374,25 +1545,38 @@ class entropy_feature(com.Feature):
         self, 
         data: pd.Series, 
         name: str = "entropy" , 
-        params: dict = None, 
         n_jobs: int = 1
     ):
-        # ======= 0. Initialize params if necessary =========
-        if params is None:
-            params = {
-                "window": [5, 10, 30, 60],
-                "smoothing_method": [None, "ewma", "average"],
-                "window_smooth": [5, 10],
-                "lambda_smooth": [0.1, 0.2, 0.5],
-            }
-
-        # ======= I. Get Base Model init =========
         super().__init__(
             data=data, 
             name=name,
-            params=params,
             n_jobs=n_jobs,
-            )
+        )
+    
+    #?____________________________________________________________________________________ #
+    def set_params(
+        self,
+        window: list = [5, 10, 30, 60],
+        smoothing_method: list = [None, "ewma", "average"],
+        window_smooth: list = [5, 10],
+        lambda_smooth: list = [0.1, 0.2, 0.5],
+    ):
+        """
+        This method sets the parameters for the feature extraction.
+        Parameters:
+            - window (list): The window size for the rolling measure.
+            - smoothing_method (list): The smoothing method to be applied. Options are "ewma" or "average".
+            - window_smooth (list): The window size for the smoothing method. It should a number of bars.
+            - lambda_smooth (list): The lambda parameter for the ewma method. It should be in [0, 1].
+        """
+        self.params = {
+            "window": window,
+            "smoothing_method": smoothing_method,
+            "window_smooth": window_smooth,
+            "lambda_smooth": lambda_smooth,
+        }
+
+        return self.params
 
     #?____________________________________________________________________________________ #
     def process_data(

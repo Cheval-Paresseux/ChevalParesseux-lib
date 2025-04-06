@@ -24,7 +24,6 @@ class Feature(ABC):
         self, 
         data: Union[tuple, pd.Series, pd.DataFrame], 
         name: str, 
-        params: dict, 
         n_jobs: int = 1
     ):
         """
@@ -39,13 +38,18 @@ class Feature(ABC):
         # ======= I. Initialize Class =======
         self.data = data
         self.name = name
-        self.params = params
         self.n_jobs = n_jobs
 
         # ======= II. Initialize Auxilaries =======
+        self.params = None
         self.processed_data = None
         self.features = None
     
+    #?____________________________________________________________________________________ #
+    @abstractmethod
+    def set_params(self):
+        pass
+
     #?____________________________________________________________________________________ #
     @abstractmethod
     def process_data(self) -> Union[pd.DataFrame, pd.Series]:

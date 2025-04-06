@@ -15,25 +15,30 @@ class Cointegration_feature(com.Feature):
         self, 
         data: Union[tuple, pd.DataFrame], 
         name: str = "cointegration", 
-        params: dict = None,  
         n_jobs: int = 1
     ):
-        # ======= 0. Initialize params if necessary =========
-        if params is None:
-            params = {
-                "window": [5, 10, 30, 60],
-                "smoothing_method": [None, "ewma", "average"],
-                "window_smooth": [5, 10],
-                "lambda_smooth": [0.1, 0.2, 0.5],
-            }
-
-        # ======= I. Get Base Model init =========
         super().__init__(
             data=data, 
             name=name,
-            params=params,
             n_jobs=n_jobs,
         )
+
+    #?____________________________________________________________________________________ #
+    def set_params(
+        self, 
+        window: list = [5, 10, 30, 60], 
+        smoothing_method: list = [None, "ewma", "average"], 
+        window_smooth: list = [5, 10], 
+        lambda_smooth: list = [0.1, 0.2, 0.5]
+    ):
+        self.params = {
+            "window": window,
+            "smoothing_method": smoothing_method,
+            "window_smooth": window_smooth,
+            "lambda_smooth": lambda_smooth,
+        }
+        
+        return self.params
 
     #?____________________________________________________________________________________ #
     def process_data(
@@ -154,26 +159,32 @@ class OU_feature(com.Feature):
         self, 
         data: Union[tuple, pd.DataFrame], 
         name: str = "OrnsteinUhlenbeck", 
-        params: dict = None,  # Fixed: Changed from list to dict
         n_jobs: int = 1
     ):
-        # ======= 0. Initialize params if necessary =========
-        if params is None:
-            params = {
-                "window": [5, 10, 30, 60],
-                "residuals_weights": [None, [1, 0]],
-                "smoothing_method": [None, "ewma", "average"],
-                "window_smooth": [5, 10],
-                "lambda_smooth": [0.1, 0.2, 0.5],
-            }
-
-        # ======= I. Get Base Model init =========
         super().__init__(
             data=data, 
             name=name,
-            params=params,
             n_jobs=n_jobs,
         )
+    
+    #?____________________________________________________________________________________ #
+    def set_params(
+        self,
+        window: list = [5, 10, 30, 60],
+        residuals_weights: list = [None, [1, 0]],
+        smoothing_method: list = [None, "ewma", "average"],
+        window_smooth: list = [5, 10],
+        lambda_smooth: list = [0.1, 0.2, 0.5],
+    ):
+        self.params = {
+            "window": window,
+            "residuals_weights": residuals_weights,
+            "smoothing_method": smoothing_method,
+            "window_smooth": window_smooth,
+            "lambda_smooth": lambda_smooth,
+        }
+        
+        return self.params
 
     #?____________________________________________________________________________________ #
     def process_data(
@@ -298,27 +309,34 @@ class kalmanOU_feature(com.Feature):
         self, 
         data: Union[tuple, pd.DataFrame], 
         name: str = "kalmanOU", 
-        params: dict = None,  # Fixed: Changed from list to dict
         n_jobs: int = 1
     ):
-        # ======= 0. Initialize params if necessary =========
-        if params is None:
-            params = {
-                "window": [5, 10, 30, 60],
-                "residuals_weights": [None, [1, 0]],
-                "smooth_coefficient": [0.2, 0.5, 0.8],
-                "smoothing_method": [None, "ewma", "average"],
-                "window_smooth": [5, 10],
-                "lambda_smooth": [0.1, 0.2, 0.5],
-            }
-
-        # ======= I. Get Base Model init =========
         super().__init__(
             data=data, 
             name=name,
-            params=params,
             n_jobs=n_jobs,
         )
+
+    #?____________________________________________________________________________________ #
+    def set_params(
+        self, 
+        window: list = [5, 10, 30, 60], 
+        residuals_weights: list = [None, [1, 0]], 
+        smooth_coefficient: list = [0.2, 0.5, 0.8], 
+        smoothing_method: list = [None, "ewma", "average"], 
+        window_smooth: list = [5, 10], 
+        lambda_smooth: list = [0.1, 0.2, 0.5]
+    ):
+        self.params = {
+            "window": window,
+            "residuals_weights": residuals_weights,
+            "smooth_coefficient": smooth_coefficient,
+            "smoothing_method": smoothing_method,
+            "window_smooth": window_smooth,
+            "lambda_smooth": lambda_smooth,
+        }
+        
+        return self.params
 
     #?____________________________________________________________________________________ #
     def process_data(

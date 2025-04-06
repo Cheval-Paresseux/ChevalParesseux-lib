@@ -21,27 +21,31 @@ class Labeller(ABC):
     @abstractmethod
     def __init__(
         self, 
-        data: pd.Series, 
-        params: dict, 
+        series: pd.Series, 
         n_jobs: int = 1
     ):
         """
         Constructor for the Labeller class.
         For each labeller, the constructor should initialize the following attributes:
             
-            - data (pd.Series): The series to be processed.
+            - series (pd.Series): The series to be processed.
             - params (dict): The parameters for the labeller, if None, default parameters should be used.
             - n_jobs (int): The number of jobs to run in parallel.
         """
         # ======= I. Initialize Class =======
-        self.data = data
-        self.params = params
+        self.series = series
         self.n_jobs = n_jobs
 
         # ======= II. Initialize Auxilaries =======
+        self.params = None
         self.processed_data = None
         self.labels = None
     
+    #?____________________________________________________________________________________ #
+    @abstractmethod
+    def set_params(self):
+        pass
+
     #?____________________________________________________________________________________ #
     @abstractmethod
     def process_data(self):

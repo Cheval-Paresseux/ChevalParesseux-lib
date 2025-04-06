@@ -10,28 +10,47 @@ import pandas as pd
 class tripleBarrier_labeller(com.Labeller):
     def __init__(
         self, 
-        data: pd.Series, 
-        params: dict = None, 
+        series: pd.Series, 
         n_jobs: int = 1
     ):
-        # ======= 0. Initialize params if necessary =========
-        if params is None:
-            params = {
-                "upper_barrier": [0.5, 1, 2, 3],
-                "lower_barrier": [0.5, 1, 2, 3],
-                "vertical_barrier": [5, 10, 15, 20, 25, 30],
-                "vol_window": [5, 10, 15, 30],
-                "smoothing_method": [None, "ewma", "average"],
-                "window_smooth": [5, 10, 15],
-                "lambda_smooth": [0.2, 0.5, 0.7],
-            }
-
-        # ======= I. Get Base Model init =========
         super().__init__(
-            data=data, 
-            params=params,
+            series=series, 
             n_jobs=n_jobs,
-            )
+        )
+    
+    #?____________________________________________________________________________________ #
+    def set_params(
+        self,
+        upper_barrier: list = [0.5, 1, 2, 3],
+        lower_barrier: list = [0.5, 1, 2, 3],
+        vertical_barrier: list = [5, 10, 15, 20, 25, 30],
+        vol_window: list = [5, 10, 15, 30],
+        smoothing_method: list = [None, "ewma", "average"],
+        window_smooth: list = [5, 10, 15],
+        lambda_smooth: list = [0.2, 0.5, 0.7],
+    ):
+        """
+        This method is used to set the parameters for the labeller.
+        Parameters:
+            - upper_barrier (list): The upper barrier for the label.
+            - lower_barrier (list): The lower barrier for the label.
+            - vertical_barrier (list): The vertical barrier for the label.
+            - vol_window (list): The window size for the volatility calculation.
+            - smoothing_method (list): The smoothing method to be applied. Options are "ewma" or "average".
+            - window_smooth (list): The window size for the smoothing method. It should a number of bars.
+            - lambda_smooth (list): The lambda parameter for the ewma method. It should be in [0, 1].
+        """
+        self.params = {
+            "upper_barrier": upper_barrier,
+            "lower_barrier": lower_barrier,
+            "vertical_barrier": vertical_barrier,
+            "vol_window": vol_window,
+            "smoothing_method": smoothing_method,
+            "window_smooth": window_smooth,
+            "lambda_smooth": lambda_smooth,
+        }
+
+        return self.params
     
     #?____________________________________________________________________________________ #
     def process_data(
@@ -52,15 +71,15 @@ class tripleBarrier_labeller(com.Labeller):
         """
         # ======= I. Check if any smoothing should be applied =======
         if smoothing_method is None:
-            processed_data = self.data
+            processed_data = self.series
             self.processed_data = processed_data
             return processed_data
         
         # ======= II. Compute the smoothed series =======
         elif smoothing_method == "ewma":
-            processed_data = fil.ewma_smoothing(price_series=self.data, window=window_smooth, ind_lambda=lambda_smooth)
+            processed_data = fil.ewma_smoothing(price_series=self.series, window=window_smooth, ind_lambda=lambda_smooth)
         elif smoothing_method == "average":
-            processed_data = fil.average_smoothing(price_series=self.data, window=window_smooth)
+            processed_data = fil.average_smoothing(price_series=self.series, window=window_smooth)
             
         else:
             raise ValueError("Smoothing method not recognized")
@@ -158,27 +177,44 @@ class tripleBarrier_labeller(com.Labeller):
 class lookForward_labeller(com.Labeller):
     def __init__(
         self, 
-        data: pd.Series, 
-        params: dict, 
+        series: pd.Series, 
         n_jobs: int = 1
     ):
-        # ======= 0. Initialize params if necessary =========
-        if params is None:
-            params = {
-                "window_lookForward": [5, 10, 15],
-                "min_trend_size": [5, 10, 15],
-                "volatility_threshold": [0.5, 1, 1.5, 2, 2.5, 3],
-                "smoothing_method": [None, "ewma", "average"],
-                "window_smooth": [5, 10, 15],
-                "lambda_smooth": [0.2, 0.5, 0.7],
-            }
-
-        # ======= I. Get Base Model init =========
         super().__init__(
-            data=data, 
-            params=params,
+            series=series, 
             n_jobs=n_jobs,
-            )
+        )
+    
+    #?____________________________________________________________________________________ #
+    def set_params(
+        self,
+        window_lookForward: list = [5, 10, 15],
+        min_trend_size: list = [5, 10, 15],
+        volatility_threshold: list = [0.5, 1, 1.5, 2, 2.5, 3],
+        smoothing_method: list = [None, "ewma", "average"],
+        window_smooth: list = [5, 10, 15],
+        lambda_smooth: list = [0.2, 0.5, 0.7],
+    ):
+        """
+        This method is used to set the parameters for the labeller.
+        Parameters:
+            - window_lookForward (list): The look forward window for the label.
+            - min_trend_size (list): The minimum trend size for the label.
+            - volatility_threshold (list): The volatility threshold for the label.
+            - smoothing_method (list): The smoothing method to be applied. Options are "ewma" or "average".
+            - window_smooth (list): The window size for the smoothing method. It should a number of bars.
+            - lambda_smooth (list): The lambda parameter for the ewma method. It should be in [0, 1].
+        """
+        self.params = {
+            "window_lookForward": window_lookForward,
+            "min_trend_size": min_trend_size,
+            "volatility_threshold": volatility_threshold,
+            "smoothing_method": smoothing_method,
+            "window_smooth": window_smooth,
+            "lambda_smooth": lambda_smooth,
+        }
+
+        return self.params
     
     #?____________________________________________________________________________________ #
     def process_data(
@@ -199,15 +235,15 @@ class lookForward_labeller(com.Labeller):
         """
         # ======= I. Check if any smoothing should be applied =======
         if smoothing_method is None:
-            processed_data = self.data
+            processed_data = self.series
             self.processed_data = processed_data
             return processed_data
         
         # ======= II. Compute the smoothed series =======
         elif smoothing_method == "ewma":
-            processed_data = fil.ewma_smoothing(price_series=self.data, window=window_smooth, ind_lambda=lambda_smooth)
+            processed_data = fil.ewma_smoothing(price_series=self.series, window=window_smooth, ind_lambda=lambda_smooth)
         elif smoothing_method == "average":
-            processed_data = fil.average_smoothing(price_series=self.data, window=window_smooth)
+            processed_data = fil.average_smoothing(price_series=self.series, window=window_smooth)
             
         else:
             raise ValueError("Smoothing method not recognized")
@@ -248,28 +284,47 @@ class lookForward_labeller(com.Labeller):
 class regR2rank_labeller(com.Labeller):
     def __init__(
         self, 
-        data: pd.Series, 
-        params: dict, 
+        series: pd.Series, 
         n_jobs: int = 1
     ):
-        # ======= 0. Initialize params if necessary =========
-        if params is None:
-            params = {
-                "horizon": [5, 10, 15],
-                "horizon_extension": [1.1, 1.5, 2],
-                "r2_threshold": [0.1, 0.5, 0.7],
-                "min_trend_size": [5, 10, 15],
-                "smoothing_method": [None, "ewma", "average"],
-                "window_smooth": [5, 10, 15],
-                "lambda_smooth": [0.2, 0.5, 0.7],
-            }
-
-        # ======= I. Get Base Model init =========
         super().__init__(
-            data=data, 
-            params=params,
+            series=series, 
             n_jobs=n_jobs,
-            )
+        )
+    
+    #?____________________________________________________________________________________ #
+    def set_params(
+        self,
+        horizon: list = [5, 10, 15],
+        horizon_extension: list = [1.1, 1.5, 2],
+        r2_threshold: list = [0.1, 0.5, 0.7],
+        min_trend_size: list = [5, 10, 15],
+        smoothing_method: list = [None, "ewma", "average"],
+        window_smooth: list = [5, 10, 15],
+        lambda_smooth: list = [0.2, 0.5, 0.7],
+    ):
+        """
+        This method is used to set the parameters for the labeller.
+        Parameters:
+            - horizon (list): The horizon for the label.
+            - horizon_extension (list): The horizon extension for the label.
+            - r2_threshold (list): The R² threshold for the label.
+            - min_trend_size (list): The minimum trend size for the label.
+            - smoothing_method (list): The smoothing method to be applied. Options are "ewma" or "average".
+            - window_smooth (list): The window size for the smoothing method. It should a number of bars.
+            - lambda_smooth (list): The lambda parameter for the ewma method. It should be in [0, 1].
+        """
+        self.params = {
+            "horizon": horizon,
+            "horizon_extension": horizon_extension,
+            "r2_threshold": r2_threshold,
+            "min_trend_size": min_trend_size,
+            "smoothing_method": smoothing_method,
+            "window_smooth": window_smooth,
+            "lambda_smooth": lambda_smooth,
+        }
+
+        return self.params
     
     #?____________________________________________________________________________________ #
     def process_data(
@@ -290,15 +345,15 @@ class regR2rank_labeller(com.Labeller):
         """
         # ======= I. Check if any smoothing should be applied =======
         if smoothing_method is None:
-            processed_data = self.data
+            processed_data = self.series
             self.processed_data = processed_data
             return processed_data
         
         # ======= II. Compute the smoothed series =======
         elif smoothing_method == "ewma":
-            processed_data = fil.ewma_smoothing(price_series=self.data, window=window_smooth, ind_lambda=lambda_smooth)
+            processed_data = fil.ewma_smoothing(price_series=self.series, window=window_smooth, ind_lambda=lambda_smooth)
         elif smoothing_method == "average":
-            processed_data = fil.average_smoothing(price_series=self.data, window=window_smooth)
+            processed_data = fil.average_smoothing(price_series=self.series, window=window_smooth)
             
         else:
             raise ValueError("Smoothing method not recognized")
@@ -359,38 +414,63 @@ class regR2rank_labeller(com.Labeller):
 class boostedlF_labeller(com.Labeller):
     def __init__(
         self, 
-        data: pd.Series, 
-        params: dict, 
+        series: pd.Series, 
         n_jobs: int = 1
     ):
-        # ======= 0. Initialize params if necessary =========
-        if params is None:
-            params = {
-                # ------- LookForward -------
-                "window_lookForward": [5, 10, 15],
-                "min_trend_size": [5, 10, 15],
-                "volatility_threshold": [0.5, 1, 1.5, 2, 2.5, 3],
-                # ------- regR2rank -------
-                "horizon": [5, 10, 15],
-                "horizon_extension": [1.1, 1.5, 2],
-                "r2_threshold": [0.1, 0.5, 0.7],
-                "min_trend_size": [5, 10, 15],
-                # ------- Common -------
-                "smoothing_method": [None, "ewma", "average"],
-                "window_smooth": [5, 10, 15],
-                "lambda_smooth": [0.2, 0.5, 0.7],
-            }
-
-        # ======= I. Get Base Model init =========
         super().__init__(
-            data=data, 
-            params=params,
+            series=series, 
             n_jobs=n_jobs,
-            )
+        )
+    
+    #?____________________________________________________________________________________ #
+    def set_params(
+        self,
+        window_lookForward: list = [5, 10, 15],
+        min_trend_size: list = [5, 10, 15],
+        volatility_threshold: list = [0.5, 1, 1.5, 2, 2.5, 3],
+        horizon: list = [5, 10, 15],
+        horizon_extension: list = [1.1, 1.5, 2],
+        r2_threshold: list = [0.1, 0.5, 0.7],
+        trend_size: list = [5, 10, 15],
+        smoothing_method: list = [None, "ewma", "average"],
+        window_smooth: list = [5, 10, 15],
+        lambda_smooth: list = [0.2, 0.5, 0.7],
+    ):
+        """
+        This method is used to set the parameters for the labeller.
+        Parameters:
+            - window_lookForward (list): The look forward window for the label.
+            - min_trend_size (list): The minimum trend size for the label.
+            - volatility_threshold (list): The volatility threshold for the label.
+            - horizon (list): The horizon for the label.
+            - horizon_extension (list): The horizon extension for the label.
+            - r2_threshold (list): The R² threshold for the label.
+            - trend_size (list): The trend size for the label.
+            - smoothing_method (list): The smoothing method to be applied. Options are "ewma" or "average".
+            - window_smooth (list): The window size for the smoothing method. It should a number of bars.
+            - lambda_smooth (list): The lambda parameter for the ewma method. It should be in [0, 1].
+        """
+        self.params = {
+            "window_lookForward": window_lookForward,
+            "min_trend_size": min_trend_size,
+            "volatility_threshold": volatility_threshold,
+            "horizon": horizon,
+            "horizon_extension": horizon_extension,
+            "r2_threshold": r2_threshold,
+            "trend_size": trend_size,
+            "smoothing_method": smoothing_method,
+            "window_smooth": window_smooth,
+            "lambda_smooth": lambda_smooth,
+        }
+
+        return self.params
     
     #?____________________________________________________________________________________ #
     def process_data(self):
-        processed_data = self.data
+        processed_data = self.series.copy()
+
+        # ======= III. Save the processed data =======
+        self.processed_data = processed_data
         
         return processed_data
 
@@ -409,29 +489,26 @@ class boostedlF_labeller(com.Labeller):
         lambda_smooth: float,
     ):
         # ======= I. Extract Labels =======
-        lF_labeller = lookForward_labeller(
-            data=self.data, 
-            params={
-                "window_lookForward": [window_lookForward], 
-                "min_trend_size": [min_trend_size], 
-                "volatility_threshold": [volatility_threshold], 
-                "smoothing_method": [smoothing_method], 
-                "window_smooth": [window_smooth], 
-                "lambda_smooth": [lambda_smooth]
-            }
+        lF_labeller = lookForward_labeller(series=self.series, n_jobs=self.n_jobs)
+        lF_labeller.set_params(
+            window_lookForward=[window_lookForward], 
+            min_trend_size=[min_trend_size], 
+            volatility_threshold=[volatility_threshold], 
+            smoothing_method=[smoothing_method], 
+            window_smooth=[window_smooth], 
+            lambda_smooth=[lambda_smooth]
         )
-        r2_labeller = regR2rank_labeller(
-            data=self.data, 
-            params={
-                "horizon": [horizon], 
-                "horizon_extension": [horizon_extension], 
-                "r2_threshold": [r2_threshold], 
-                "trend_size": [trend_size], 
-                "smoothing_method": [smoothing_method], 
-                "window_smooth": [window_smooth], 
-                "lambda_smooth": [lambda_smooth]
-            }
+        r2_labeller = regR2rank_labeller(series=self.series, n_jobs=self.n_jobs)
+        r2_labeller.set_params(
+            horizon=[horizon],
+            horizon_extension=[horizon_extension],
+            r2_threshold=[r2_threshold],
+            min_trend_size=[min_trend_size],
+            smoothing_method=[smoothing_method],
+            window_smooth=[window_smooth],
+            lambda_smooth=[lambda_smooth],
         )
+
         lF_labels = lF_labeller.extract()
         r2_labels = r2_labeller.extract()
         
@@ -470,27 +547,44 @@ class boostedlF_labeller(com.Labeller):
 class slope_labeller(com.Labeller):
     def __init__(
         self, 
-        data: pd.Series, 
-        params: dict = None, 
+        series: pd.Series, 
         n_jobs: int = 1
     ):
-        # ======= 0. Initialize params if necessary =========
-        if params is None:
-            params = {
-                "horizon": [5, 10, 15],
-                "horizon_extension": [1.1, 1.5, 2],
-                "min_trend_size": [5, 10, 15],
-                "smoothing_method": [None, "ewma", "average"],
-                "window_smooth": [5, 10, 15],
-                "lambda_smooth": [0.2, 0.5, 0.7],
-            }
-
-        # ======= I. Get Base Model init =========
         super().__init__(
-            data=data, 
-            params=params,
+            series=series, 
             n_jobs=n_jobs,
-            )
+        )
+    
+    #?____________________________________________________________________________________ #
+    def set_params(
+        self,
+        horizon: list = [5, 10, 15],
+        horizon_extension: list = [1.1, 1.5, 2],
+        min_trend_size: list = [5, 10, 15],
+        smoothing_method: list = [None, "ewma", "average"],
+        window_smooth: list = [5, 10, 15],
+        lambda_smooth: list = [0.2, 0.5, 0.7],
+    ):
+        """
+        This method is used to set the parameters for the labeller.
+        Parameters:
+            - horizon (list): The horizon for the label.
+            - horizon_extension (list): The horizon extension for the label.
+            - min_trend_size (list): The minimum trend size for the label.
+            - smoothing_method (list): The smoothing method to be applied. Options are "ewma" or "average".
+            - window_smooth (list): The window size for the smoothing method. It should a number of bars.
+            - lambda_smooth (list): The lambda parameter for the ewma method. It should be in [0, 1].
+        """
+        self.params = {
+            "horizon": horizon,
+            "horizon_extension": horizon_extension,
+            "min_trend_size": min_trend_size,
+            "smoothing_method": smoothing_method,
+            "window_smooth": window_smooth,
+            "lambda_smooth": lambda_smooth,
+        }
+
+        return self.params
     
     #?____________________________________________________________________________________ #
     def process_data(
@@ -511,15 +605,15 @@ class slope_labeller(com.Labeller):
         """
         # ======= I. Check if any smoothing should be applied =======
         if smoothing_method is None:
-            processed_data = self.data
+            processed_data = self.series
             self.processed_data = processed_data
             return processed_data
         
         # ======= II. Compute the smoothed series =======
         elif smoothing_method == "ewma":
-            processed_data = fil.ewma_smoothing(price_series=self.data, window=window_smooth, ind_lambda=lambda_smooth)
+            processed_data = fil.ewma_smoothing(price_series=self.series, window=window_smooth, ind_lambda=lambda_smooth)
         elif smoothing_method == "average":
-            processed_data = fil.average_smoothing(price_series=self.data, window=window_smooth)
+            processed_data = fil.average_smoothing(price_series=self.series, window=window_smooth)
             
         else:
             raise ValueError("Smoothing method not recognized")

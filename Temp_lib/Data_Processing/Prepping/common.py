@@ -9,25 +9,33 @@ from joblib import Parallel, delayed
 #! ==================================================================================== #
 #! ==================================== Cleaning ====================================== #
 class DataCleaner():
-    def __init__(self, training_data: Union[list, pd.DataFrame]):
-        # ======= I. Store the training data =======
+    def __init__(
+        self, 
+        training_data: Union[list, pd.DataFrame],
+        params: dict = None,
+        non_feature_columns: list = ['open', 'high', 'low', 'close', 'volume'],
+        n_jobs: int = 1
+    ):
+        # ======= I. Ensure Params is defined =======
+        if params is None:
+            params = {
+                'stationarity_threshold': 0.05,
+                'outliers_threshold': 3,
+                'mean_tolerance': 0.01,
+                'std_tolerance': 0.01
+            }
+
+        # ======= II. Store the inputs =======
         self.training_data = training_data
+        self.params = params
+        self.non_feature_columns = non_feature_columns
+        self.n_jobs = n_jobs
+
+        # ======= III. Initialize Results =======
         self.stacked_data = None
-        
-        # ======= II. Set default parameters =======
-        self.stationarity_threshold = None
-        self.outliers_threshold = None
-        self.mean_tolerance = None
-        self.std_tolerance = None
-        self.n_jobs = 1
-        
-        # ======= III. Post Processing Information =======
         self.processed_data = None
         self.features_informations = None
         
-        # ======= IV. Non-Feature Columns =======
-        self.non_feature_columns = None
-    
     #?_____________________________ Build Functions ______________________________________ #
     def horizontal_stacking(self, dfs_list: list):
         """
@@ -54,7 +62,7 @@ class DataCleaner():
         return stacked_data
         
     #?____________________________________________________________________________________ #
-    def check_features_df(self, features_df: pd.DataFrame):
+    def check_features_df(self, training_df: pd.DataFrame):
         """
         This function checks the features of the DataFrame to ensure they are properly formatted and valid.
         It performs the following checks:
@@ -71,21 +79,20 @@ class DataCleaner():
             - features_informations (pd.DataFrame): The DataFrame containing the features information.
         """
         # ======= I. Ensure the Features_df does not contain the labels =======
-        columns_name = features_df.columns.tolist()
+        columns_name = training_df.columns.tolist()
         features_list = [column for column in columns_name if column not in self.non_feature_columns]
         
-        self.features_df = features_df.copy()
-        self.features_df = self.features_df[features_list]
+        features_df = training_df[features_list].copy()
 
         # ======= II. Performs the Features Check =======
         results = Parallel(n_jobs=self.n_jobs)(
             delayed(sanit.check_feature)(
-                feature_series=self.features_df[feature], 
-                stationarity_threshold=self.stationarity_threshold, 
-                outliers_threshold=self.outliers_threshold, 
-                mean_tolerance=self.mean_tolerance, 
-                std_tolerance=self.std_tolerance, 
-            ) for feature in self.features_df.columns
+                feature_series=features_df[feature], 
+                stationarity_threshold=self.params['stationarity_threshold'], 
+                outliers_threshold=self.params['outliers_threshold'], 
+                mean_tolerance=self.params['mean_tolerance'], 
+                std_tolerance=self.params['std_tolerance'], 
+            ) for feature in features_df.columns
         )
         
         # ======= II. Recreate the Feature DataFrame =======
@@ -95,35 +102,7 @@ class DataCleaner():
         return scaled_data, features_informations
         
     #?_____________________________ User Functions _______________________________________ #
-    def set_non_features_columns(self, non_feature_columns: list = ['open', 'high', 'low', 'close', 'volume']):
-        self.non_feature_columns = non_feature_columns
-        
-    #?____________________________________________________________________________________ #
-    def set_params(
-        self, 
-        stationarity_threshold: float = 0.05, 
-        outliers_threshold: float = 3, 
-        mean_tolerance: float = 0.01, 
-        std_tolerance: float = 0.01, 
-        n_jobs: int = 1
-    ):
-        """
-        This function sets the parameters for the training preparator.
-        Parameters:
-            - stationarity_threshold (float): The threshold for stationarity tests.
-            - outliers_threshold (float): The threshold for outlier detection.
-            - mean_tolerance (float): The tolerance for the mean value.
-            - std_tolerance (float): The tolerance for the standard deviation.
-            - n_jobs (int): The number of jobs to run in parallel.
-        """
-        self.stationarity_threshold = stationarity_threshold
-        self.outliers_threshold = outliers_threshold
-        self.mean_tolerance = mean_tolerance
-        self.std_tolerance = std_tolerance
-        self.n_jobs = n_jobs
-    
-    #?____________________________________________________________________________________ #
-    def prepare_data(self):
+    def extract(self):
         """
         This function prepares the training data for the model by checking the features and stacking the DataFrames.
         """
