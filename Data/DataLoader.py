@@ -20,7 +20,7 @@ def load_data(ticker: str):
     # ======= III. Load the data =======
     for path in [csv_path_nyse, csv_path_nasdaq, csv_path_wdo]:
         try:
-            data = pd.read_csv(path, parse_dates=True)
+            data = pd.read_csv(path)
             break  
         except FileNotFoundError:
             continue

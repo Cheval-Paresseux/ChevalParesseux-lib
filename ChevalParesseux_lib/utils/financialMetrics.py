@@ -52,7 +52,8 @@ def get_risk_measures(returns_series: pd.Series):
     running_max = cumulative_returns.cummax().replace(0, 1e-10)
     drawdown = (cumulative_returns / running_max) - 1
     drawdown_durations = (drawdown < 0).astype(int).groupby((drawdown == 0).cumsum()).cumsum()
-
+    
+    mean_drawdown = drawdown.mean()
     maximum_drawdown = drawdown.min()
     max_drawdown_duration = drawdown_durations.max()
 
@@ -63,6 +64,7 @@ def get_risk_measures(returns_series: pd.Series):
     # ======= III. Store the statistics =======
     risk_stats = {
         "drawdown": drawdown,
+        "mean_drawdown": mean_drawdown,
         "maximum_drawdown": maximum_drawdown,
         "max_drawdown_duration": max_drawdown_duration,
         "var_95": var_95,

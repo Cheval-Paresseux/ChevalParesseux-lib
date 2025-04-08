@@ -5,17 +5,9 @@ import numpy as np
 
 #! ==================================================================================== #
 #! =============================== Main Visualizer ==================================== #
-def classification_metrics(predictions: pd.Series, labels: pd.Series, classes: list = [-1, 0, 1]):
+def plot_classification_metrics(predictions: pd.Series, labels: pd.Series, classes: list = [-1, 0, 1]):
     # ======= I. Compute metrics =======
-    metrics = {
-        "Accuracy": get_accuracy(predictions, labels),
-        "Precision": get_precision(predictions, labels, classes),
-        "Recall": get_recall(predictions, labels, classes),
-        "F1 Score": get_f1_score(predictions, labels, classes),
-        "Balanced Accuracy": get_balanced_accuracy(predictions, labels, classes),
-        "MCC": get_MCC(predictions, labels, classes),
-        "Cohen Kappa": get_cohen_kappa(predictions, labels, classes)
-    }
+    metrics = get_classification_metrics(predictions, labels, classes)
 
     # ======= II. Create confusion matrix and classification report =======
     confusion_matrix = get_confusion_matrix(predictions, labels, classes)
@@ -68,6 +60,20 @@ def classification_metrics(predictions: pd.Series, labels: pd.Series, classes: l
 
 #! ==================================================================================== #
 #! =============================== Metrics Functions ================================== #
+def get_classification_metrics(predictions: pd.Series, labels: pd.Series, classes: list = [-1, 0, 1]) -> dict:
+    metrics = {
+        "accuracy": get_accuracy(predictions, labels),
+        "precision": get_precision(predictions, labels, classes),
+        "recall": get_recall(predictions, labels, classes),
+        "f1_score": get_f1_score(predictions, labels, classes),
+        "balanced_accuracy": get_balanced_accuracy(predictions, labels, classes),
+        "mcc": get_MCC(predictions, labels, classes),
+        "cohen_kappa": get_cohen_kappa(predictions, labels, classes)
+    }
+    
+    return metrics
+
+#*____________________________________________________________________________________ #
 def get_accuracy(predictions: pd.Series, labels: pd.Series) -> float:
     
     # ======= I. Compute the number of accurate predictions =======
