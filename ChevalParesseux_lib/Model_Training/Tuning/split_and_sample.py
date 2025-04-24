@@ -1,16 +1,35 @@
+from ..Tuning import common as com
+
 import pandas as pd
 import numpy as np
 from joblib import Parallel, delayed
 
 #! ==================================================================================== #
 #! ================================= Main Function ==================================== #
-class SetGenerator:
+class TemporalUniquenessSplitter(com.SplitAndSample):
+    """
+    Class for temporal splitting and labels based resampling.
+    
+    This class implements methods to perform the following tasks:
+        - Set parameters for the splitter.
+        - Balance the data by creating random samples of each class.
+        - Create temporal linear folds for cross-validation.
+        - Extract folds from the input DataFrame.
+    """
     def __init__(
         self, 
         training_df: pd.DataFrame, 
         n_jobs: int = 1, 
         random_state: int = 72
     ):
+        """
+        Initializes the TemporalUniquenessSplitter class with the training data and parameters.
+        
+        Parameters:
+            - training_df (pd.DataFrame): The data to be used for training and testing the model.
+            - n_jobs (int): The number of jobs to run in parallel. Default is 1.
+            - random_state (int): The random seed for reproducibility. Default is 72.
+        """
         # ===== I. Initialize the Inputs =======
         self.training_df = training_df.copy()
         
@@ -35,7 +54,8 @@ class SetGenerator:
         vertical_barrier: int = 20,
     ) -> None:
         """
-        This function sets the parameters for the SetGenerator class.
+        Sets the parameters for the splitter.
+        
         Parameters:
             - labels_name (str): The name of the column containing the labels.
             - price_name (str): The name of the column containing the price data.
@@ -58,11 +78,16 @@ class SetGenerator:
         return self
         
     #?____________________________________________________________________________________ #
-    def balance_data(self, df_list: list) -> pd.DataFrame:
+    def balance_data(
+        self, 
+        df_list: list
+    ) -> pd.DataFrame:
         """
-        This function balances the data by creating random samples of each class.
+        Balances the data by creating random samples of each class.
+        
         Parameters:
             - df_list (list): A list of DataFrames to be balanced.
+        
         Returns:
             - balanced_dfs (list): A list of balanced DataFrames.
         """
@@ -98,7 +123,12 @@ class SetGenerator:
             sampled_dfs = []
             for unique_df in labels_specific_dfs:
                 unique_df['sample_weights'] = unique_df['sample_weights'] / unique_df['sample_weights'].sum()
+                
+                if not self.params['replacement']:
+                    n_samples = min(n_samples, unique_df.shape[0])
+                    
                 sampled_indices = np.random.choice(unique_df.index, size=n_samples, replace=self.params['replacement'], p=unique_df["sample_weights"])
+                
                 df_sampled = unique_df.loc[sampled_indices].reset_index(drop=True)
                 sampled_dfs.append(df_sampled)
             
@@ -113,12 +143,18 @@ class SetGenerator:
         return balanced_dfs
 
     #?____________________________________________________________________________________ #
-    def create_folds(self, df: pd.DataFrame, n_folds: int = 5) -> list:
+    def create_folds(
+        self, 
+        df: pd.DataFrame, 
+        n_folds: int = 5
+    ) -> list:
         """
-        This function creates folds for cross-validation.
+        Creates folds for cross-validation.
+        
         Parameters:
             - df (pd.DataFrame): The input DataFrame to be split into folds.
             - n_splits (int): The number of folds to create.
+        
         Returns:
             - folds (list): A list of DataFrames representing the folds.
         """
@@ -139,9 +175,35 @@ class SetGenerator:
         self.folds = folds
         
         return folds
+    
+    #?____________________________________________________________________________________ #
+    def extract(
+        self, 
+        df:pd.DataFrame, 
+        n_folds: int = 5
+    ) -> list:
+        """
+        Extracts the folds from the input DataFrame.
+        
+        Parameters:
+            - df (pd.DataFrame): The input DataFrame to be split into folds.
+            - n_folds (int): The number of folds to create.
+        
+        Returns:
+            - folds (list): A list of DataFrames representing the folds.
+        """
+        # ======= I. Create the folds =======
+        folds = self.create_folds(df, n_folds=n_folds)
+        
+        # ======= II. Create the balanced folds =======
+        balanced_folds = self.balance_data(folds)
+        
+        return folds, balanced_folds
 
 
-#*____________________________________________________________________________________ #
+
+#! ==================================================================================== #
+#! ================================= Helper Function ================================== #
 def create_random_sample(
     df: pd.DataFrame, 
     n_samples: int = 1000,
@@ -196,9 +258,7 @@ def create_random_sample(
     
     return df_sampled
 
-
-#! ==================================================================================== #
-#! ================================= Helper Function ================================== #
+#*____________________________________________________________________________________ #
 def get_samples_weights(
     labels_series: pd.Series, 
     price_series: pd.Series, 

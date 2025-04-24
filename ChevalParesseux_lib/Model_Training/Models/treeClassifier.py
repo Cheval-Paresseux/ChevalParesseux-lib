@@ -4,7 +4,6 @@ from ...Data_Processing.Measures import Entropy as ent
 import numpy as np
 import pandas as pd
 from joblib import Parallel, delayed
- 
 
 #! ==================================================================================== #
 #! ================================ Tree Classifiers ================================== #
@@ -266,11 +265,11 @@ class DecisionTreeClassifier(com.ML_Model):
         return predictions
 
 
-
-
+      
 #! ==================================================================================== #
 #! ================================ Helper Functions ================================== #
 def count_occurrences(universe: list, series: pd.Series):
     counts = series.value_counts().to_dict()
     occurences = [counts.get(val, 0) for val in universe]
     return occurences
+

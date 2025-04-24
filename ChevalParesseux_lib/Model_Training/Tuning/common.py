@@ -3,19 +3,41 @@ import numpy as np
 from joblib import Parallel, delayed
 from abc import ABC, abstractmethod
 
-class GridSearch(ABC):
+
+#! ==================================================================================== #
+#! ================================= Main Function ==================================== #
+class SplitAndSample(ABC):
+    """
+    Base class for Splitting and Sampling models.
+    
+    This class provides an interface for splitting and resampling data for machine learning tasks.
+    """
     @abstractmethod
     def __init__(self):
         pass
 
     #?____________________________________________________________________________________ #
     @abstractmethod
-    def set_params_grid(self):
+    def set_params(self):
         pass
 
     #?____________________________________________________________________________________ #
     @abstractmethod
-    def set_params_sets(self):
+    def extract(self):
+        pass
+
+#*____________________________________________________________________________________ #
+class GridSearch(ABC):
+    """
+    Base class for Grid Search models.
+    """
+    @abstractmethod
+    def __init__(self):
+        pass
+
+    #?____________________________________________________________________________________ #
+    @abstractmethod
+    def set_params(self):
         pass
 
     #?____________________________________________________________________________________ #
@@ -28,7 +50,26 @@ class GridSearch(ABC):
     def fit(self):
         pass
 
-    
+#*____________________________________________________________________________________ #
+class FeaturesSelector(ABC):
+    @abstractmethod
+    def __init__(self):
+        pass
+
+    #?____________________________________________________________________________________ #
+    @abstractmethod
+    def set_params(self):
+        pass
+
+    #?____________________________________________________________________________________ #
+    @abstractmethod
+    def extract(self):
+        pass
+
+
+
+#! ==================================================================================== #
+#! ================================= Helper Function ==================================== #
 def extract_universe(params_grid: dict): 
     # ======= 0. Define recursive function to generate all combinations =======
     def recursive_combine(keys, values, index, current_combination, params_list):

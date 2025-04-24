@@ -126,7 +126,7 @@ class average_feature(com.Feature):
         """
         # ======= I. Compute the different smoothed series =======
         series = self.process_data(smoothing_method=smoothing_method, window_smooth=window_smooth, lambda_smooth=lambda_smooth).dropna().copy()
-        rolling_average = series.rolling(window=window + 1).apply(lambda x: np.mean(x[:window]))
+        rolling_average = series.rolling(window=window).apply(np.mean, raw=False)
 
         # ======= II. Convert to pd.Series and Center =======
         rolling_average = (pd.Series(rolling_average, index=series.index) / (series + 1e-8)) - 1
@@ -135,7 +135,6 @@ class average_feature(com.Feature):
         rolling_average.name = f"average_{window}_{smoothing_method}_{window_smooth}_{lambda_smooth}"
 
         return rolling_average
-
 
 #*____________________________________________________________________________________ #
 class median_feature(com.Feature):
@@ -254,7 +253,7 @@ class median_feature(com.Feature):
         """
         # ======= I. Compute the different smoothed series =======
         series = self.process_data(smoothing_method=smoothing_method, window_smooth=window_smooth, lambda_smooth=lambda_smooth).dropna().copy()
-        rolling_median = series.rolling(window=window + 1).apply(lambda x: np.median(x[:window]))
+        rolling_median = series.rolling(window=window).apply(np.median, raw=False)
 
         # ======= II. Convert to pd.Series and Center =======
         rolling_median = (pd.Series(rolling_median, index=series.index) / (series + 1e-8)) - 1
@@ -263,7 +262,6 @@ class median_feature(com.Feature):
         rolling_median.name = f"median_{window}_{smoothing_method}_{window_smooth}_{lambda_smooth}"
 
         return rolling_median
-
 
 #*____________________________________________________________________________________ #
 class minimum_feature(com.Feature):
@@ -382,7 +380,7 @@ class minimum_feature(com.Feature):
         """
         # ======= I. Compute the different smoothed series =======
         series = self.process_data(smoothing_method=smoothing_method, window_smooth=window_smooth, lambda_smooth=lambda_smooth).dropna().copy()
-        rolling_min = series.rolling(window=window + 1).apply(lambda x: np.min(x[:window]))
+        rolling_min = series.rolling(window=window).apply(np.min, raw=False)
 
         # ======= II. Convert to pd.Series and Center =======
         rolling_min = (pd.Series(rolling_min, index=series.index) / (series + 1e-8)) - 1
@@ -391,7 +389,6 @@ class minimum_feature(com.Feature):
         rolling_min.name = f"min_{window}_{smoothing_method}_{window_smooth}_{lambda_smooth}"
 
         return rolling_min
-    
     
 #*____________________________________________________________________________________ #
 class maximum_feature(com.Feature):
@@ -510,7 +507,7 @@ class maximum_feature(com.Feature):
         """
         # ======= I. Compute the different smoothed series =======
         series = self.process_data(smoothing_method=smoothing_method, window_smooth=window_smooth, lambda_smooth=lambda_smooth).dropna().copy()
-        rolling_max = series.rolling(window=window + 1).apply(lambda x: np.max(x[:window]))
+        rolling_max = series.rolling(window=window).apply(np.max, raw=False)
 
         # ======= II. Convert to pd.Series and Center =======
         rolling_max = (pd.Series(rolling_max, index=series.index) / (series + 1e-8)) - 1
@@ -643,7 +640,7 @@ class volatility_feature(com.Feature):
         # ======= I. Compute the different smoothed series =======
         series = self.process_data(smoothing_method=smoothing_method, window_smooth=window_smooth, lambda_smooth=lambda_smooth).dropna().copy()
         returns_series = series.pct_change().dropna()
-        rolling_vol = returns_series.rolling(window=window + 1).apply(lambda x: np.std(x[:window]))
+        rolling_vol = returns_series.rolling(window=window).apply(np.std, raw=False)
 
         # ======= II. Convert to pd.Series and Center =======
         rolling_vol = pd.Series(rolling_vol, index=series.index)
@@ -652,7 +649,6 @@ class volatility_feature(com.Feature):
         rolling_vol.name = f"vol_{window}_{smoothing_method}_{window_smooth}_{lambda_smooth}"
 
         return rolling_vol
-
 
 #*____________________________________________________________________________________ #
 class skewness_feature(com.Feature):
@@ -774,7 +770,7 @@ class skewness_feature(com.Feature):
         # ======= I. Compute the different smoothed series =======
         series = self.process_data(smoothing_method=smoothing_method, window_smooth=window_smooth, lambda_smooth=lambda_smooth).dropna().copy()
         returns_series = series.pct_change().dropna()
-        rolling_skew = returns_series.rolling(window=window + 1).apply(lambda x: (x[:window]).skew())
+        rolling_skew = returns_series.rolling(window=window).apply(lambda x: x.skew())
 
         # ======= II. Convert to pd.Series and Center =======
         rolling_skew = pd.Series(rolling_skew, index=series.index)
@@ -783,7 +779,6 @@ class skewness_feature(com.Feature):
         rolling_skew.name = f"skew_{window}_{smoothing_method}_{window_smooth}_{lambda_smooth}"
 
         return rolling_skew
-
 
 #*____________________________________________________________________________________ #
 class kurtosis_feature(com.Feature):
@@ -905,7 +900,7 @@ class kurtosis_feature(com.Feature):
         # ======= I. Compute the different smoothed series =======
         series = self.process_data(smoothing_method=smoothing_method, window_smooth=window_smooth, lambda_smooth=lambda_smooth).dropna().copy()
         returns_series = series.pct_change().dropna()
-        rolling_kurt = returns_series.rolling(window=window + 1).apply(lambda x: (x[:window]).kurtosis())
+        rolling_kurt = returns_series.rolling(window=window).apply(lambda x: x.kurtosis())
 
         # ======= II. Convert to pd.Series and Center =======
         rolling_kurt = pd.Series(rolling_kurt, index=series.index)
@@ -914,7 +909,6 @@ class kurtosis_feature(com.Feature):
         rolling_kurt.name = f"kurt_{window}_{smoothing_method}_{window_smooth}_{lambda_smooth}"
 
         return rolling_kurt
-
 
 #*____________________________________________________________________________________ #
 class quantile_feature(com.Feature):
@@ -1041,7 +1035,7 @@ class quantile_feature(com.Feature):
         # ======= I. Compute the different smoothed series =======
         series = self.process_data(smoothing_method=smoothing_method, window_smooth=window_smooth, lambda_smooth=lambda_smooth).dropna().copy()
         returns_series = series.pct_change().dropna()
-        rolling_quantile = returns_series.rolling(window=window + 1).apply(lambda x: np.quantile(x[:window], quantile))
+        rolling_quantile = returns_series.rolling(window=window).apply(lambda x: np.quantile(x, quantile))
 
         # ======= II. Convert to pd.Series and Center =======
         rolling_quantile = pd.Series(rolling_quantile, index=series.index)
@@ -1171,7 +1165,7 @@ class momentum_feature(com.Feature):
         """
         # ======= I. Compute the different smoothed series =======
         series = self.process_data(smoothing_method=smoothing_method, window_smooth=window_smooth, lambda_smooth=lambda_smooth).dropna().copy()
-        rolling_momentum = series.rolling(window=window + 1).apply(lambda x: mom.get_momentum(x[:window]))
+        rolling_momentum = series.rolling(window=window ).apply(mom.get_momentum, raw=False)
         
         # ======= II. Convert to pd.Series and Center =======
         rolling_momentum = pd.Series(rolling_momentum, index=series.index)
@@ -1180,7 +1174,6 @@ class momentum_feature(com.Feature):
         rolling_momentum.name = f"momentum_{window}_{smoothing_method}_{window_smooth}_{lambda_smooth}"
 
         return rolling_momentum
-
 
 #*____________________________________________________________________________________ #
 class Z_momentum_feature(com.Feature):
@@ -1299,7 +1292,7 @@ class Z_momentum_feature(com.Feature):
         """
         # ======= I. Compute the different smoothed series =======
         series = self.process_data(smoothing_method=smoothing_method, window_smooth=window_smooth, lambda_smooth=lambda_smooth).dropna().copy()
-        rolling_Z_momentum = series.rolling(window=window + 1).apply(lambda x: mom.get_Z_momentum(x[:window]))
+        rolling_Z_momentum = series.rolling(window=window).apply(mom.get_Z_momentum, raw=False)
         
         # ======= II. Convert to pd.Series and Center =======
         rolling_Z_momentum = pd.Series(rolling_Z_momentum, index=series.index)
@@ -1308,7 +1301,6 @@ class Z_momentum_feature(com.Feature):
         rolling_Z_momentum.name = f"Z_momentum_{window}_{smoothing_method}_{window_smooth}_{lambda_smooth}"
 
         return rolling_Z_momentum
-
 
 #*____________________________________________________________________________________ #
 class linear_tempReg_feature(com.Feature):
@@ -1459,10 +1451,10 @@ class linear_tempReg_feature(com.Feature):
         series = self.process_data(smoothing_method=smoothing_method, window_smooth=window_smooth, lambda_smooth=lambda_smooth).dropna().copy()
 
         # ======= II. Compute the rolling regression statistics =======
-        rolling_slope = series.rolling(window=window + 1).apply(compute_slope, raw=False)
-        rolling_tstat = series.rolling(window=window + 1).apply(compute_T_stats, raw=False)
-        rolling_pvalue = series.rolling(window=window + 1).apply(compute_Pvalue, raw=False)
-        rolling_r_squared = series.rolling(window=window + 1).apply(compute_R_squared, raw=False)
+        rolling_slope = series.rolling(window=window).apply(compute_slope, raw=False)
+        rolling_tstat = series.rolling(window=window).apply(compute_T_stats, raw=False)
+        rolling_pvalue = series.rolling(window=window).apply(compute_Pvalue, raw=False)
+        rolling_r_squared = series.rolling(window=window).apply(compute_R_squared, raw=False)
 
         # ======= III. Convert to pd.Series and Unscale =======
         rolling_slope = pd.Series(rolling_slope, index=series.index) / (series + 1e-8)
@@ -1479,7 +1471,6 @@ class linear_tempReg_feature(com.Feature):
         })
         
         return features_df
-
 
 #*____________________________________________________________________________________ #
 class nonlinear_tempReg_feature(com.Feature):
@@ -1633,11 +1624,11 @@ class nonlinear_tempReg_feature(com.Feature):
         series = self.process_data(smoothing_method=smoothing_method, window_smooth=window_smooth, lambda_smooth=lambda_smooth).dropna().copy()
 
         # ======= II. Compute the rolling regression statistics =======
-        rolling_slope = series.rolling(window=window + 1).apply(compute_slope, raw=False)
-        rolling_acceleration = series.rolling(window=window + 1).apply(compute_acceleration, raw=False)
-        rolling_tstat = series.rolling(window=window + 1).apply(compute_T_stats, raw=False)
-        rolling_pvalue = series.rolling(window=window + 1).apply(compute_Pvalue, raw=False)
-        rolling_r_squared = series.rolling(window=window + 1).apply(compute_R_squared, raw=False)
+        rolling_slope = series.rolling(window=window).apply(compute_slope, raw=False)
+        rolling_acceleration = series.rolling(window=window).apply(compute_acceleration, raw=False)
+        rolling_tstat = series.rolling(window=window).apply(compute_T_stats, raw=False)
+        rolling_pvalue = series.rolling(window=window).apply(compute_Pvalue, raw=False)
+        rolling_r_squared = series.rolling(window=window).apply(compute_R_squared, raw=False)
 
         # ======= III. Convert to pd.Series and Unscale =======
         rolling_slope = pd.Series(rolling_slope, index=series.index) / (series + 1e-8)
@@ -1656,7 +1647,6 @@ class nonlinear_tempReg_feature(com.Feature):
         })
 
         return features_df
-
 
 #*____________________________________________________________________________________ #
 class hurst_exponent_feature(com.Feature):
@@ -1969,10 +1959,10 @@ class entropy_feature(com.Feature):
         signs_series = ent.get_movements_signs(series=series)
 
         # ======= II. Compute the rolling entropy features =======
-        rolling_shannon = signs_series.rolling(window=window + 1).apply(ent.get_shannon_entropy, raw=False)
-        rolling_plugin = signs_series.rolling(window=window + 1).apply(ent.get_plugin_entropy, raw=False)
-        rolling_lempel_ziv = signs_series.rolling(window=window + 1).apply(ent.get_lempel_ziv_entropy, raw=False)
-        rolling_kontoyiannis = signs_series.rolling(window=window + 1).apply(ent.get_kontoyiannis_entropy, raw=False)
+        rolling_shannon = signs_series.rolling(window=window).apply(ent.get_shannon_entropy, raw=False)
+        rolling_plugin = signs_series.rolling(window=window).apply(ent.get_plugin_entropy, raw=False)
+        rolling_lempel_ziv = signs_series.rolling(window=window).apply(ent.get_lempel_ziv_entropy, raw=False)
+        rolling_kontoyiannis = signs_series.rolling(window=window).apply(ent.get_kontoyiannis_entropy, raw=False)
 
         # ======= III. Convert to pd.Series and Center =======
         rolling_shannon = pd.Series(rolling_shannon, index=series.index)
@@ -1990,4 +1980,137 @@ class entropy_feature(com.Feature):
 
         return features_df
 
+#*____________________________________________________________________________________ #
+class sample_entropy_feature(com.Feature):
+    """
+    Sample Entropy Feature
+
+    This class computes the sample entropy over a rolling window of a time series.
+    It inherits from the Feature base class and implements methods to:
+        - define parameter grids
+        - apply optional preprocessing
+        - compute sample entropy feature
+    """
+    def __init__(
+        self, 
+        data: pd.Series, 
+        name: str = "sample_entropy", 
+        n_jobs: int = 1
+    ):
+        """
+        Initializes the sample_entropy_feature object with input data, name, and parallel jobs.
+        
+        Parameters:
+            - data (pd.Series): The time series data to be processed.
+            - name (str): Name of the feature, used in column labeling.
+            - n_jobs (int): Number of jobs to run in parallel for feature extraction.
+        """
+        super().__init__(
+            data=data, 
+            name=name, 
+            n_jobs=n_jobs
+        )
+
+    #?____________________________________________________________________________________ #
+    def set_params(
+        self,
+        window: list = [5, 10, 30, 60],
+        sub_vector_size: list = [2, 3],
+        threshold_distance: list = [0.1, 0.2, 0.3],
+        smoothing_method: list = [None, "ewma", "average"],
+        window_smooth: list = [5, 10],
+        lambda_smooth: list = [0.1, 0.2, 0.5],
+    ):
+        """
+        Defines the parameter grid for feature extraction.
+
+        Parameters:
+            - window (list): Rolling window sizes for sample entropy.
+            - sub_vector_size (list): Embedding dimension values.
+            - threshold_distance (list): Tolerance values as a fraction of standard deviation.
+        """
+        self.params = {
+            "window": window,
+            "sub_vector_size": sub_vector_size,
+            "threshold_distance": threshold_distance,
+            "smoothing_method": smoothing_method,
+            "window_smooth": window_smooth,
+            "lambda_smooth": lambda_smooth,
+        }
+
+        return self
+
+    #?____________________________________________________________________________________ #
+    def process_data(
+        self, 
+        smoothing_method: str = None, 
+        window_smooth: int = None, 
+        lambda_smooth: float = None
+    ):
+        """
+        Applies optional smoothing to the input data before feature computation.
+
+        Parameters:
+            - smoothing_method (str): Type of smoothing to apply. Options: "ewma", "average", or None.
+            - window_smooth (int): Size of the smoothing window.
+            - lambda_smooth (float): EWMA decay parameter in [0, 1].
+
+        Returns:
+            - processed_data (pd.Series): The smoothed series, or raw series if no smoothing is applied.
+        """
+        # ======= I. Check if any smoothing should be applied =======
+        if smoothing_method is None:
+            processed_data = self.data
+            self.processed_data = processed_data
+            return processed_data
+        
+        # ======= II. Compute the smoothed series =======
+        elif smoothing_method == "ewma":
+            processed_data = fil.ewma_smoothing(price_series=self.data, window=window_smooth, ind_lambda=lambda_smooth)
+        elif smoothing_method == "average":
+            processed_data = fil.average_smoothing(price_series=self.data, window=window_smooth)
+            
+        else:
+            raise ValueError("Smoothing method not recognized")
+        
+        # ======= III. Save the processed data =======
+        self.processed_data = processed_data
+        
+        return self.processed_data
+
+    #?____________________________________________________________________________________ #
+    def get_feature(
+        self,
+        window: int,
+        sub_vector_size: int,
+        threshold_distance: float,
+        smoothing_method: str,
+        window_smooth: int,
+        lambda_smooth: float,
+    ):
+        """
+        Computes the rolling sample entropy over the processed series.
+
+        Parameters:
+            - window (int): Rolling window size for sample entropy.
+            - sub_vector_size (int): Embedding dimension.
+            - threshold_distance (float): Tolerance for entropy, as a fraction of std.
+
+        Returns:
+            - sample_entropy_series (pd.Series): Series of sample entropy values.
+        """
+        # ======= I. Compute the different smoothed series =======
+        series = self.process_data(smoothing_method=smoothing_method, window_smooth=window_smooth, lambda_smooth=lambda_smooth).dropna().copy()
+        signs_series = ent.get_movements_signs(series=series)
+
+        # ======= II. Compute the rolling entropy features =======
+        rolling_entropy = signs_series.rolling(window=window).apply(lambda x: ent.calculate_sample_entropy(series=x, sub_vector_size=sub_vector_size, threshold_distance=threshold_distance), raw=False)
+
+        # ======= III. Convert to pd.Series and Center =======
+        rolling_entropy = pd.Series(rolling_entropy, index=series.index)
+        
+        # ======= IV. Change Name =======
+        rolling_entropy.name = f"sample_entropy_{sub_vector_size}_{threshold_distance}_{window}_{smoothing_method}_{window_smooth}_{lambda_smooth}"
+        
+        return rolling_entropy
 

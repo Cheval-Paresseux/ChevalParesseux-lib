@@ -6,7 +6,9 @@ import numpy as np
 #! ==================================================================================== #
 #! ================================ Regression Models ================================= #
 class OLSRegression(com.ML_Model):
-    def __init__(self):
+    def __init__(self, n_jobs: int = 1):
+        self.n_jobs = n_jobs # Useless, just to fit the backtest compatibility
+        
         # --- Data Fitted ---
         self.X_train = None
         self.y_train = None
@@ -81,7 +83,9 @@ class OLSRegression(com.ML_Model):
     
 #*____________________________________________________________________________________ #
 class MSERegression(com.ML_Model):
-    def __init__(self):
+    def __init__(self, n_jobs: int = 1):
+        self.n_jobs = n_jobs # Useless, just to fit the backtest compatibility
+        
         # --- Data Fitted ---
         self.X_train = None
         self.y_train = None
@@ -192,7 +196,9 @@ class MSERegression(com.ML_Model):
     
 #*____________________________________________________________________________________ #
 class RidgeRegression(com.ML_Model):
-    def __init__(self):
+    def __init__(self, n_jobs: int = 1):
+        self.n_jobs = n_jobs # Useless, just to fit the backtest compatibility
+        
         # --- Data Fitted ---
         self.X_train = None
         self.y_train = None
@@ -305,7 +311,9 @@ class RidgeRegression(com.ML_Model):
     
 #*____________________________________________________________________________________ #
 class LassoRegression(com.ML_Model):
-    def __init__(self):
+    def __init__(self, n_jobs: int = 1):
+        self.n_jobs = n_jobs # Useless, just to fit the backtest compatibility
+        
         # --- Data Fitted ---
         self.X_train = None
         self.y_train = None
@@ -418,7 +426,9 @@ class LassoRegression(com.ML_Model):
     
 #*____________________________________________________________________________________ #
 class ElasticNetRegression(com.ML_Model):
-    def __init__(self):
+    def __init__(self, n_jobs: int = 1):
+        self.n_jobs = n_jobs # Useless, just to fit the backtest compatibility
+        
         # --- Data Fitted ---
         self.X_train = None
         self.y_train = None

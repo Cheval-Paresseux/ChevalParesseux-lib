@@ -1,8 +1,8 @@
 from ...Model_Training.Models import linearRegression as reg
 
-import os
+# import os
 
-os.environ["MKL_NUM_THREADS"] = "1"
+# os.environ["MKL_NUM_THREADS"] = "1"
 import numpy as np
 import pandas as pd
 from statsmodels.tsa.stattools import adfuller

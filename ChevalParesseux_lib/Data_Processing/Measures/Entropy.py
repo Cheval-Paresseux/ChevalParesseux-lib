@@ -193,4 +193,54 @@ def get_gini_impurity(signs_series: pd.Series):
     """
     classes, counts = np.unique(signs_series, return_counts=True)
     probs = counts / counts.sum()
+    
     return 1 - np.sum(probs**2)
+
+#*____________________________________________________________________________________ #
+def calculate_sample_entropy(
+    series: pd.Series, 
+    sub_vector_size: int = 2, 
+    threshold_distance: float = 0.2
+):
+    #?____________________________________________________________________________________ #
+    def get_maximum_distance(vector_1: list, vector_2: list):
+        distances = [abs(ua - va) for ua, va in zip(vector_1, vector_2)]
+        max_distance = max(distances)
+        
+        return max_distance
+    
+    #?____________________________________________________________________________________ #
+    def get_phi(series: pd.Series, sub_vector_size: int, r_abs: float) -> int:
+        series_size = len(series)
+
+        # Step 1: Build rolling sub-vectors (embedding)
+        rolling_sub_vectors = [
+            [series.iloc[i + j] for j in range(sub_vector_size)]
+            for i in range(series_size - sub_vector_size + 1)
+        ]
+
+
+        # Step 2: Count how many vectors are within the distance threshold of each other
+        similarity_counts = []
+        for i, vector_i in enumerate(rolling_sub_vectors):
+            count = sum(1 for j, vector_j in enumerate(rolling_sub_vectors) if i != j and get_maximum_distance(vector_i, vector_j) <= r_abs)
+            similarity_counts.append(count)
+
+        # Step 3: Return total similarity count
+        total_similarity_count = sum(similarity_counts)
+        
+        return total_similarity_count
+    
+    #?____________________________________________________________________________________ #
+    try:
+        r_abs = threshold_distance * np.std(series)
+        phi = get_phi(series, sub_vector_size, r_abs)
+        phi_plus_1 = get_phi(series, sub_vector_size + 1, r_abs)
+
+        sample_entropy = -np.log(phi_plus_1 / phi)
+    
+    except Exception:
+        sample_entropy = np.nan
+    
+    return sample_entropy
+

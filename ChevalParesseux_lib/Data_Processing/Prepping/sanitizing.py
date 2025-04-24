@@ -12,8 +12,6 @@ def check_feature(
     feature_series: pd.Series,
     stationarity_threshold: float = 0.05, 
     outliers_threshold: float = 5, 
-    mean_tolerance: float = 0.01, 
-    std_tolerance: float = 0.01, 
 ):
     """
     This function checks a given feature series for various characteristics and store the results in a DataFrame.
@@ -35,16 +33,17 @@ def check_feature(
     clean_series, error_proportion, beginning_nans, middle_nans, infinite_indexes = check_for_error_values(feature_series=feature_series)
     
     # ======= II. Check for outliers =======
-    filtered_series, outliers_df, threshold_value = check_for_outliers(feature_series=clean_series,  threshold=outliers_threshold)
+    filtered_series, outliers_df, threshold_value = check_for_outliers(feature_series=clean_series, threshold=outliers_threshold)
     
     # ======= III. Check for scale =======
-    scaled_series, mean, std = check_for_scale(feature_series=filtered_series, mean_tolerance=mean_tolerance, std_tolerance=std_tolerance)
+    scaled_series, mean, std = check_for_scale(feature_series=filtered_series)
     
     # ======= IV. Check for stationarity =======
     dropped_series = scaled_series.dropna()
-    is_adf_stationary, is_kpss_stationary = check_for_stationarity(feature_series=dropped_series, threshold=stationarity_threshold)
+    # is_adf_stationary, is_kpss_stationary = check_for_stationarity(feature_series=dropped_series, threshold=stationarity_threshold)
 
     outliers_proportion = len(outliers_df) / len(dropped_series) if len(dropped_series) > 0 else 0
+    
     # ======= V. Store results inside a DataFrame =======
     results_df = pd.DataFrame({
         "feature_name": feature_series.name,
@@ -57,8 +56,8 @@ def check_feature(
         "outliers_threshold": threshold_value,
         "mean": mean,
         "std": std,
-        "is_adf_stationary": is_adf_stationary,
-        "is_kpss_stationary": is_kpss_stationary
+        # "is_adf_stationary": is_adf_stationary,
+        # "is_kpss_stationary": is_kpss_stationary
     }, index=[0])
     
     return scaled_series, results_df
@@ -108,7 +107,7 @@ def check_for_error_values(
     error_proportion = total_error_values / total_values if total_values > 0 else 0
     
     # ======= VII. Create a Clean Series =======
-    clean_series = auxiliary_series.replace([np.inf, -np.inf], np.nan)  
+    clean_series = auxiliary_series.replace([np.inf, -np.inf], np.nan).copy()
     clean_series = clean_series.ffill()
     
     return clean_series, error_proportion, beginning_nans.tolist(), middle_nans.tolist(), infinite_indexes.tolist()
@@ -119,52 +118,52 @@ def check_for_outliers(
     threshold: float = 3
 ) -> tuple:
     """
-    This function checks for outliers in a given feature series using Z-scores.
+    Checks for outliers in a given feature series using Z-scores.
+
     Parameters:
         - feature_series (pd.Series): The feature series to be checked for outliers.
         - threshold (float): The Z-score threshold for identifying outliers.
-    
+
     Returns:
-        - filtered_series (pd.Series): A series filtered from outliers.
-        - outliers_df (pd.DataFrame): A DataFrame containing the indexes, values, and Z-scores of the outliers.
+        - filtered_series (pd.Series): A series with outliers replaced by NaN.
+        - outliers_df (pd.DataFrame): A DataFrame with the indexes, values, and Z-scores of the outliers.
+        - threshold_value (float): The value equivalent to the threshold Z-score.
     """
-    # ======= I. Check if standard deviation is zero =======
     series = feature_series.copy()
     std = series.std()
 
-    # ======= II. Compute Z-scores =======
+    # Handle constant series to avoid division by zero
+    if std == 0 or np.isnan(std):
+        return series.copy(), pd.DataFrame(columns=["index", "value", "z-score"]), np.nan
+
     mean = series.mean()
     z_scores = (series - mean) / std
 
-    # ======= III. Identify outliers =======
-    outliers = series[z_scores.abs() > threshold]
+    # Detect outliers
+    outlier_mask = z_scores.abs() > threshold
+    outliers = series[outlier_mask]
 
-    # ======= IV. Create a DataFrame to store outliers =======
-    threshold_value = threshold * std + mean
     outliers_df = pd.DataFrame({
         "index": outliers.index,
-        "value": outliers.values.astype("float64"),
-        "z-score": z_scores[outliers.index].astype("float64"),
+        "value": outliers.astype("float64"),
+        "z-score": z_scores[outlier_mask].astype("float64"),
     }).reset_index(drop=True)
-    
-    # ======= V. Create a series filtered from outliers =======
+
     filtered_series = series.copy()
-    filtered_series.loc[outliers.index] = np.nan
-    
+    filtered_series[outlier_mask] = np.nan
+
+    threshold_value = threshold * std + mean
+
     return filtered_series, outliers_df, threshold_value
-    
+
 #*____________________________________________________________________________________ #
 def check_for_scale(
     feature_series: pd.Series, 
-    mean_tolerance: float = 0.01, 
-    std_tolerance: float = 0.01, 
 ) -> tuple:
     """
     This function checks for scale in a given feature series.
     Parameters:
         - feature_series (pd.Series): The feature series to be checked for scale.
-        - mean_tolerance (float): The tolerance for the mean value.
-        - std_tolerance (float): The tolerance for the standard deviation.
     
     Returns:
         - auxiliary_series (pd.Series): The normalized series.
@@ -176,14 +175,9 @@ def check_for_scale(
     mean = auxiliary_series.mean()
     std = auxiliary_series.std()
 
-    is_mean_near_zero = abs(mean) < mean_tolerance
-    is_std_near_one = abs(std - 1) < std_tolerance
-
     # ======= II. Apply necessary normalization =======
-    if not is_mean_near_zero:
-        auxiliary_series -= mean
-    if not is_std_near_one:
-        auxiliary_series /= std
+    auxiliary_series -= mean
+    auxiliary_series /= std
     
     return auxiliary_series, mean, std
 
@@ -203,11 +197,15 @@ def check_for_stationarity(
         - (tuple): A tuple containing two boolean values indicating whether the series is stationary according to the ADF and KPSS tests, respectively.
     """
     # ======= I. Perform Stationarity Tests =======
-    adf_results = adfuller(feature_series)
-    
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
-        kpss_results = kpss(feature_series, regression="c", nlags="auto")
+    try:
+        adf_results = adfuller(feature_series)
+        
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            kpss_results = kpss(feature_series, regression="c", nlags="auto")
+    except ValueError:
+        # Handle the case where the series is too short for the tests
+        return False, False
     
     # ======= II. Check p-values =======
     adf_p_value = adf_results[1]
@@ -218,3 +216,4 @@ def check_for_stationarity(
     is_kpss_stationary = kpss_p_value > threshold
     
     return is_adf_stationary, is_kpss_stationary
+

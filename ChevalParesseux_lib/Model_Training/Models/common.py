@@ -77,7 +77,7 @@ def get_regression_stats(predictions: np.array, X_train: np.array, y_train: np.a
     # ======= III. Compute R-Squared =======
     SST = np.sum((y_train - np.mean(y_train))**2)
     SSR = np.sum((predictions - np.mean(y_train))**2)
-    R_squared = SSR / SST
+    R_squared = SSR / SST if SST != 0 else 0
     
     # ======= IV. Compute t-Statistics and p-Values =======
     XTX = X_train.T @ X_train
@@ -149,3 +149,4 @@ def plot_tree(node, depth=0, x=0.5, y=1.0, dx=0.3, dy=0.2, ax=None, feature_name
         plt.show()
     
     return None
+

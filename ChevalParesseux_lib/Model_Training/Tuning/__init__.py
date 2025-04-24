@@ -1,3 +1,3 @@
 from .common import *
-from .set_generator import *
+from .split_and_sample import *
 from .grid_search import *

@@ -191,7 +191,7 @@ def trend_filter(label_series: pd.Series, window: int):
     group_sizes = auxiliary_df.groupby("group")["label"].transform("size")
 
     # ======= III. Filter the labels based on the group size =======
-    auxiliary_df["label"] = auxiliary_df.apply(lambda row: row["label"] if group_sizes[row.name] >= window else 0, axis=1)
+    auxiliary_df["label"] = auxiliary_df.apply(lambda row: row["label"] if group_sizes.get(row.name, 0) >= window else 0, axis=1)
     labels_series = auxiliary_df["label"]
     
     return labels_series

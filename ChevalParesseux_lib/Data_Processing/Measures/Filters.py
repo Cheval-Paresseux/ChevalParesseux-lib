@@ -10,7 +10,7 @@ def average_smoothing(
     window: int,
 ):
     # ======= I. Compute the moving average =======
-    moving_average = price_series.rolling(window=window + 1).mean()
+    moving_average = price_series.rolling(window=window).mean()
 
     # ======= II. Convert to pd.Series and Normalize =======
     moving_average = pd.Series(moving_average, index=price_series.index)
