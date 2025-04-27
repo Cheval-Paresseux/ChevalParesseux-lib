@@ -1,11 +1,12 @@
 from ..Prepping import sanitizing as sanit
 from ..Prepping import sampling as sampl
 
-import pandas as pd 
+import pandas as pd
 import numpy as np
 from typing import Union
 from joblib import Parallel, delayed
 import inspect
+
 
 #! ==================================================================================== #
 #! ==================================== Cleaning ====================================== #
@@ -329,7 +330,8 @@ class FeaturesCleaner():
         
         return final_df
         
-        
+
+
 #! ==================================================================================== #
 #! =================================== Sampling  ====================================== #
 class DataSampler():
@@ -364,6 +366,17 @@ class DataSampler():
         pre_threshold: float = 1000,
         weight_column_name: str = "close",
         vol_threshold: float = 0.0005,
+        aggregation_dict: dict = {
+            "open": "first",
+            "high": "max",
+            "low": "min",
+            "close": "last",
+            "volume": "sum",
+            "ts": ["first", "last"],
+            "date": "first",
+            "bid_open": "first",
+            "ask_open": "first",
+        },
     ):
         self.params = {
             'sampling_method': sampling_method,
@@ -375,6 +388,7 @@ class DataSampler():
             'pre_threshold': pre_threshold,
             'weight_column_name': weight_column_name,
             'vol_threshold': vol_threshold,
+            'aggregation_dict': aggregation_dict,
         }
         
         return self

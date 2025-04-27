@@ -13,6 +13,17 @@ def daily_cumsumTargetBars(
     new_cols_methods: str = "mean",
     grouping_column: str = "date",
     pre_threshold: int = 1000,
+    aggregation_dict: dict = {
+        "open": "first",
+        "high": "max",
+        "low": "min",
+        "close": "last",
+        "volume": "sum",
+        "ts": ["first", "last"],
+        "date": "first",
+        "bid_open": "first",
+        "ask_open": "first",
+    },
     n_jobs: int = 1,
 ) -> pd.DataFrame:
     """
@@ -50,10 +61,10 @@ def daily_cumsumTargetBars(
     
     # ======= III. Process each DataFrame in parallel or sequentially =======
     if n_jobs == 1:
-        resampled_dfs = [get_cumsum_resample(df=dfs_list[idx], column_name=column_name, threshold=thresholds[idx], new_cols_method=new_cols_methods) for idx in range(len(dfs_list))]
+        resampled_dfs = [get_cumsum_resample(df=dfs_list[idx], column_name=column_name, threshold=thresholds[idx], new_cols_method=new_cols_methods, aggregation_dict=aggregation_dict) for idx in range(len(dfs_list))]
     else:
         resampled_dfs = Parallel(n_jobs=n_jobs)(
-            delayed(get_cumsum_resample)(df=dfs_list[idx], column_name=column_name, threshold=thresholds[idx], new_cols_method=new_cols_methods)
+            delayed(get_cumsum_resample)(df=dfs_list[idx], column_name=column_name, threshold=thresholds[idx], new_cols_method=new_cols_methods, aggregation_dict=aggregation_dict)
             for idx in range(len(dfs_list))
     )
 
@@ -69,6 +80,17 @@ def daily_cumsumWeightedTargetBars(
     new_cols_methods: str = "mean",
     grouping_column: str = "date",
     pre_threshold: int = 1000,
+    aggregation_dict: dict = {
+        "open": "first",
+        "high": "max",
+        "low": "min",
+        "close": "last",
+        "volume": "sum",
+        "ts": ["first", "last"],
+        "date": "first",
+        "bid_open": "first",
+        "ask_open": "first",
+    },
     n_jobs: int = 1,
 ) -> pd.DataFrame:
     """
@@ -107,10 +129,10 @@ def daily_cumsumWeightedTargetBars(
     
     # ======= III. Process each DataFrame in parallel or sequentially =======
     if n_jobs == 1:
-        resampled_dfs = [get_cumsumWeighted_resample(df=dfs_list[idx], column_name=column_name, weight_column_name=weight_column_name, threshold=thresholds[idx], new_cols_method=new_cols_methods) for idx in range(len(dfs_list))]
+        resampled_dfs = [get_cumsumWeighted_resample(df=dfs_list[idx], column_name=column_name, weight_column_name=weight_column_name, threshold=thresholds[idx], new_cols_method=new_cols_methods, aggregation_dict=aggregation_dict) for idx in range(len(dfs_list))]
     else:
         resampled_dfs = Parallel(n_jobs=n_jobs)(
-            delayed(get_cumsumWeighted_resample)(df=dfs_list[idx], column_name=column_name, weight_column_name=weight_column_name, threshold=thresholds[idx], new_cols_method=new_cols_methods)
+            delayed(get_cumsumWeighted_resample)(df=dfs_list[idx], column_name=column_name, weight_column_name=weight_column_name, threshold=thresholds[idx], new_cols_method=new_cols_methods, aggregation_dict=aggregation_dict)
             for idx in range(len(dfs_list))
     )
 
@@ -119,10 +141,21 @@ def daily_cumsumWeightedTargetBars(
 #*____________________________________________________________________________________ #
 def daily_volBars(
     data: pd.DataFrame, 
-    column_name: str = "volume",
+    column_name: str = "close",
     vol_threshold: float = 0.0005,
     new_cols_methods: str = "mean",
     grouping_column: str = "date",
+    aggregation_dict: dict = {
+        "open": "first",
+        "high": "max",
+        "low": "min",
+        "close": "last",
+        "volume": "sum",
+        "ts": ["first", "last"],
+        "date": "first",
+        "bid_open": "first",
+        "ask_open": "first",
+    },
     n_jobs: int = 1,
 ) -> pd.DataFrame:
     # ======= I. Group the DataFrame if Necessary =======
@@ -133,10 +166,10 @@ def daily_volBars(
     
     # ======= III. Process each DataFrame in parallel or sequentially =======
     if n_jobs == 1:
-        resampled_dfs = [get_volatility_resample(df=dfs_list[idx], column_name=column_name, threshold=vol_threshold, new_cols_method=new_cols_methods) for idx in range(len(dfs_list))]
+        resampled_dfs = [get_volatility_resample(df=dfs_list[idx], column_name=column_name, threshold=vol_threshold, new_cols_method=new_cols_methods, aggregation_dict=aggregation_dict) for idx in range(len(dfs_list))]
     else:
         resampled_dfs = Parallel(n_jobs=n_jobs)(
-            delayed(get_volatility_resample)(df=dfs_list[idx], column_name=column_name, threshold=vol_threshold, new_cols_method=new_cols_methods)
+            delayed(get_volatility_resample)(df=dfs_list[idx], column_name=column_name, threshold=vol_threshold, new_cols_method=new_cols_methods, aggregation_dict=aggregation_dict)
             for idx in range(len(dfs_list))
     )
 
@@ -150,7 +183,18 @@ def get_cumsum_resample(
     df: pd.DataFrame, 
     column_name: str = "volume",
     threshold: int = 1000,
-    new_cols_method: str = "mean"
+    new_cols_method: str = "mean",
+    aggregation_dict: dict = {
+        "open": "first",
+        "high": "max",
+        "low": "min",
+        "close": "last",
+        "volume": "sum",
+        "ts": ["first", "last"],
+        "date": "first",
+        "bid_open": "first",
+        "ask_open": "first",
+    },
 ) -> pd.DataFrame:
     """
     This function resamples the DataFrame based on the cumulative sum of a specified column.
@@ -189,17 +233,7 @@ def get_cumsum_resample(
     auxiliary_df["new_bars"] = bars_indexes
 
     # III.2 Define the aggregation dictionary
-    agg_dict = {
-        "open": "first",
-        "high": "max",
-        "low": "min",
-        "close": "last",
-        "volume": "sum",
-        "ts": ["first", "last"],
-        "date": "first",
-        "bid_open": "first",
-        "ask_open": "first",
-    }
+    agg_dict = aggregation_dict.copy()
 
     # III.3 Check for additional columns and add them to the aggregation dictionary
     additional_cols = set(auxiliary_df.columns) - set(agg_dict.keys()) - {"new_bars"}
@@ -208,7 +242,7 @@ def get_cumsum_resample(
 
     # III.4 Perform the aggregation
     auxiliary_df = auxiliary_df.groupby("new_bars").agg(agg_dict)
-    auxiliary_df.columns = [ "open", "high", "low", "close", "volume", "ts_open", "ts_close", "date", "bid_open", "ask_open"] + list(additional_cols)
+    auxiliary_df.columns = [key for key in aggregation_dict.keys()] + list(additional_cols)
     
     auxiliary_df.reset_index(drop=True, inplace=True)
     
@@ -220,7 +254,18 @@ def get_cumsumWeighted_resample(
     column_name: str = "volume",
     weight_column_name: str = "close",
     threshold: int = 1000,
-    new_cols_method: str = "mean"
+    new_cols_method: str = "mean",
+    aggregation_dict: dict = {
+        "open": "first",
+        "high": "max",
+        "low": "min",
+        "close": "last",
+        "volume": "sum",
+        "ts": ["first", "last"],
+        "date": "first",
+        "bid_open": "first",
+        "ask_open": "first",
+    },
 ) -> pd.DataFrame:
     """
     This function resamples the DataFrame based on the cumulative sum of a specified column multiplied by the price.
@@ -261,17 +306,7 @@ def get_cumsumWeighted_resample(
     auxiliary_df["new_bars"] = bars_indexes
 
     # III.2 Define the aggregation dictionary
-    agg_dict = {
-        "open": "first",
-        "high": "max",
-        "low": "min",
-        "close": "last",
-        "volume": "sum",
-        "ts": ["first", "last"],
-        "date": "first",
-        "bid_open": "first",
-        "ask_open": "first",
-    }
+    agg_dict = aggregation_dict.copy()
 
     # III.3 Check for additional columns and add them to the aggregation dictionary
     additional_cols = set(auxiliary_df.columns) - set(agg_dict.keys()) - {"new_bars"}
@@ -280,7 +315,7 @@ def get_cumsumWeighted_resample(
 
     # III.4 Perform the aggregation
     auxiliary_df = auxiliary_df.groupby("new_bars").agg(agg_dict)
-    auxiliary_df.columns = [ "open", "high", "low", "close", "volume", "ts_open", "ts_close", "date", "bid_open", "ask_open"] + list(additional_cols)
+    auxiliary_df.columns = [key for key in aggregation_dict.keys()] + list(additional_cols)
     
     auxiliary_df.reset_index(drop=True, inplace=True)
     
@@ -291,7 +326,18 @@ def get_volatility_resample(
     df: pd.DataFrame, 
     column_name: str = "close",
     threshold: int = 0.001,
-    new_cols_method: str = "mean"
+    new_cols_method: str = "mean",
+    aggregation_dict: dict = {
+        "open": "first",
+        "high": "max",
+        "low": "min",
+        "close": "last",
+        "volume": "sum",
+        "ts": ["first", "last"],
+        "date": "first",
+        "bid_open": "first",
+        "ask_open": "first",
+    },
 ) -> pd.DataFrame:
     """
     This function resamples the DataFrame based on the volatility of a specified column.
@@ -332,17 +378,7 @@ def get_volatility_resample(
     auxiliary_df["new_bars"] = bars_indexes
 
     # III.2 Define the aggregation dictionary
-    agg_dict = {
-        "open": "first",
-        "high": "max",
-        "low": "min",
-        "close": "last",
-        "volume": "sum",
-        "ts": ["first", "last"],
-        "date": "first",
-        "bid_open": "first",
-        "ask_open": "first",
-    }
+    agg_dict = aggregation_dict.copy()
 
     # III.3 Check for additional columns and add them to the aggregation dictionary
     additional_cols = set(auxiliary_df.columns) - set(agg_dict.keys()) - {"new_bars"}
@@ -351,7 +387,7 @@ def get_volatility_resample(
 
     # III.4 Perform the aggregation
     auxiliary_df = auxiliary_df.groupby("new_bars").agg(agg_dict)
-    auxiliary_df.columns = [ "open", "high", "low", "close", "volume", "ts_open", "ts_close", "date", "bid_open", "ask_open"] + list(additional_cols)
+    auxiliary_df.columns = [key for key in aggregation_dict.keys()] + list(additional_cols)
     
     auxiliary_df.reset_index(drop=True, inplace=True)
     

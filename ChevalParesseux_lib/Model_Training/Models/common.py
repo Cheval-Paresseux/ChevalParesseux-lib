@@ -85,7 +85,7 @@ def get_regression_stats(predictions: np.array, X_train: np.array, y_train: np.a
     # Use pseudo-inverse to avoid singularity issues
     var_covar_matrix = variance * np.linalg.pinv(XTX)
     se_coefficients = np.sqrt(np.diag(var_covar_matrix))
-    t_stats = coefficients / se_coefficients
+    t_stats = coefficients / se_coefficients if np.all(se_coefficients != 0) else np.zeros_like(coefficients)
 
     # Degrees of freedom check
     degrees_freedom = nb_observations - nb_features

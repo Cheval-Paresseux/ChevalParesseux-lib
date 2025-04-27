@@ -179,7 +179,7 @@ class TemporalUniquenessSplitter(com.SplitAndSample):
     #?____________________________________________________________________________________ #
     def extract(
         self, 
-        df:pd.DataFrame, 
+        df: pd.DataFrame, 
         n_folds: int = 5
     ) -> list:
         """

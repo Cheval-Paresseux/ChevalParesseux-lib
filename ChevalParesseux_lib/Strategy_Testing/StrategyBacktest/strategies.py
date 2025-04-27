@@ -1,68 +1,36 @@
-from .info import valor_ponto
-from .common import strategy
-from ...Data_Processing import Prepping as prep
+from ..StrategyBacktest import common as com
 from ...utils import classificationMetrics as clsmet
+from ...utils import common as util
 
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
 from joblib import Parallel, delayed
-import inspect
 
-def filter_params_for_function(func, param_dict):
-    sig = inspect.signature(func)
-    valid_keys = sig.parameters.keys()
-    return {k: v for k, v in param_dict.items() if k in valid_keys}
-
-def extract_universe(params_grid: dict): 
-    # ======= 0. Define recursive function to generate all combinations =======
-    def recursive_combine(keys, values, index, current_combination, params_list):
-        if index == len(keys):
-            # Base case: all parameters have been assigned a value
-            params_list.append(current_combination.copy())
-            return
-
-        key = keys[index]
-        for value in values[index]:
-            current_combination[key] = value
-            recursive_combine(keys, values, index + 1, current_combination, params_list)
-
-    # ======= I. Initialize variables =======
-    keys = list(params_grid.keys())
-    values = list(params_grid.values())
-    params_list = []
-
-    # ======= II. Generate all combinations =======
-    recursive_combine(keys, values, 0, {}, params_list)
-
-    return params_list
 
 #! ==================================================================================== #
 #! ================================== ML MODEL ======================================== #
-class ML_Model(strategy):
+class ML_strategy(com.Strategy):
     def __init__(
         self, 
-        data: pd.DataFrame = None, 
         n_jobs: int = 1,
-        lag: str = "open",
-        asset: str = None,
+        date_name: str = "date",
+        bid_open_name: str = "bid_open",
+        ask_open_name: str = "ask_open",
     ):
         """
-        Constructor for the ML_Model class.
+        Constructor for the Machine Learning-based strategy class.
         
         Parameters:
-            - data (pd.DataFrame): Input data for the model, should be raw from the data handler.
             - n_jobs (int): Number of jobs to run in parallel. Default is 1.
-            - lag (str): Lag value for the backtest methods. Default is "open".
-            - asset (str): Asset name for the backtest methods. Default is None.
+            - date_name (str): Name of the column containing the dates. Default is "date".
+            - bid_open_name (str): Name of the column containing the bid open prices. Default is "bid_open".
+            - ask_open_name (str): Name of the column containing the ask open prices. Default is "ask_open".
         """
         # ======= 0. Input Data =======
-        self.data = data
         self.n_jobs = n_jobs
-        
-        self.lag = lag
-        self.asset = asset
-        
+        super().__init__(date_name=date_name, bid_open_name=bid_open_name, ask_open_name=ask_open_name)
+
         # ======= I. Data Processing models =======
         self.sampling_model = None
         self.sampling_params = None
@@ -205,7 +173,7 @@ class ML_Model(strategy):
         """
         # ======= I. Initialize Model =======
         sampler = self.sampling_model(data=df, n_jobs=self.n_jobs)
-        sampler.set_params(**filter_params_for_function(sampler.set_params, self.sampling_params))
+        sampler.set_params(**util.filter_params_for_function(sampler.set_params, self.sampling_params))
         
         # ======= II. Resample Data =======
         resampled_data = sampler.extract()
@@ -234,7 +202,7 @@ class ML_Model(strategy):
         
         # ======= II. Extract Labels =======
         labeller = self.labeller_model(series=series, n_jobs=self.n_jobs)
-        labeller.set_params(**filter_params_for_function(labeller.set_params, self.labeller_params))
+        labeller.set_params(**util.filter_params_for_function(labeller.set_params, self.labeller_params))
         labels_df = labeller.extract()
         labels_series = labels_df["set_0"] # Keep only the first set of labels
         
@@ -266,7 +234,7 @@ class ML_Model(strategy):
         features_df = pd.DataFrame()
         for feature_model in self.features_model:
             feature = feature_model(data=series, n_jobs=self.n_jobs)
-            feature.set_params(**filter_params_for_function(feature.set_params, self.features_params))
+            feature.set_params(**util.filter_params_for_function(feature.set_params, self.features_params))
 
             features_df = pd.concat([features_df, feature.extract()], axis=1)
 
@@ -294,7 +262,7 @@ class ML_Model(strategy):
         """
         # ======= I. Initialize and set Parameters =======
         cleaner = self.cleaner_model(training_data=dfs_list, non_feature_columns=self.non_feature_columns, n_jobs=self.n_jobs)
-        cleaner.set_params(**filter_params_for_function(cleaner.set_params, self.cleaner_params))
+        cleaner.set_params(**util.filter_params_for_function(cleaner.set_params, self.cleaner_params))
         
         # ======= II. Clean the data =======
         stacked_data, processed_data, features_informations, features_rules = cleaner.extract()
@@ -374,7 +342,7 @@ class ML_Model(strategy):
         """
         # ======= I. Initialize =======
         splitSample_model = self.splitSample_model(training_df=df, n_jobs=self.n_jobs, random_state=random_state)
-        splitSample_model.set_params(**filter_params_for_function(splitSample_model.set_params, self.splitSample_params))
+        splitSample_model.set_params(**util.filter_params_for_function(splitSample_model.set_params, self.splitSample_params))
         
         # ====== II. Generate Samples =======
         folds, balanced_folds = splitSample_model.extract(df=df, n_folds=n_folds)
@@ -392,7 +360,7 @@ class ML_Model(strategy):
         
         # ======= II. Initialize Selector Model =======
         features_selector = self.featuresSelector_model()
-        features_selector.set_params(**filter_params_for_function(features_selector.set_params, self.featuresSelector_params))
+        features_selector.set_params(**util.filter_params_for_function(features_selector.set_params, self.featuresSelector_params))
         
         # ======= III. Extract New Features df =======
         new_features_df = features_selector.extract(features_df)
@@ -467,7 +435,7 @@ class ML_Model(strategy):
         processed_data: list,
         costs: float = 0.0,
     ):
-        params_list = extract_universe(self.filterGridUniverse)
+        params_list = com.extract_universe(self.filterGridUniverse)
         
         best_profit = -np.inf
         best_params = None
@@ -475,7 +443,7 @@ class ML_Model(strategy):
         for params in tqdm(params_list):
             # ======= I. Initialize the Filter =======
             filter = self.filter_model()
-            filter.set_params(**filter_params_for_function(filter.set_params, params))
+            filter.set_params(**util.filter_params_for_function(filter.set_params, params))
             self.filter = filter
 
             # ======= II. Run Backtest with the current Filter =======
@@ -500,7 +468,7 @@ class ML_Model(strategy):
         
         # ======= IV. Store the Best Parameters =======
         filter = self.filter_model()
-        filter.set_params(**filter_params_for_function(filter.set_params, best_params))
+        filter.set_params(**util.filter_params_for_function(filter.set_params, best_params))
         
         self.filter_params = best_params
         self.filter = filter
@@ -509,7 +477,7 @@ class ML_Model(strategy):
         return profit_history
 
     #?___________________________ Backtest Methods _______________________________________ #
-    def transform_data(
+    def process_data(
         self, 
         df: pd.DataFrame
     ):
@@ -590,7 +558,7 @@ class ML_Model(strategy):
         return new_data
 
     #?____________________________________________________________________________________ #
-    def get_signals(
+    def predict(
         self, 
         df: pd.DataFrame
     ):
@@ -624,502 +592,4 @@ class ML_Model(strategy):
         self.metrics.append(metrics)
 
         return results_df
-    
-    #?____________________________________________________________________________________ #
-    def predict(
-        self, 
-        df: pd.DataFrame
-    ):
-        """
-        Transforms a dataframe containing signals into a dataframe of operations.
-        
-        Parameters:
-            - df (list): List of DataFrames to be used for predictions.
-        
-        Returns:
-            - operations (pd.DataFrame): DataFrame with the operations generated from the signals.
-        """
-        # ======= I. Initialize Operations =======
-        operations = pd.DataFrame(columns=["ID", "Trade Type", "Entry ts", "Entry price", "Exit ts", "Exit price", "Size", "Profit"])
-        
-        # ======== II. Extract Signals =======
-        try:
-            signals_df = self.get_signals(df=df)
-        except Exception as e:
-            print(f"Skipping predict due to error: {e}")
-            return operations
-        
-        # ======= II. Generate Operations from the signals =======
-        # II.1 Adjust Last Prices (issue in the data input)
-        signals_df.loc[signals_df.index[-1], "bid_open"] = signals_df.loc[signals_df.index[-1], "close"]
-        signals_df.loc[signals_df.index[-1], "ask_open"] = signals_df.loc[signals_df.index[-1], "close"]
-
-        # II.2 Set first and last signal to 0 to ensure that the operations are closed
-        signals_df.reset_index(drop=True, inplace=True)
-        signals_df.loc[0, "signal"] = 0
-        signals_df.loc[len(signals_df) - 1, "signal"] = 0
-        signals_df.loc[len(signals_df) - 2, "signal"] = 0
-        
-        signals_df = signals_df.ffill()
-
-        # II.3 Extract the Signal Change and the Entry Points
-        signals_df["signal_change"] = signals_df["signal"].diff()
-        signals_df["signal_change"] = signals_df["signal_change"].shift(1)
-
-        entry_points = signals_df[signals_df["signal_change"] != 0]
-
-        # ======= III. Create an Operation for each entry point =======
-        entry_points = entry_points.copy()
-        entry_points_size = len(entry_points)
-        sequential_id = 0
-
-        for idx in range(entry_points_size - 1):
-            # III.1 Extracting rows
-            current_row = entry_points.iloc[idx]
-            next_row = entry_points.iloc[idx + 1]
-            row_before_current_row = signals_df.iloc[current_row.name - 1]
-
-            # III.2 Extract Information for a Long Operation
-            if (current_row["signal_change"] > 0 and row_before_current_row["signal"] == 1):
-                trade_type = "buy"
-                entry_ts = current_row["ts_open"]
-                entry_price = current_row["ask_open"]
-                exit_ts = next_row["ts_open"]
-                exit_price = next_row["bid_open"]
-
-                size = 1  # signals_df.loc[1, "size"]
-                profit = (exit_price - entry_price) * valor_ponto[self.asset]
-
-            # III.3 Extract Information for a Short Operation
-            elif (current_row["signal_change"] < 0 and row_before_current_row["signal"] == -1):
-                trade_type = "sell"
-                entry_ts = current_row["ts_open"]
-                entry_price = current_row["bid_open"]
-                exit_ts = next_row["ts_open"]
-                exit_price = next_row["ask_open"]
-
-                size = 1  # signals_df.loc[1, "size"]
-
-                profit = (entry_price - exit_price) * valor_ponto[self.asset]
-
-            else:
-                continue
-
-            # III.4 Append Operation to the DataFrame
-            operations.loc[sequential_id] = [sequential_id, trade_type, entry_ts, entry_price, exit_ts, exit_price, size, profit]
-            sequential_id += 1
-
-        return operations
-    
-
-#! ==================================================================================== #
-#! ================================== LABELLER ======================================== #
-class Labeller_Benchmark(strategy):
-    def __init__(
-        self, 
-        data: pd.DataFrame = None, 
-        n_jobs: int = 1,
-        lag: str = "open",
-        asset: str = None,
-    ):
-        """
-        Constructor for the ML_Model class.
-        
-        Parameters:
-            - data (pd.DataFrame): Input data for the model, should be raw from the data handler.
-            - n_jobs (int): Number of jobs to run in parallel. Default is 1.
-            - lag (str): Lag value for the backtest methods. Default is "open".
-            - asset (str): Asset name for the backtest methods. Default is None.
-        """
-        # ======= I. Input Data =======
-        self.data = data
-        self.n_jobs = n_jobs
-        
-        # ======= II. Data Processing models =======
-        # ----> Core models
-        self.predictive_model = None
-        self.model = None # Store the instance of the model to use for the test data
-        
-        self.filter_model = None
-        
-        # ----> Training models
-        self.labeller_model = None
-        self.features_model = None
-        
-        # ----> Data Cleaning models
-        self.cleaner_model = None
-        self.cleaner = None # Store the instance of the cleaner to use for the test data
-        
-        # ----> Grid Search models
-        self.sampleGenerator_model = None
-        self.gridSearch_model = None
-        
-        # ======= III. Models Parameters =======
-        # ----> Core models
-        self.predictive_params = None
-        self.filter_params = None
-        
-        # ----> Training models
-        self.labeller_params = None
-        self.features_params = None
-        
-        # ----> Data Cleaning models
-        self.cleaner_params = None
-        self.pre_threshold = None
-        
-        # ----> Grid Search models
-        self.sampling_params = None
-        self.sampleGenerator_params = None
-        self.gridSearch_params = None
-        self.params_filter_grid = None
-        
-        # ----> Columns to not be used as features
-        self.non_feature_columns = None
-        
-        # ======= IV. Features Information =======
-        self.features_informations = None
-        self.features_rules = None
-        self.metrics = [] # Store the metrics for each backtest
-
-        # ======= IV. Backtest Parameters =======
-        self.lag = lag
-        self.asset = asset
-
-    #?__________________________ Initialization Methods __________________________________ #
-    def set_models(
-        self,
-        labeller_model,
-        cleaner_model,
-    ):
-        """
-        Set the models to be used in the strategy.
-        
-        Parameters:
-            - labeller_model: Labeller model to be used for labelling data.                    ===> GrandLine/Data_Processing/Labelling
-            - cleaner_model: Data cleaning model to be used.                                   ===> GrandLine/Data_Processing/Prepping
-        """
-        self.labeller_model = labeller_model
-        self.cleaner_model = cleaner_model
-    
-        return self
-    
-    #?____________________________________________________________________________________ #
-    def set_params(
-        self,
-        labeller_params: dict,
-        sampling_params: dict,
-        cleaner_params: dict,
-        non_feature_columns: list = ["open","high","low","close","volume","ts_open","ts_close","date","bid_open","ask_open"],
-    ):
-        """
-        Set the parameters to be used for all the models.
-        
-        Parameters:
-            - labeller_params (dict): Parameters for the labeller model.
-                Ex : (slope_labeller) | labeller_params = {'horizon': [5], 'horizon_extension': [1.5], 'min_trend_size': [10], 'smoothing_method': ["ewma"], 'window_smooth': [10], 'lambda_smooth': [0.2]}
-                
-            - sampling_params (dict): Parameters for the sampling model.
-                Ex : (extract_targetBars) | sampling_params = {"target_bars": 100, "column_name": "volume", "window_bars_estimation": 10, "new_cols_methods": "mean", "grouping_column": "date"}
-            
-            - cleaner_params (dict): Parameters for the data cleaning model.
-                Ex : (DataCleaner) | cleaner_params = {'stationarity_threshold': 0.05, 'outliers_threshold': 5, 'mean_tolerance': 0.05, 'std_tolerance': 0.05}
-
-            - non_feature_columns (list): List of columns to be excluded from the features.
-                Ex : non_feature_columns = ["ts_open", "ts_close", "open", "high", "low", "close", "volume", "date", "bid_open", "ask_open", "label"]
-        """
-        self.labeller_params = labeller_params
-        self.sampling_params = sampling_params
-        self.cleaner_params = cleaner_params
-        self.non_feature_columns = non_feature_columns
-        
-        self.pre_threshold = sampling_params["target_bars"]
-        
-        return self
-    
-    #?_______________________________ Helper Methods _____________________________________ #
-    def bars_sampling(
-        self,
-        df: pd.DataFrame,
-    ):
-        """
-        Performs data cumsum resampling based on the specified parameters.
-        
-        Parameters:
-            - df (pd.DataFrame): Input DataFrame to be resampled.
-        """
-        # ===== I. Resample Data =======
-        resampled_dfs, last_threshold = prep.extract_targetBars(
-            data=df,
-            target_bars=self.sampling_params["target_bars"],
-            column_name=self.sampling_params["column_name"],
-            window_bars_estimation=self.sampling_params["window_bars_estimation"],
-            new_cols_methods=self.sampling_params["new_cols_methods"],
-            grouping_column=self.sampling_params["grouping_column"],
-            pre_threshold=self.pre_threshold,
-            n_jobs=self.n_jobs,
-        )
-        
-        self.pre_threshold = last_threshold
-        
-        # ===== II. Get Rid of the first days (incorrect estimation) =======
-        window_bars_estimation = self.sampling_params["window_bars_estimation"]
-        resampled_dfs = resampled_dfs[window_bars_estimation:]
-        
-        return resampled_dfs
-    
-    #?____________________________________________________________________________________ #
-    def apply_labelling(
-        self, 
-        df: pd.DataFrame,
-        series_name: str = "close",
-    ):
-        """
-        This function applies the labelling model to the data.
-        
-        Parameters:
-            - df (pd.DataFrame): Input DataFrame to be labelled.
-            - series_name (str): Name of the column to be used for labelling. Default is "close".
-        
-        Notes : The parameters should be passed as a dictionary of lists, then only the first set of parameters will be used.
-                This comes from the fact that the labelling model allows to compute multiple labels at once.
-        """
-        # ======= I. Copy the DataFrame =======
-        aux_df = df.copy()
-        series = aux_df[series_name]
-        
-        # ======= II. Extract Labels =======
-        labeller = self.labeller_model(series=series, n_jobs=self.n_jobs).set_params(**self.labeller_params)
-        labels_df = labeller.extract()
-        labels_series = labels_df["set_0"] # Keep only the first set of labels
-        
-        # ======= III. Concatenate the Labels with the Original Data =======
-        aux_df.loc[:, "label"] = labels_series
-        
-        return aux_df
-    
-    #?____________________________________________________________________________________ #
-    def clean_data(
-        self,
-        dfs_list: list,
-    ):
-        """
-        Cleans the data using the cleaner model. It manage nans and outliers in the middle of the data by a forward fill to avoid leakage and performs a normalization of the features.
-        
-        Parameters:
-            - dfs_list (list): List of DataFrames to be cleaned.
-        
-        Returns: 
-            - stacked_data (pd.DataFrame): Stacked DataFrame with all the data cleaned.
-            - processed_data (list): List of all the clean dataframes.
-            - features_informations (pd.DataFrame): DataFrame with the features information.
-            - features_rules (dictionary): Dictionary containing the rules for each feature; (mean and std for the normalization, threshold to consider an outlier => used on test data).
-        """
-        # ======= I. Initialize and set Parameters =======
-        cleaner = self.cleaner_model(training_data=dfs_list, non_feature_columns=self.non_feature_columns, n_jobs=self.n_jobs)
-        cleaner.set_params(**self.cleaner_params)
-        
-        # ======= II. Clean the data =======
-        stacked_data, processed_data, features_informations, features_rules = cleaner.extract()
-        stacked_data.replace([np.inf, -np.inf], np.nan, inplace=True)
-        stacked_data = stacked_data.ffill(inplace=False).copy()
-        
-        # ======= III. Store the features information =======
-        self.features_informations = features_informations
-        self.features_rules = features_rules
-        self.cleaner = cleaner
-        
-        return stacked_data, processed_data, features_informations
-    
-    #?__________________________ Preparation Methods _____________________________________ #
-    def get_training_data(
-        self,
-        training_data: pd.DataFrame,
-    ):
-        """
-        Generates the training data for the model by applying the sampling, labelling, feature extraction and cleaning methods.
-        
-        Parameters:
-            - training_data (pd.DataFrame): Input raw DataFrame to be used for training.
-        
-        Returns:
-            - stacked_data (pd.DataFrame): Stacked DataFrame with all the data cleaned.
-            - processed_data (list): List of all the clean dataframes.
-            - features_informations (pd.DataFrame): DataFrame with the features information.
-        """
-        # ======= I. Resample Data =======
-        resampled_dfs = self.bars_sampling(df=training_data)
-
-        # ======= II. Apply Labelling =======
-        labels_dfs = []
-        print('Labelling data...')
-        for day_df in tqdm(resampled_dfs):
-            try:
-                label_df = self.apply_labelling(df=day_df, series_name=self.sampleGenerator_params['price_name'])
-                labels_dfs.append(label_df)
-            except Exception as e:
-                print(f"Skipping labelling due to error: {e}")
-                continue
-
-        # ======= IV. Clean Data =======
-        stacked_data, processed_data, features_informations = self.clean_data(dfs_list=labels_dfs)
-        
-        return stacked_data, processed_data, features_informations
-    
-    #?____________________________________________________________________________________ #
-    def fit(
-        self, 
-    ):
-        pass
-
-    #?___________________________ Backtest Methods _______________________________________ #
-    def transform_data(
-        self, 
-        df: pd.DataFrame
-    ):
-        """
-        Applies a series of transformations to the data, including resampling, labelling, feature extraction, and cleaning.
-        This method is called when backtesting the strategy so it is used only on test data.
-        
-        Parameters:
-            - df (pd.DataFrame): Input DataFrame to be transformed.
-        
-        Returns:
-            - clean_dfs (list): List of DataFrames with the transformed data.
-        """
-        # ======= I. Resample Data =======
-        resampled_dfs = self.bars_sampling(df=df)
-
-        # ======= II. Apply Labelling =======
-        labels_dfs = []
-        print('Labelling data...')
-        for day_df in tqdm(resampled_dfs):
-            label_df = self.apply_labelling(df=day_df, series_name=self.sampleGenerator_params['price_name'])
-            labels_dfs.append(label_df)
-        
-        # ======= IV. Clean Data =======
-        clean_dfs = []
-        print('Cleaning data...')
-        for df in tqdm(labels_dfs):
-            clean_df = self.cleaner.extract_new(new_data=df)
-            if len(clean_df) > 10:
-                clean_df.replace([np.inf, -np.inf], np.nan, inplace=True)
-                clean_df = clean_df.ffill(inplace=False).copy()
-                clean_dfs.append(clean_df)
-                
-        print(f'{len(clean_dfs)} dataframes cleaned')
-        
-        return clean_dfs
-
-    #?____________________________________________________________________________________ #
-    def get_signals(
-        self, 
-        df: pd.DataFrame
-    ):
-        """
-        Uses the model to predict the signals on the test data.
-        
-        Parameters:
-            - df (pd.DataFrame): Input DataFrame to be used for predictions.
-        
-        Returns:
-            - results_df (pd.DataFrame): DataFrame with the predicted signals.
-        """
-        # ======= 0. Initialization =======
-        results_df = df.copy()
-        results_df['signal'] = results_df['label'].copy()
-
-        return results_df
-    
-    #?____________________________________________________________________________________ #
-    def filter_signals(
-        self, 
-        signals: pd.Series
-    ):
-        return signals
-
-    #?____________________________________________________________________________________ #
-    def predict(
-        self, 
-        df: pd.DataFrame
-    ):
-        """
-        Transforms a dataframe containing signals into a dataframe of operations.
-        
-        Parameters:
-            - df (list): List of DataFrames to be used for predictions.
-        
-        Returns:
-            - operations (pd.DataFrame): DataFrame with the operations generated from the signals.
-        """
-        # ======= I. Initialize Operations =======
-        operations = pd.DataFrame(columns=["ID", "Trade Type", "Entry ts", "Entry price", "Exit ts", "Exit price", "Size", "Profit"])
-        
-        # ======== II. Extract Signals =======
-        try:
-            signals_df = self.get_signals(df=df)
-        except Exception as e:
-            print(f"Skipping predict due to error: {e}")
-            return operations
-        
-        # ======= II. Generate Operations from the signals =======
-        # II.1 Adjust Last Prices (issue in the data input)
-        signals_df.loc[signals_df.index[-1], "bid_open"] = signals_df.loc[signals_df.index[-1], "close"]
-        signals_df.loc[signals_df.index[-1], "ask_open"] = signals_df.loc[signals_df.index[-1], "close"]
-
-        # II.2 Set first and last signal to 0 to ensure that the operations are closed
-        signals_df.reset_index(drop=True, inplace=True)
-        signals_df.loc[0, "signal"] = 0
-        signals_df.loc[len(signals_df) - 1, "signal"] = 0
-        signals_df.loc[len(signals_df) - 2, "signal"] = 0
-        
-        signals_df = signals_df.ffill()
-
-        # II.3 Extract the Signal Change and the Entry Points
-        signals_df["signal_change"] = signals_df["signal"].diff()
-        signals_df["signal_change"] = signals_df["signal_change"].shift(1)
-
-        entry_points = signals_df[signals_df["signal_change"] != 0]
-
-        # ======= III. Create an Operation for each entry point =======
-        entry_points = entry_points.copy()
-        entry_points_size = len(entry_points)
-        sequential_id = 0
-
-        for idx in range(entry_points_size - 1):
-            # III.1 Extracting rows
-            current_row = entry_points.iloc[idx]
-            next_row = entry_points.iloc[idx + 1]
-            row_before_current_row = signals_df.iloc[current_row.name - 1]
-
-            # III.2 Extract Information for a Long Operation
-            if (current_row["signal_change"] > 0 and row_before_current_row["signal"] == 1):
-                trade_type = "buy"
-                entry_ts = current_row["ts_open"]
-                entry_price = current_row["ask_open"]
-                exit_ts = next_row["ts_open"]
-                exit_price = next_row["bid_open"]
-
-                size = 1  # signals_df.loc[1, "size"]
-                profit = (exit_price - entry_price) * valor_ponto[self.asset]
-
-            # III.3 Extract Information for a Short Operation
-            elif (current_row["signal_change"] < 0 and row_before_current_row["signal"] == -1):
-                trade_type = "sell"
-                entry_ts = current_row["ts_open"]
-                entry_price = current_row["bid_open"]
-                exit_ts = next_row["ts_open"]
-                exit_price = next_row["ask_open"]
-
-                size = 1  # signals_df.loc[1, "size"]
-
-                profit = (entry_price - exit_price) * valor_ponto[self.asset]
-
-            else:
-                continue
-
-            # III.4 Append Operation to the DataFrame
-            operations.loc[sequential_id] = [sequential_id, trade_type, entry_ts, entry_price, exit_ts, exit_price, size, profit]
-            sequential_id += 1
-
-        return operations
     

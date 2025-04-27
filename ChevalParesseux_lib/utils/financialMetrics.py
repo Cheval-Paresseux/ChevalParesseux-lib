@@ -129,7 +129,7 @@ def get_performance_measures(returns_series: pd.Series, market_returns: pd.Serie
     downside_deviation = distribution_stats["downside_deviation"]
     
     risk_stats = get_risk_measures(returns_series)
-    drawdown = risk_stats["drawdown"]
+    mean_drawdown = risk_stats["mean_drawdown"]
     maximum_drawdown = risk_stats["maximum_drawdown"]
     
     market_sensitivity_stats = get_market_sensitivity(returns_series, market_returns, frequence)
@@ -144,7 +144,7 @@ def get_performance_measures(returns_series: pd.Series, market_returns: pd.Serie
     information_ratio = (expected_return - market_returns.mean() * adjusted_frequence) / tracking_error if tracking_error != 0 else 0
 
     # ------ Sterling, and Calmar Ratios
-    average_drawdown = abs(drawdown[drawdown < 0].mean()) if drawdown[drawdown < 0].sum() != 0 else 0
+    average_drawdown = abs(mean_drawdown) if mean_drawdown != 0 else 0
     sterling_ratio = (expected_return - risk_free_rate) / average_drawdown if average_drawdown != 0 else 0
     calmar_ratio = expected_return / abs(maximum_drawdown) if maximum_drawdown != 0 else 0
     
