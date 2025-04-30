@@ -57,16 +57,16 @@ class ML_strategy(com.Strategy):
         self.gridSearch_params = None
         self.gridUniverse = None
         
-        self.filterGridUniverse = None
+        self.metaGridUniverse = None
         
         # ======= III. Core Models =======
         self.predictor_model = None
         self.predictor = None # Store the instance of the model to use for the test data
         self.predictor_params = None
         
-        self.filter_model = None
-        self.filter = None # Store the instance of the filter to use for the test data
-        self.filter_params = None
+        self.meta_model = None
+        self.meta = None # Store the instance of the filter to use for the test data
+        self.meta_params = None
         
         # ======= IV. Annexe =======
         self.non_feature_columns = None
@@ -94,7 +94,7 @@ class ML_strategy(com.Strategy):
         gridSearch_model = None,
         # Core Models
         predictor_model = None,
-        filter_model = None,
+        meta_model = None,
     ):
         """
         Set the models to be used in the strategy.
@@ -114,7 +114,7 @@ class ML_strategy(com.Strategy):
         
         # ======= III. Core Models =======
         self.predictor_model = predictor_model if predictor_model is not None else self.predictor_model
-        self.filter_model = filter_model if filter_model is not None else self.filter_model
+        self.meta_model = meta_model if meta_model is not None else self.meta_model
         
         return self
     
@@ -131,7 +131,7 @@ class ML_strategy(com.Strategy):
         splitSample_params: dict = None,
         gridSearch_params: dict = None,
         gridUniverse: dict = None,
-        filterGridUniverse: dict = None,
+        metaGridUniverse: dict = None,
         # Annexe
         non_feature_columns: list = None,
         price_name: str = None,
@@ -152,7 +152,7 @@ class ML_strategy(com.Strategy):
         self.splitSample_params = splitSample_params if splitSample_params is not None else self.splitSample_params
         self.gridSearch_params = gridSearch_params if gridSearch_params is not None else self.gridSearch_params
         self.gridUniverse = gridUniverse if gridUniverse is not None else self.gridUniverse
-        self.filterGridUniverse = filterGridUniverse if filterGridUniverse is not None else self.filterGridUniverse
+        self.metaGridUniverse = metaGridUniverse if metaGridUniverse is not None else self.metaGridUniverse
         
         # ====== III. Annexe =======
         self.non_feature_columns = non_feature_columns if non_feature_columns is not None else self.non_feature_columns
@@ -430,21 +430,21 @@ class ML_strategy(com.Strategy):
         return self
     
     #?____________________________________________________________________________________ #
-    def tune_filter(
+    def tune_meta(
         self, 
         processed_data: list,
         costs: float = 0.0,
     ):
-        params_list = com.extract_universe(self.filterGridUniverse)
+        params_list = util.extract_universe(self.metaGridUniverse)
         
         best_profit = -np.inf
         best_params = None
         profit_history = []
         for params in tqdm(params_list):
             # ======= I. Initialize the Filter =======
-            filter = self.filter_model()
-            filter.set_params(**util.filter_params_for_function(filter.set_params, params))
-            self.filter = filter
+            meta = self.meta_model()
+            meta.set_params(**util.filter_params_for_function(meta.set_params, params))
+            self.meta = meta
 
             # ======= II. Run Backtest with the current Filter =======
             results = []
@@ -467,11 +467,11 @@ class ML_strategy(com.Strategy):
                 best_metrics = self.metrics.copy()
         
         # ======= IV. Store the Best Parameters =======
-        filter = self.filter_model()
-        filter.set_params(**util.filter_params_for_function(filter.set_params, best_params))
+        meta = self.meta_model()
+        meta.set_params(**util.filter_params_for_function(meta.set_params, best_params))
         
-        self.filter_params = best_params
-        self.filter = filter
+        self.meta_params = best_params
+        self.meta = meta
         self.metrics = best_metrics
         
         return profit_history
@@ -582,7 +582,7 @@ class ML_strategy(com.Strategy):
         predictions = pd.Series(predictions, index=X_test.index)
         
         # ======= III. Filter the Signals =======
-        predictions_filtered = self.filter.extract(predictions)
+        predictions_filtered = self.meta.extract(predictions)
         
         results_df.loc[X_test.index, "signal"] = predictions_filtered
         
