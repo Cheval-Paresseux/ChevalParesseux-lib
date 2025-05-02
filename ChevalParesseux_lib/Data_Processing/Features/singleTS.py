@@ -7,6 +7,7 @@ from ...Model_Training.Models import linearRegression as reg
 
 import numpy as np
 import pandas as pd
+from typing import Union
 
 #! ==================================================================================== #
 #! ======================= Unscaled Smoothed-like Series Features ===================== #
@@ -22,7 +23,6 @@ class average_feature(com.Feature):
     """
     def __init__(
         self, 
-        data: pd.Series, 
         name: str = "average" , 
         n_jobs: int = 1
     ):
@@ -30,12 +30,10 @@ class average_feature(com.Feature):
         Initializes the average_feature object with input data, name, and parallel jobs.
         
         Parameters:
-            - data (pd.Series): The time series data to be processed.
             - name (str): Name of the feature, used in column labeling.
             - n_jobs (int): Number of jobs to run in parallel for feature extraction.
         """
         super().__init__(
-            data=data, 
             name=name,
             n_jobs=n_jobs,
         )
@@ -69,6 +67,7 @@ class average_feature(com.Feature):
     #?____________________________________________________________________________________ #
     def process_data(
         self, 
+        data: Union[tuple, pd.Series, pd.DataFrame],
         smoothing_method: str = None, 
         window_smooth: int = None, 
         lambda_smooth: float = None
@@ -77,6 +76,7 @@ class average_feature(com.Feature):
         Applies optional smoothing to the input data before feature computation.
 
         Parameters:
+            - data (tuple | pd.Series | pd.DataFrame): The input data to be processed.
             - smoothing_method (str): Type of smoothing to apply. Options: "ewma", "average", or None.
             - window_smooth (int): Size of the smoothing window.
             - lambda_smooth (float): EWMA decay parameter in [0, 1].
@@ -86,27 +86,23 @@ class average_feature(com.Feature):
         """
         # ======= I. Check if any smoothing should be applied =======
         if smoothing_method is None:
-            processed_data = self.data
-            self.processed_data = processed_data
-            return processed_data
+            return data
         
         # ======= II. Compute the smoothed series =======
         elif smoothing_method == "ewma":
-            processed_data = fil.ewma_smoothing(price_series=self.data, window=window_smooth, ind_lambda=lambda_smooth)
+            processed_data = fil.ewma_smoothing(price_series=data, window=window_smooth, ind_lambda=lambda_smooth)
         elif smoothing_method == "average":
-            processed_data = fil.average_smoothing(price_series=self.data, window=window_smooth)
+            processed_data = fil.average_smoothing(price_series=data, window=window_smooth)
             
         else:
             raise ValueError("Smoothing method not recognized")
         
-        # ======= III. Save the processed data =======
-        self.processed_data = processed_data
-        
-        return self.processed_data
+        return processed_data
     
     #?____________________________________________________________________________________ #
     def get_feature(
         self,
+        data: Union[tuple, pd.Series, pd.DataFrame],
         window: int,
         smoothing_method: str,
         window_smooth: int,
@@ -116,6 +112,7 @@ class average_feature(com.Feature):
         Computes the normalized rolling average of the processed series.
 
         Parameters: 
+            - data (tuple | pd.Series | pd.DataFrame): The input data to be processed.
             - window (int): Rolling window size for the moving average.
             - smoothing_method (str): Smoothing method used in preprocessing.
             - window_smooth (int): Smoothing window size.
@@ -125,7 +122,7 @@ class average_feature(com.Feature):
             - rolling_average (pd.Series): The resulting normalized moving average feature.
         """
         # ======= I. Compute the different smoothed series =======
-        series = self.process_data(smoothing_method=smoothing_method, window_smooth=window_smooth, lambda_smooth=lambda_smooth).dropna().copy()
+        series = self.process_data(data=data, smoothing_method=smoothing_method, window_smooth=window_smooth, lambda_smooth=lambda_smooth).dropna().copy()
         rolling_average = series.rolling(window=window).apply(np.mean, raw=False)
 
         # ======= II. Convert to pd.Series and Center =======
@@ -149,7 +146,6 @@ class median_feature(com.Feature):
     """
     def __init__(
         self, 
-        data: pd.Series, 
         name: str = "median" , 
         n_jobs: int = 1
     ):
@@ -162,7 +158,6 @@ class median_feature(com.Feature):
             - n_jobs (int): Number of jobs to run in parallel for feature extraction.
         """
         super().__init__(
-            data=data, 
             name=name,
             n_jobs=n_jobs,
         )
@@ -196,6 +191,7 @@ class median_feature(com.Feature):
     #?____________________________________________________________________________________ #
     def process_data(
         self, 
+        data: Union[tuple, pd.Series, pd.DataFrame],
         smoothing_method: str = None, 
         window_smooth: int = None, 
         lambda_smooth: float = None
@@ -204,6 +200,7 @@ class median_feature(com.Feature):
         Applies optional smoothing to the input data before feature computation.
 
         Parameters:
+            - data (tuple | pd.Series | pd.DataFrame): The input data to be processed.
             - smoothing_method (str): Type of smoothing to apply. Options: "ewma", "average", or None.
             - window_smooth (int): Size of the smoothing window.
             - lambda_smooth (float): EWMA decay parameter in [0, 1].
@@ -213,27 +210,23 @@ class median_feature(com.Feature):
         """
         # ======= I. Check if any smoothing should be applied =======
         if smoothing_method is None:
-            processed_data = self.data
-            self.processed_data = processed_data
-            return processed_data
+            return data
         
         # ======= II. Compute the smoothed series =======
         elif smoothing_method == "ewma":
-            processed_data = fil.ewma_smoothing(price_series=self.data, window=window_smooth, ind_lambda=lambda_smooth)
+            processed_data = fil.ewma_smoothing(price_series=data, window=window_smooth, ind_lambda=lambda_smooth)
         elif smoothing_method == "average":
-            processed_data = fil.average_smoothing(price_series=self.data, window=window_smooth)
+            processed_data = fil.average_smoothing(price_series=data, window=window_smooth)
             
         else:
             raise ValueError("Smoothing method not recognized")
         
-        # ======= III. Save the processed data =======
-        self.processed_data = processed_data
-        
-        return self.processed_data
+        return processed_data
     
     #?____________________________________________________________________________________ #
     def get_feature(
         self,
+        data: Union[tuple, pd.Series, pd.DataFrame],
         window: int,
         smoothing_method: str,
         window_smooth: int,
@@ -243,6 +236,7 @@ class median_feature(com.Feature):
         Computes the normalized rolling median of the processed series.
 
         Parameters: 
+            - data (tuple | pd.Series | pd.DataFrame): The input data to be processed.
             - window (int): Rolling window size for the median computation.
             - smoothing_method (str): Smoothing method used in preprocessing.
             - window_smooth (int): Smoothing window size.
@@ -252,7 +246,7 @@ class median_feature(com.Feature):
             - rolling_median (pd.Series): The resulting normalized rolling median feature.
         """
         # ======= I. Compute the different smoothed series =======
-        series = self.process_data(smoothing_method=smoothing_method, window_smooth=window_smooth, lambda_smooth=lambda_smooth).dropna().copy()
+        series = self.process_data(data=data, smoothing_method=smoothing_method, window_smooth=window_smooth, lambda_smooth=lambda_smooth).dropna().copy()
         rolling_median = series.rolling(window=window).apply(np.median, raw=False)
 
         # ======= II. Convert to pd.Series and Center =======
@@ -276,7 +270,6 @@ class minimum_feature(com.Feature):
     """
     def __init__(
         self, 
-        data: pd.Series, 
         name: str = "minimum" , 
         n_jobs: int = 1
     ):
@@ -289,7 +282,6 @@ class minimum_feature(com.Feature):
             - n_jobs (int): Number of jobs to run in parallel for feature extraction.
         """
         super().__init__(
-            data=data, 
             name=name,
             n_jobs=n_jobs,
         )
@@ -323,6 +315,7 @@ class minimum_feature(com.Feature):
     #?____________________________________________________________________________________ #
     def process_data(
         self, 
+        data: Union[tuple, pd.Series, pd.DataFrame],
         smoothing_method: str = None, 
         window_smooth: int = None, 
         lambda_smooth: float = None
@@ -331,6 +324,7 @@ class minimum_feature(com.Feature):
         Applies optional smoothing to the input data before feature computation.
 
         Parameters:
+            - data (tuple | pd.Series | pd.DataFrame): The input data to be processed.
             - smoothing_method (str): Type of smoothing to apply. Options: "ewma", "average", or None.
             - window_smooth (int): Size of the smoothing window.
             - lambda_smooth (float): EWMA decay parameter in [0, 1].
@@ -340,27 +334,23 @@ class minimum_feature(com.Feature):
         """
         # ======= I. Check if any smoothing should be applied =======
         if smoothing_method is None:
-            processed_data = self.data
-            self.processed_data = processed_data
-            return processed_data
+            return data
         
         # ======= II. Compute the smoothed series =======
         elif smoothing_method == "ewma":
-            processed_data = fil.ewma_smoothing(price_series=self.data, window=window_smooth, ind_lambda=lambda_smooth)
+            processed_data = fil.ewma_smoothing(price_series=data, window=window_smooth, ind_lambda=lambda_smooth)
         elif smoothing_method == "average":
-            processed_data = fil.average_smoothing(price_series=self.data, window=window_smooth)
+            processed_data = fil.average_smoothing(price_series=data, window=window_smooth)
             
         else:
             raise ValueError("Smoothing method not recognized")
         
-        # ======= III. Save the processed data =======
-        self.processed_data = processed_data
-        
-        return self.processed_data
+        return processed_data
     
     #?____________________________________________________________________________________ #
     def get_feature(
         self,
+        data: Union[tuple, pd.Series, pd.DataFrame],
         window: int,
         smoothing_method: str,
         window_smooth: int,
@@ -370,6 +360,7 @@ class minimum_feature(com.Feature):
         Computes the normalized rolling minimum of the processed series.
 
         Parameters: 
+            - data (tuple | pd.Series | pd.DataFrame): The input data to be processed.
             - window (int): Rolling window size for the minimum computation.
             - smoothing_method (str): Smoothing method used in preprocessing.
             - window_smooth (int): Smoothing window size.
@@ -379,7 +370,7 @@ class minimum_feature(com.Feature):
             - rolling_min (pd.Series): The resulting normalized rolling minimum feature.
         """
         # ======= I. Compute the different smoothed series =======
-        series = self.process_data(smoothing_method=smoothing_method, window_smooth=window_smooth, lambda_smooth=lambda_smooth).dropna().copy()
+        series = self.process_data(data=data, smoothing_method=smoothing_method, window_smooth=window_smooth, lambda_smooth=lambda_smooth).dropna().copy()
         rolling_min = series.rolling(window=window).apply(np.min, raw=False)
 
         # ======= II. Convert to pd.Series and Center =======
@@ -403,7 +394,6 @@ class maximum_feature(com.Feature):
     """
     def __init__(
         self, 
-        data: pd.Series, 
         name: str = "maximum" , 
         n_jobs: int = 1
     ):
@@ -416,7 +406,6 @@ class maximum_feature(com.Feature):
             - n_jobs (int): Number of jobs to run in parallel for feature extraction.
         """
         super().__init__(
-            data=data, 
             name=name,
             n_jobs=n_jobs,
         )
@@ -450,6 +439,7 @@ class maximum_feature(com.Feature):
     #?____________________________________________________________________________________ #
     def process_data(
         self, 
+        data: Union[tuple, pd.Series, pd.DataFrame],
         smoothing_method: str = None, 
         window_smooth: int = None, 
         lambda_smooth: float = None
@@ -458,6 +448,7 @@ class maximum_feature(com.Feature):
         Applies optional smoothing to the input data before feature computation.
 
         Parameters:
+            - data (tuple | pd.Series | pd.DataFrame): The input data to be processed.
             - smoothing_method (str): Type of smoothing to apply. Options: "ewma", "average", or None.
             - window_smooth (int): Size of the smoothing window.
             - lambda_smooth (float): EWMA decay parameter in [0, 1].
@@ -467,27 +458,23 @@ class maximum_feature(com.Feature):
         """
         # ======= I. Check if any smoothing should be applied =======
         if smoothing_method is None:
-            processed_data = self.data
-            self.processed_data = processed_data
-            return processed_data
+            return data
         
         # ======= II. Compute the smoothed series =======
         elif smoothing_method == "ewma":
-            processed_data = fil.ewma_smoothing(price_series=self.data, window=window_smooth, ind_lambda=lambda_smooth)
+            processed_data = fil.ewma_smoothing(price_series=data, window=window_smooth, ind_lambda=lambda_smooth)
         elif smoothing_method == "average":
-            processed_data = fil.average_smoothing(price_series=self.data, window=window_smooth)
+            processed_data = fil.average_smoothing(price_series=data, window=window_smooth)
             
         else:
             raise ValueError("Smoothing method not recognized")
         
-        # ======= III. Save the processed data =======
-        self.processed_data = processed_data
-        
-        return self.processed_data
+        return processed_data
     
     #?____________________________________________________________________________________ #
     def get_feature(
         self,
+        data: Union[tuple, pd.Series, pd.DataFrame],
         window: int,
         smoothing_method: str,
         window_smooth: int,
@@ -497,6 +484,7 @@ class maximum_feature(com.Feature):
         Computes the normalized rolling maximum of the processed series.
 
         Parameters: 
+            - data (tuple | pd.Series | pd.DataFrame): The input data to be processed.
             - window (int): Rolling window size for the maximum computation.
             - smoothing_method (str): Smoothing method used in preprocessing.
             - window_smooth (int): Smoothing window size.
@@ -506,7 +494,7 @@ class maximum_feature(com.Feature):
             - rolling_max (pd.Series): The resulting normalized rolling maximum feature.
         """
         # ======= I. Compute the different smoothed series =======
-        series = self.process_data(smoothing_method=smoothing_method, window_smooth=window_smooth, lambda_smooth=lambda_smooth).dropna().copy()
+        series = self.process_data(data=data, smoothing_method=smoothing_method, window_smooth=window_smooth, lambda_smooth=lambda_smooth).dropna().copy()
         rolling_max = series.rolling(window=window).apply(np.max, raw=False)
 
         # ======= II. Convert to pd.Series and Center =======
@@ -535,7 +523,6 @@ class volatility_feature(com.Feature):
     """
     def __init__(
         self, 
-        data: pd.Series, 
         name: str = "volatility" , 
         n_jobs: int = 1
     ):
@@ -548,7 +535,6 @@ class volatility_feature(com.Feature):
             - n_jobs (int): Number of parallel jobs for multi-core processing.
         """
         super().__init__(
-            data=data, 
             name=name,
             n_jobs=n_jobs,
         )
@@ -582,44 +568,42 @@ class volatility_feature(com.Feature):
     #?____________________________________________________________________________________ #
     def process_data(
         self, 
+        data: Union[tuple, pd.Series, pd.DataFrame],
         smoothing_method: str = None, 
         window_smooth: int = None, 
         lambda_smooth: float = None
     ):
         """
-        Applies optional smoothing to the input time series.
+        Applies optional smoothing to the input data before feature computation.
 
         Parameters:
-            - smoothing_method (str): Type of smoothing: "ewma", "average", or None.
-            - window_smooth (int): Size of the rolling window for smoothing.
-            - lambda_smooth (float): Decay factor for EWMA, in [0, 1].
+            - data (tuple | pd.Series | pd.DataFrame): The input data to be processed.
+            - smoothing_method (str): Type of smoothing to apply. Options: "ewma", "average", or None.
+            - window_smooth (int): Size of the smoothing window.
+            - lambda_smooth (float): EWMA decay parameter in [0, 1].
 
         Returns:
-            - processed_data (pd.Series): Smoothed or raw time series depending on parameters.
+            - processed_data (pd.Series): The smoothed series, or raw series if no smoothing is applied.
         """
         # ======= I. Check if any smoothing should be applied =======
         if smoothing_method is None:
-            processed_data = self.data
-            self.processed_data = processed_data
-            return processed_data
+            return data
         
         # ======= II. Compute the smoothed series =======
         elif smoothing_method == "ewma":
-            processed_data = fil.ewma_smoothing(price_series=self.data, window=window_smooth, ind_lambda=lambda_smooth)
+            processed_data = fil.ewma_smoothing(price_series=data, window=window_smooth, ind_lambda=lambda_smooth)
         elif smoothing_method == "average":
-            processed_data = fil.average_smoothing(price_series=self.data, window=window_smooth)
+            processed_data = fil.average_smoothing(price_series=data, window=window_smooth)
             
         else:
             raise ValueError("Smoothing method not recognized")
         
-        # ======= III. Save the processed data =======
-        self.processed_data = processed_data
-        
-        return self.processed_data
+        return processed_data
     
     #?____________________________________________________________________________________ #
     def get_feature(
         self,
+        data: Union[tuple, pd.Series, pd.DataFrame],
         window: int,
         smoothing_method: str,
         window_smooth: int,
@@ -629,6 +613,7 @@ class volatility_feature(com.Feature):
         Computes the rolling volatility (standard deviation of percentage returns).
 
         Parameters:
+            - data (tuple | pd.Series | pd.DataFrame): The input data to be processed.
             - window (int): Size of the rolling window for volatility computation.
             - smoothing_method (str): Type of pre-smoothing filter used.
             - window_smooth (int): Window size used in smoothing.
@@ -638,7 +623,7 @@ class volatility_feature(com.Feature):
             - rolling_vol (pd.Series): The computed volatility feature as a time series.
         """
         # ======= I. Compute the different smoothed series =======
-        series = self.process_data(smoothing_method=smoothing_method, window_smooth=window_smooth, lambda_smooth=lambda_smooth).dropna().copy()
+        series = self.process_data(data=data, smoothing_method=smoothing_method, window_smooth=window_smooth, lambda_smooth=lambda_smooth).dropna().copy()
         returns_series = series.pct_change().dropna()
         rolling_vol = returns_series.rolling(window=window).apply(np.std, raw=False)
 
@@ -665,7 +650,6 @@ class skewness_feature(com.Feature):
     """
     def __init__(
         self, 
-        data: pd.Series, 
         name: str = "skewness" , 
         n_jobs: int = 1
     ):
@@ -678,7 +662,6 @@ class skewness_feature(com.Feature):
             - n_jobs (int): Number of parallel jobs to use for processing.
         """
         super().__init__(
-            data=data, 
             name=name,
             n_jobs=n_jobs,
         )
@@ -712,44 +695,42 @@ class skewness_feature(com.Feature):
     #?____________________________________________________________________________________ #
     def process_data(
         self, 
+        data: Union[tuple, pd.Series, pd.DataFrame],
         smoothing_method: str = None, 
         window_smooth: int = None, 
         lambda_smooth: float = None
     ):
         """
-        Applies smoothing to the input series before computing skewness.
+        Applies optional smoothing to the input data before feature computation.
 
         Parameters:
-            - smoothing_method (str): Smoothing type. Options: "ewma", "average", or None.
-            - window_smooth (int): Smoothing window size (in number of bars).
-            - lambda_smooth (float): Decay factor for EWMA, must be in [0, 1].
+            - data (tuple | pd.Series | pd.DataFrame): The input data to be processed.
+            - smoothing_method (str): Type of smoothing to apply. Options: "ewma", "average", or None.
+            - window_smooth (int): Size of the smoothing window.
+            - lambda_smooth (float): EWMA decay parameter in [0, 1].
 
         Returns:
-            - processed_data (pd.Series): Smoothed time series (or raw if no smoothing).
+            - processed_data (pd.Series): The smoothed series, or raw series if no smoothing is applied.
         """
         # ======= I. Check if any smoothing should be applied =======
         if smoothing_method is None:
-            processed_data = self.data
-            self.processed_data = processed_data
-            return processed_data
+            return data
         
         # ======= II. Compute the smoothed series =======
         elif smoothing_method == "ewma":
-            processed_data = fil.ewma_smoothing(price_series=self.data, window=window_smooth, ind_lambda=lambda_smooth)
+            processed_data = fil.ewma_smoothing(price_series=data, window=window_smooth, ind_lambda=lambda_smooth)
         elif smoothing_method == "average":
-            processed_data = fil.average_smoothing(price_series=self.data, window=window_smooth)
+            processed_data = fil.average_smoothing(price_series=data, window=window_smooth)
             
         else:
             raise ValueError("Smoothing method not recognized")
         
-        # ======= III. Save the processed data =======
-        self.processed_data = processed_data
-        
-        return self.processed_data
+        return processed_data
     
     #?____________________________________________________________________________________ #
     def get_feature(
         self,
+        data: Union[tuple, pd.Series, pd.DataFrame],
         window: int,
         smoothing_method: str,
         window_smooth: int,
@@ -759,6 +740,7 @@ class skewness_feature(com.Feature):
         Computes the rolling skewness of percentage returns over a given window.
 
         Parameters:
+            - data (tuple | pd.Series | pd.DataFrame): The input data to be processed.
             - window (int): Size of the rolling window used to compute skewness.
             - smoothing_method (str): Pre-smoothing method applied to the series.
             - window_smooth (int): Smoothing window size.
@@ -768,7 +750,7 @@ class skewness_feature(com.Feature):
             - rolling_skew (pd.Series): Time series of rolling skewness values.
         """
         # ======= I. Compute the different smoothed series =======
-        series = self.process_data(smoothing_method=smoothing_method, window_smooth=window_smooth, lambda_smooth=lambda_smooth).dropna().copy()
+        series = self.process_data(data=data, smoothing_method=smoothing_method, window_smooth=window_smooth, lambda_smooth=lambda_smooth).dropna().copy()
         returns_series = series.pct_change().dropna()
         rolling_skew = returns_series.rolling(window=window).apply(lambda x: x.skew())
 
@@ -795,7 +777,6 @@ class kurtosis_feature(com.Feature):
     """
     def __init__(
         self, 
-        data: pd.Series, 
         name: str = "kurtosis" , 
         n_jobs: int = 1
     ):
@@ -808,7 +789,6 @@ class kurtosis_feature(com.Feature):
             - n_jobs (int): Number of parallel jobs to use for processing.
         """
         super().__init__(
-            data=data, 
             name=name,
             n_jobs=n_jobs,
         )
@@ -842,44 +822,42 @@ class kurtosis_feature(com.Feature):
     #?____________________________________________________________________________________ #
     def process_data(
         self, 
+        data: Union[tuple, pd.Series, pd.DataFrame],
         smoothing_method: str = None, 
         window_smooth: int = None, 
         lambda_smooth: float = None
     ):
         """
-        Applies smoothing to the input series before computing kurtosis.
+        Applies optional smoothing to the input data before feature computation.
 
         Parameters:
-            - smoothing_method (str): Smoothing type. Options: "ewma", "average", or None.
-            - window_smooth (int): Smoothing window size.
-            - lambda_smooth (float): Decay factor for EWMA (range [0, 1]).
+            - data (tuple | pd.Series | pd.DataFrame): The input data to be processed.
+            - smoothing_method (str): Type of smoothing to apply. Options: "ewma", "average", or None.
+            - window_smooth (int): Size of the smoothing window.
+            - lambda_smooth (float): EWMA decay parameter in [0, 1].
 
         Returns:
-            - processed_data (pd.Series): Smoothed time series.
+            - processed_data (pd.Series): The smoothed series, or raw series if no smoothing is applied.
         """
         # ======= I. Check if any smoothing should be applied =======
         if smoothing_method is None:
-            processed_data = self.data
-            self.processed_data = processed_data
-            return processed_data
+            return data
         
         # ======= II. Compute the smoothed series =======
         elif smoothing_method == "ewma":
-            processed_data = fil.ewma_smoothing(price_series=self.data, window=window_smooth, ind_lambda=lambda_smooth)
+            processed_data = fil.ewma_smoothing(price_series=data, window=window_smooth, ind_lambda=lambda_smooth)
         elif smoothing_method == "average":
-            processed_data = fil.average_smoothing(price_series=self.data, window=window_smooth)
+            processed_data = fil.average_smoothing(price_series=data, window=window_smooth)
             
         else:
             raise ValueError("Smoothing method not recognized")
         
-        # ======= III. Save the processed data =======
-        self.processed_data = processed_data
-        
-        return self.processed_data
+        return processed_data
     
     #?____________________________________________________________________________________ #
     def get_feature(
         self,
+        data: Union[tuple, pd.Series, pd.DataFrame],
         window: int,
         smoothing_method: str,
         window_smooth: int,
@@ -889,6 +867,7 @@ class kurtosis_feature(com.Feature):
         Computes the rolling kurtosis of percentage returns over a given window.
 
         Parameters:
+            - data (tuple | pd.Series | pd.DataFrame): The input data to be processed.
             - window (int): Size of the rolling window.
             - smoothing_method (str): Type of smoothing applied before calculation.
             - window_smooth (int): Smoothing window size.
@@ -898,7 +877,7 @@ class kurtosis_feature(com.Feature):
             - rolling_kurt (pd.Series): Time series of rolling kurtosis values.
         """
         # ======= I. Compute the different smoothed series =======
-        series = self.process_data(smoothing_method=smoothing_method, window_smooth=window_smooth, lambda_smooth=lambda_smooth).dropna().copy()
+        series = self.process_data(data=data, smoothing_method=smoothing_method, window_smooth=window_smooth, lambda_smooth=lambda_smooth).dropna().copy()
         returns_series = series.pct_change().dropna()
         rolling_kurt = returns_series.rolling(window=window).apply(lambda x: x.kurtosis())
 
@@ -925,7 +904,6 @@ class quantile_feature(com.Feature):
     """
     def __init__(
         self, 
-        data: pd.Series, 
         name: str = "quantile" , 
         n_jobs: int = 1
     ):
@@ -938,7 +916,6 @@ class quantile_feature(com.Feature):
             - n_jobs (int): Number of parallel jobs to use for processing.
         """
         super().__init__(
-            data=data, 
             name=name,
             n_jobs=n_jobs,
         )
@@ -975,44 +952,42 @@ class quantile_feature(com.Feature):
     #?____________________________________________________________________________________ #
     def process_data(
         self, 
+        data: Union[tuple, pd.Series, pd.DataFrame],
         smoothing_method: str = None, 
         window_smooth: int = None, 
         lambda_smooth: float = None
     ):
         """
-        Applies smoothing to the input series before computing quantile.
+        Applies optional smoothing to the input data before feature computation.
 
         Parameters:
-            - smoothing_method (str): Type of smoothing. Options: "ewma", "average", or None.
-            - window_smooth (int): Smoothing window size.
-            - lambda_smooth (float): Decay factor for EWMA (range [0, 1]).
+            - data (tuple | pd.Series | pd.DataFrame): The input data to be processed.
+            - smoothing_method (str): Type of smoothing to apply. Options: "ewma", "average", or None.
+            - window_smooth (int): Size of the smoothing window.
+            - lambda_smooth (float): EWMA decay parameter in [0, 1].
 
         Returns:
-            - processed_data (pd.Series): Smoothed time series.
+            - processed_data (pd.Series): The smoothed series, or raw series if no smoothing is applied.
         """
         # ======= I. Check if any smoothing should be applied =======
         if smoothing_method is None:
-            processed_data = self.data
-            self.processed_data = processed_data
-            return processed_data
+            return data
         
         # ======= II. Compute the smoothed series =======
         elif smoothing_method == "ewma":
-            processed_data = fil.ewma_smoothing(price_series=self.data, window=window_smooth, ind_lambda=lambda_smooth)
+            processed_data = fil.ewma_smoothing(price_series=data, window=window_smooth, ind_lambda=lambda_smooth)
         elif smoothing_method == "average":
-            processed_data = fil.average_smoothing(price_series=self.data, window=window_smooth)
+            processed_data = fil.average_smoothing(price_series=data, window=window_smooth)
             
         else:
             raise ValueError("Smoothing method not recognized")
         
-        # ======= III. Save the processed data =======
-        self.processed_data = processed_data
-        
-        return self.processed_data
+        return processed_data
     
     #?____________________________________________________________________________________ #
     def get_feature(
         self,
+        data: Union[tuple, pd.Series, pd.DataFrame],
         window: int,
         quantile: float,
         smoothing_method: str,
@@ -1023,6 +998,7 @@ class quantile_feature(com.Feature):
         Computes the rolling quantile of percentage returns over a specified window.
 
         Parameters:
+            - data (tuple | pd.Series | pd.DataFrame): The input data to be processed.
             - window (int): Size of the rolling window.
             - quantile (float): Quantile level to compute, must be in [0, 1].
             - smoothing_method (str): Type of smoothing applied before calculation.
@@ -1033,7 +1009,7 @@ class quantile_feature(com.Feature):
             - rolling_quantile (pd.Series): Time series of rolling quantile values.
         """
         # ======= I. Compute the different smoothed series =======
-        series = self.process_data(smoothing_method=smoothing_method, window_smooth=window_smooth, lambda_smooth=lambda_smooth).dropna().copy()
+        series = self.process_data(data=data, smoothing_method=smoothing_method, window_smooth=window_smooth, lambda_smooth=lambda_smooth).dropna().copy()
         returns_series = series.pct_change().dropna()
         rolling_quantile = returns_series.rolling(window=window).apply(lambda x: np.quantile(x, quantile))
 
@@ -1061,7 +1037,6 @@ class momentum_feature(com.Feature):
     """
     def __init__(
         self, 
-        data: pd.Series, 
         name: str = "momentum" , 
         n_jobs: int = 1
     ):
@@ -1074,7 +1049,6 @@ class momentum_feature(com.Feature):
             - n_jobs (int): Number of parallel jobs to use.
         """
         super().__init__(
-            data=data, 
             name=name,
             n_jobs=n_jobs,
         )
@@ -1108,44 +1082,42 @@ class momentum_feature(com.Feature):
     #?____________________________________________________________________________________ #
     def process_data(
         self, 
+        data: Union[tuple, pd.Series, pd.DataFrame],
         smoothing_method: str = None, 
         window_smooth: int = None, 
         lambda_smooth: float = None
     ):
         """
-        Applies a smoothing filter to the series prior to feature calculation.
+        Applies optional smoothing to the input data before feature computation.
 
         Parameters:
-            - smoothing_method (str): Options are "ewma", "average", or None.
-            - window_smooth (int): Window size for smoothing.
-            - lambda_smooth (float): Decay factor for EWMA.
+            - data (tuple | pd.Series | pd.DataFrame): The input data to be processed.
+            - smoothing_method (str): Type of smoothing to apply. Options: "ewma", "average", or None.
+            - window_smooth (int): Size of the smoothing window.
+            - lambda_smooth (float): EWMA decay parameter in [0, 1].
 
         Returns:
-            - processed_data (pd.Series): Smoothed series.
+            - processed_data (pd.Series): The smoothed series, or raw series if no smoothing is applied.
         """
         # ======= I. Check if any smoothing should be applied =======
         if smoothing_method is None:
-            processed_data = self.data
-            self.processed_data = processed_data
-            return processed_data
+            return data
         
         # ======= II. Compute the smoothed series =======
         elif smoothing_method == "ewma":
-            processed_data = fil.ewma_smoothing(price_series=self.data, window=window_smooth, ind_lambda=lambda_smooth)
+            processed_data = fil.ewma_smoothing(price_series=data, window=window_smooth, ind_lambda=lambda_smooth)
         elif smoothing_method == "average":
-            processed_data = fil.average_smoothing(price_series=self.data, window=window_smooth)
+            processed_data = fil.average_smoothing(price_series=data, window=window_smooth)
             
         else:
             raise ValueError("Smoothing method not recognized")
         
-        # ======= III. Save the processed data =======
-        self.processed_data = processed_data
-        
-        return self.processed_data
+        return processed_data
     
     #?____________________________________________________________________________________ #
     def get_feature(
         self,
+        data: Union[tuple, pd.Series, pd.DataFrame],
         window: int,
         smoothing_method: str,
         window_smooth: int,
@@ -1155,6 +1127,7 @@ class momentum_feature(com.Feature):
         Computes the rolling momentum from the smoothed series.
 
         Parameters:
+            - data (tuple | pd.Series | pd.DataFrame): The input data to be processed.
             - window (int): Rolling window size.
             - smoothing_method (str): Smoothing method to apply.
             - window_smooth (int): Smoothing window size.
@@ -1164,7 +1137,7 @@ class momentum_feature(com.Feature):
             - rolling_momentum (pd.Series): Series of rolling momentum values.
         """
         # ======= I. Compute the different smoothed series =======
-        series = self.process_data(smoothing_method=smoothing_method, window_smooth=window_smooth, lambda_smooth=lambda_smooth).dropna().copy()
+        series = self.process_data(data=data, smoothing_method=smoothing_method, window_smooth=window_smooth, lambda_smooth=lambda_smooth).dropna().copy()
         rolling_momentum = series.rolling(window=window ).apply(mom.get_momentum, raw=False)
         
         # ======= II. Convert to pd.Series and Center =======
@@ -1188,7 +1161,6 @@ class Z_momentum_feature(com.Feature):
     """
     def __init__(
         self, 
-        data: pd.Series, 
         name: str = "Z_momentum" , 
         n_jobs: int = 1
     ):
@@ -1201,7 +1173,6 @@ class Z_momentum_feature(com.Feature):
             - n_jobs (int): Number of parallel jobs to use.
         """
         super().__init__(
-            data=data, 
             name=name,
             n_jobs=n_jobs,
         )
@@ -1235,44 +1206,42 @@ class Z_momentum_feature(com.Feature):
     #?____________________________________________________________________________________ #
     def process_data(
         self, 
+        data: Union[tuple, pd.Series, pd.DataFrame],
         smoothing_method: str = None, 
         window_smooth: int = None, 
         lambda_smooth: float = None
     ):
         """
-        Applies a smoothing filter to the series prior to feature calculation.
+        Applies optional smoothing to the input data before feature computation.
 
         Parameters:
-            - smoothing_method (str): Options are "ewma", "average", or None.
-            - window_smooth (int): Window size for smoothing.
-            - lambda_smooth (float): Decay factor for EWMA.
+            - data (tuple | pd.Series | pd.DataFrame): The input data to be processed.
+            - smoothing_method (str): Type of smoothing to apply. Options: "ewma", "average", or None.
+            - window_smooth (int): Size of the smoothing window.
+            - lambda_smooth (float): EWMA decay parameter in [0, 1].
 
         Returns:
-            - processed_data (pd.Series): Smoothed series.
+            - processed_data (pd.Series): The smoothed series, or raw series if no smoothing is applied.
         """
         # ======= I. Check if any smoothing should be applied =======
         if smoothing_method is None:
-            processed_data = self.data
-            self.processed_data = processed_data
-            return processed_data
+            return data
         
         # ======= II. Compute the smoothed series =======
         elif smoothing_method == "ewma":
-            processed_data = fil.ewma_smoothing(price_series=self.data, window=window_smooth, ind_lambda=lambda_smooth)
+            processed_data = fil.ewma_smoothing(price_series=data, window=window_smooth, ind_lambda=lambda_smooth)
         elif smoothing_method == "average":
-            processed_data = fil.average_smoothing(price_series=self.data, window=window_smooth)
+            processed_data = fil.average_smoothing(price_series=data, window=window_smooth)
             
         else:
             raise ValueError("Smoothing method not recognized")
         
-        # ======= III. Save the processed data =======
-        self.processed_data = processed_data
-        
-        return self.processed_data
+        return processed_data
     
     #?____________________________________________________________________________________ #
     def get_feature(
         self,
+        data: Union[tuple, pd.Series, pd.DataFrame],
         window: int,
         smoothing_method: str,
         window_smooth: int,
@@ -1282,6 +1251,7 @@ class Z_momentum_feature(com.Feature):
         Computes the rolling Z-momentum from the smoothed series.
 
         Parameters:
+            - data (tuple | pd.Series | pd.DataFrame): The input data to be processed.
             - window (int): Rolling window size.
             - smoothing_method (str): Smoothing method to apply.
             - window_smooth (int): Smoothing window size.
@@ -1291,7 +1261,7 @@ class Z_momentum_feature(com.Feature):
             - rolling_Z_momentum (pd.Series): Series of rolling Z-momentum values.
         """
         # ======= I. Compute the different smoothed series =======
-        series = self.process_data(smoothing_method=smoothing_method, window_smooth=window_smooth, lambda_smooth=lambda_smooth).dropna().copy()
+        series = self.process_data(data=data, smoothing_method=smoothing_method, window_smooth=window_smooth, lambda_smooth=lambda_smooth).dropna().copy()
         rolling_Z_momentum = series.rolling(window=window).apply(mom.get_Z_momentum, raw=False)
         
         # ======= II. Convert to pd.Series and Center =======
@@ -1319,7 +1289,6 @@ class linear_tempReg_feature(com.Feature):
     """
     def __init__(
         self, 
-        data: pd.Series, 
         name: str = "linear_tempreg" , 
         n_jobs: int = 1
     ):
@@ -1332,7 +1301,6 @@ class linear_tempReg_feature(com.Feature):
             - n_jobs (int): Number of parallel jobs to use.
         """
         super().__init__(
-            data=data, 
             name=name,
             n_jobs=n_jobs,
         )
@@ -1366,44 +1334,42 @@ class linear_tempReg_feature(com.Feature):
     #?____________________________________________________________________________________ #
     def process_data(
         self, 
+        data: Union[tuple, pd.Series, pd.DataFrame],
         smoothing_method: str = None, 
         window_smooth: int = None, 
         lambda_smooth: float = None
     ):
         """
-        Applies a smoothing filter to the input series prior to regression analysis.
+        Applies optional smoothing to the input data before feature computation.
 
         Parameters:
-            - smoothing_method (str): Options are "ewma", "average", or None.
-            - window_smooth (int): Window size for smoothing.
-            - lambda_smooth (float): Decay factor for EWMA.
+            - data (tuple | pd.Series | pd.DataFrame): The input data to be processed.
+            - smoothing_method (str): Type of smoothing to apply. Options: "ewma", "average", or None.
+            - window_smooth (int): Size of the smoothing window.
+            - lambda_smooth (float): EWMA decay parameter in [0, 1].
 
         Returns:
-            - processed_data (pd.Series): Smoothed time series.
+            - processed_data (pd.Series): The smoothed series, or raw series if no smoothing is applied.
         """
         # ======= I. Check if any smoothing should be applied =======
         if smoothing_method is None:
-            processed_data = self.data
-            self.processed_data = processed_data
-            return processed_data
+            return data
         
         # ======= II. Compute the smoothed series =======
         elif smoothing_method == "ewma":
-            processed_data = fil.ewma_smoothing(price_series=self.data, window=window_smooth, ind_lambda=lambda_smooth)
+            processed_data = fil.ewma_smoothing(price_series=data, window=window_smooth, ind_lambda=lambda_smooth)
         elif smoothing_method == "average":
-            processed_data = fil.average_smoothing(price_series=self.data, window=window_smooth)
+            processed_data = fil.average_smoothing(price_series=data, window=window_smooth)
             
         else:
             raise ValueError("Smoothing method not recognized")
         
-        # ======= III. Save the processed data =======
-        self.processed_data = processed_data
-        
-        return self.processed_data
+        return processed_data
     
     #?____________________________________________________________________________________ #
     def get_feature(
         self,
+        data: Union[tuple, pd.Series, pd.DataFrame],
         window: int,
         smoothing_method: str,
         window_smooth: int,
@@ -1414,6 +1380,7 @@ class linear_tempReg_feature(com.Feature):
         on the smoothed series over the specified window.
 
         Parameters:
+            - data (tuple | pd.Series | pd.DataFrame): The input data to be processed.
             - window (int): Rolling window size for regression.
             - smoothing_method (str): Smoothing method to apply before regression.
             - window_smooth (int): Smoothing window size.
@@ -1448,7 +1415,7 @@ class linear_tempReg_feature(com.Feature):
             return R_squared
 
         # ======= I. Compute the different smoothed series =======
-        series = self.process_data(smoothing_method=smoothing_method, window_smooth=window_smooth, lambda_smooth=lambda_smooth).dropna().copy()
+        series = self.process_data(data=data, smoothing_method=smoothing_method, window_smooth=window_smooth, lambda_smooth=lambda_smooth).dropna().copy()
 
         # ======= II. Compute the rolling regression statistics =======
         rolling_slope = series.rolling(window=window).apply(compute_slope, raw=False)
@@ -1486,7 +1453,6 @@ class nonlinear_tempReg_feature(com.Feature):
     """
     def __init__(
         self, 
-        data: pd.Series, 
         name: str = "nonlinear_tempreg" , 
         n_jobs: int = 1
     ):
@@ -1499,7 +1465,6 @@ class nonlinear_tempReg_feature(com.Feature):
             - n_jobs (int): Number of parallel jobs to use.
         """
         super().__init__(
-            data=data, 
             name=name,
             n_jobs=n_jobs,
         )
@@ -1533,44 +1498,42 @@ class nonlinear_tempReg_feature(com.Feature):
     #?____________________________________________________________________________________ #
     def process_data(
         self, 
+        data: Union[tuple, pd.Series, pd.DataFrame],
         smoothing_method: str = None, 
         window_smooth: int = None, 
         lambda_smooth: float = None
     ):
         """
-        Applies a smoothing filter to the series prior to feature calculation.
+        Applies optional smoothing to the input data before feature computation.
 
         Parameters:
-            - smoothing_method (str): Options are "ewma", "average", or None.
-            - window_smooth (int): Window size for smoothing.
-            - lambda_smooth (float): Decay factor for EWMA.
+            - data (tuple | pd.Series | pd.DataFrame): The input data to be processed.
+            - smoothing_method (str): Type of smoothing to apply. Options: "ewma", "average", or None.
+            - window_smooth (int): Size of the smoothing window.
+            - lambda_smooth (float): EWMA decay parameter in [0, 1].
 
         Returns:
-            - processed_data (pd.Series): Smoothed series.
+            - processed_data (pd.Series): The smoothed series, or raw series if no smoothing is applied.
         """
         # ======= I. Check if any smoothing should be applied =======
         if smoothing_method is None:
-            processed_data = self.data
-            self.processed_data = processed_data
-            return processed_data
+            return data
         
         # ======= II. Compute the smoothed series =======
         elif smoothing_method == "ewma":
-            processed_data = fil.ewma_smoothing(price_series=self.data, window=window_smooth, ind_lambda=lambda_smooth)
+            processed_data = fil.ewma_smoothing(price_series=data, window=window_smooth, ind_lambda=lambda_smooth)
         elif smoothing_method == "average":
-            processed_data = fil.average_smoothing(price_series=self.data, window=window_smooth)
+            processed_data = fil.average_smoothing(price_series=data, window=window_smooth)
             
         else:
             raise ValueError("Smoothing method not recognized")
         
-        # ======= III. Save the processed data =======
-        self.processed_data = processed_data
-        
-        return self.processed_data
+        return processed_data
     
     #?____________________________________________________________________________________ #
     def get_feature(
         self,
+        data: Union[tuple, pd.Series, pd.DataFrame],
         window: int,
         smoothing_method: str,
         window_smooth: int,
@@ -1580,6 +1543,7 @@ class nonlinear_tempReg_feature(com.Feature):
         Computes rolling nonlinear regression features from the smoothed series.
 
         Parameters:
+            - data (tuple | pd.Series | pd.DataFrame): The input data to be processed.
             - window (int): Rolling window size.
             - smoothing_method (str): Smoothing method to apply.
             - window_smooth (int): Smoothing window size.
@@ -1621,7 +1585,7 @@ class nonlinear_tempReg_feature(com.Feature):
             return R_squared
 
         # ======= I. Compute the different smoothed series =======
-        series = self.process_data(smoothing_method=smoothing_method, window_smooth=window_smooth, lambda_smooth=lambda_smooth).dropna().copy()
+        series = self.process_data(data=data, smoothing_method=smoothing_method, window_smooth=window_smooth, lambda_smooth=lambda_smooth).dropna().copy()
 
         # ======= II. Compute the rolling regression statistics =======
         rolling_slope = series.rolling(window=window).apply(compute_slope, raw=False)
@@ -1665,7 +1629,6 @@ class hurst_exponent_feature(com.Feature):
     """
     def __init__(
         self, 
-        data: pd.Series, 
         name: str = "hurst_exponent" , 
         n_jobs: int = 1
     ):
@@ -1678,7 +1641,6 @@ class hurst_exponent_feature(com.Feature):
             - n_jobs (int): Number of parallel jobs to use.
         """
         super().__init__(
-            data=data, 
             name=name,
             n_jobs=n_jobs,
         )
@@ -1712,44 +1674,42 @@ class hurst_exponent_feature(com.Feature):
     #?____________________________________________________________________________________ #
     def process_data(
         self, 
+        data: Union[tuple, pd.Series, pd.DataFrame],
         smoothing_method: str = None, 
         window_smooth: int = None, 
         lambda_smooth: float = None
     ):
         """
-        Applies a smoothing filter to the series prior to feature calculation.
+        Applies optional smoothing to the input data before feature computation.
 
         Parameters:
-            - smoothing_method (str): Options are "ewma", "average", or None.
-            - window_smooth (int): Smoothing window size.
-            - lambda_smooth (float): Decay factor for EWMA.
+            - data (tuple | pd.Series | pd.DataFrame): The input data to be processed.
+            - smoothing_method (str): Type of smoothing to apply. Options: "ewma", "average", or None.
+            - window_smooth (int): Size of the smoothing window.
+            - lambda_smooth (float): EWMA decay parameter in [0, 1].
 
         Returns:
-            - processed_data (pd.Series): Smoothed time series.
+            - processed_data (pd.Series): The smoothed series, or raw series if no smoothing is applied.
         """
         # ======= I. Check if any smoothing should be applied =======
         if smoothing_method is None:
-            processed_data = self.data
-            self.processed_data = processed_data
-            return processed_data
+            return data
         
         # ======= II. Compute the smoothed series =======
         elif smoothing_method == "ewma":
-            processed_data = fil.ewma_smoothing(price_series=self.data, window=window_smooth, ind_lambda=lambda_smooth)
+            processed_data = fil.ewma_smoothing(price_series=data, window=window_smooth, ind_lambda=lambda_smooth)
         elif smoothing_method == "average":
-            processed_data = fil.average_smoothing(price_series=self.data, window=window_smooth)
+            processed_data = fil.average_smoothing(price_series=data, window=window_smooth)
             
         else:
             raise ValueError("Smoothing method not recognized")
         
-        # ======= III. Save the processed data =======
-        self.processed_data = processed_data
-        
-        return self.processed_data
+        return processed_data
     
     #?____________________________________________________________________________________ #
     def get_feature(
         self,
+        data: Union[tuple, pd.Series, pd.DataFrame],
         power: int,
         smoothing_method: str,
         window_smooth: int,
@@ -1759,6 +1719,7 @@ class hurst_exponent_feature(com.Feature):
         Computes rolling Hurst exponent values, along with t-statistics and p-values.
 
         Parameters:
+            - data (tuple | pd.Series | pd.DataFrame): The input data to be processed.
             - power (int): Power of 2 used to define the rolling window size.
             - smoothing_method (str): Smoothing method applied before computation.
             - window_smooth (int): Window size for smoothing.
@@ -1771,7 +1732,7 @@ class hurst_exponent_feature(com.Feature):
                 - p-value of regression slope
         """
         # ======= I. Compute the different smoothed series =======
-        series = self.process_data(smoothing_method=smoothing_method, window_smooth=window_smooth, lambda_smooth=lambda_smooth).dropna().copy()
+        series = self.process_data(data=data, smoothing_method=smoothing_method, window_smooth=window_smooth, lambda_smooth=lambda_smooth).dropna().copy()
         prices_array = np.array(series)
         returns_array = prices_array[1:] / prices_array[:-1] - 1
 
@@ -1851,7 +1812,6 @@ class entropy_feature(com.Feature):
     """
     def __init__(
         self, 
-        data: pd.Series, 
         name: str = "entropy" , 
         n_jobs: int = 1
     ):
@@ -1864,7 +1824,6 @@ class entropy_feature(com.Feature):
             - n_jobs (int): Number of parallel jobs to use.
         """
         super().__init__(
-            data=data, 
             name=name,
             n_jobs=n_jobs,
         )
@@ -1898,44 +1857,42 @@ class entropy_feature(com.Feature):
     #?____________________________________________________________________________________ #
     def process_data(
         self, 
+        data: Union[tuple, pd.Series, pd.DataFrame],
         smoothing_method: str = None, 
         window_smooth: int = None, 
         lambda_smooth: float = None
     ):
         """
-        Applies a smoothing filter to the series prior to entropy calculation.
+        Applies optional smoothing to the input data before feature computation.
 
         Parameters:
-            - smoothing_method (str): Options are "ewma", "average", or None.
-            - window_smooth (int): Window size for smoothing.
-            - lambda_smooth (float): Decay factor for EWMA.
+            - data (tuple | pd.Series | pd.DataFrame): The input data to be processed.
+            - smoothing_method (str): Type of smoothing to apply. Options: "ewma", "average", or None.
+            - window_smooth (int): Size of the smoothing window.
+            - lambda_smooth (float): EWMA decay parameter in [0, 1].
 
         Returns:
-            - processed_data (pd.Series): Smoothed series.
+            - processed_data (pd.Series): The smoothed series, or raw series if no smoothing is applied.
         """
         # ======= I. Check if any smoothing should be applied =======
         if smoothing_method is None:
-            processed_data = self.data
-            self.processed_data = processed_data
-            return processed_data
+            return data
         
         # ======= II. Compute the smoothed series =======
         elif smoothing_method == "ewma":
-            processed_data = fil.ewma_smoothing(price_series=self.data, window=window_smooth, ind_lambda=lambda_smooth)
+            processed_data = fil.ewma_smoothing(price_series=data, window=window_smooth, ind_lambda=lambda_smooth)
         elif smoothing_method == "average":
-            processed_data = fil.average_smoothing(price_series=self.data, window=window_smooth)
+            processed_data = fil.average_smoothing(price_series=data, window=window_smooth)
             
         else:
             raise ValueError("Smoothing method not recognized")
         
-        # ======= III. Save the processed data =======
-        self.processed_data = processed_data
-        
-        return self.processed_data
+        return processed_data
     
     #?____________________________________________________________________________________ #
     def get_feature(
         self,
+        data: Union[tuple, pd.Series, pd.DataFrame],
         window: int,
         smoothing_method: str,
         window_smooth: int,
@@ -1945,6 +1902,7 @@ class entropy_feature(com.Feature):
         Computes rolling entropy features from the smoothed series.
 
         Parameters:
+            - data (tuple | pd.Series | pd.DataFrame): The input data to be processed.
             - window (int): Rolling window size for entropy calculation.
             - smoothing_method (str): Smoothing method to apply prior to entropy calculation.
             - window_smooth (int): Smoothing window size.
@@ -1955,7 +1913,7 @@ class entropy_feature(com.Feature):
               Lempel-Ziv, and Kontoyiannis entropy values for each window.
         """
         # ======= I. Compute the different smoothed series =======
-        series = self.process_data(smoothing_method=smoothing_method, window_smooth=window_smooth, lambda_smooth=lambda_smooth).dropna().copy()
+        series = self.process_data(data=data, smoothing_method=smoothing_method, window_smooth=window_smooth, lambda_smooth=lambda_smooth).dropna().copy()
         signs_series = ent.get_movements_signs(series=series)
 
         # ======= II. Compute the rolling entropy features =======
@@ -1993,7 +1951,6 @@ class sample_entropy_feature(com.Feature):
     """
     def __init__(
         self, 
-        data: pd.Series, 
         name: str = "sample_entropy", 
         n_jobs: int = 1
     ):
@@ -2006,7 +1963,6 @@ class sample_entropy_feature(com.Feature):
             - n_jobs (int): Number of jobs to run in parallel for feature extraction.
         """
         super().__init__(
-            data=data, 
             name=name, 
             n_jobs=n_jobs
         )
@@ -2043,6 +1999,7 @@ class sample_entropy_feature(com.Feature):
     #?____________________________________________________________________________________ #
     def process_data(
         self, 
+        data: Union[tuple, pd.Series, pd.DataFrame],
         smoothing_method: str = None, 
         window_smooth: int = None, 
         lambda_smooth: float = None
@@ -2051,6 +2008,7 @@ class sample_entropy_feature(com.Feature):
         Applies optional smoothing to the input data before feature computation.
 
         Parameters:
+            - data (tuple | pd.Series | pd.DataFrame): The input data to be processed.
             - smoothing_method (str): Type of smoothing to apply. Options: "ewma", "average", or None.
             - window_smooth (int): Size of the smoothing window.
             - lambda_smooth (float): EWMA decay parameter in [0, 1].
@@ -2060,27 +2018,23 @@ class sample_entropy_feature(com.Feature):
         """
         # ======= I. Check if any smoothing should be applied =======
         if smoothing_method is None:
-            processed_data = self.data
-            self.processed_data = processed_data
-            return processed_data
+            return data
         
         # ======= II. Compute the smoothed series =======
         elif smoothing_method == "ewma":
-            processed_data = fil.ewma_smoothing(price_series=self.data, window=window_smooth, ind_lambda=lambda_smooth)
+            processed_data = fil.ewma_smoothing(price_series=data, window=window_smooth, ind_lambda=lambda_smooth)
         elif smoothing_method == "average":
-            processed_data = fil.average_smoothing(price_series=self.data, window=window_smooth)
+            processed_data = fil.average_smoothing(price_series=data, window=window_smooth)
             
         else:
             raise ValueError("Smoothing method not recognized")
         
-        # ======= III. Save the processed data =======
-        self.processed_data = processed_data
-        
-        return self.processed_data
-
+        return processed_data
+    
     #?____________________________________________________________________________________ #
     def get_feature(
         self,
+        data: Union[tuple, pd.Series, pd.DataFrame],
         window: int,
         sub_vector_size: int,
         threshold_distance: float,
@@ -2092,6 +2046,7 @@ class sample_entropy_feature(com.Feature):
         Computes the rolling sample entropy over the processed series.
 
         Parameters:
+            - data (tuple | pd.Series | pd.DataFrame): The input data to be processed.
             - window (int): Rolling window size for sample entropy.
             - sub_vector_size (int): Embedding dimension.
             - threshold_distance (float): Tolerance for entropy, as a fraction of std.
@@ -2100,7 +2055,7 @@ class sample_entropy_feature(com.Feature):
             - sample_entropy_series (pd.Series): Series of sample entropy values.
         """
         # ======= I. Compute the different smoothed series =======
-        series = self.process_data(smoothing_method=smoothing_method, window_smooth=window_smooth, lambda_smooth=lambda_smooth).dropna().copy()
+        series = self.process_data(data=data, smoothing_method=smoothing_method, window_smooth=window_smooth, lambda_smooth=lambda_smooth).dropna().copy()
         signs_series = ent.get_movements_signs(series=series)
 
         # ======= II. Compute the rolling entropy features =======

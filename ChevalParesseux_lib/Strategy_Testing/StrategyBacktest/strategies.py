@@ -1,6 +1,6 @@
 from ..StrategyBacktest import common as com
 from ...utils import classificationMetrics as clsmet
-from ...utils import common as util
+from ...utils import function_tools as util
 
 import numpy as np
 import pandas as pd
@@ -437,9 +437,9 @@ class ML_strategy(com.Strategy):
     ):
         params_list = util.extract_universe(self.metaGridUniverse)
         
-        best_profit = -np.inf
+        best_pnl = -np.inf
         best_params = None
-        profit_history = []
+        pnl_history = []
         for params in tqdm(params_list):
             # ======= I. Initialize the Filter =======
             meta = self.meta_model()
@@ -450,19 +450,19 @@ class ML_strategy(com.Strategy):
             results = []
             self.metrics = [] # Reset the metrics for each backtest, they are computed each time we call get_signals
             for df in processed_data:
-                df_ops = self.predict(df)
-                if not df_ops.empty:
-                    results.append(df_ops)
+                operations_df, signals_df = self.operate(df)
+                if not operations_df.empty:
+                    results.append(operations_df)
                 
             operations = pd.concat(results)
-            operations['Profit'] -= 2 * costs * operations['Size']
+            operations['pnl'] -= 2 * costs
             
             # ======= III. Keep the Best Params =======
-            profit_total = operations['Profit'].sum()
-            profit_history.append({"params": params, "profit": profit_total}) 
+            pnl_total = operations['pnl'].sum()
+            pnl_history.append({"params": params, "pnl_total": pnl_total}) 
             
-            if profit_total > best_profit:
-                best_profit = profit_total
+            if pnl_total > best_pnl:
+                best_pnl = pnl_total
                 best_params = params
                 best_metrics = self.metrics.copy()
         
@@ -474,7 +474,7 @@ class ML_strategy(com.Strategy):
         self.meta = meta
         self.metrics = best_metrics
         
-        return profit_history
+        return pnl_history
 
     #?___________________________ Backtest Methods _______________________________________ #
     def process_data(

@@ -10,5 +10,5 @@ class noFilter(com.MetaModel):
     def set_params(self):
         return self
     
-    def extract(predictions: pd.Series):
+    def extract(self, predictions: pd.Series):
         return predictions
