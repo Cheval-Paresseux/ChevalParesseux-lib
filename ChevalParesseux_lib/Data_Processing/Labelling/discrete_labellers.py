@@ -11,27 +11,23 @@ class tripleBarrier_labeller(com.Labeller):
     """
     Triple Barrier Method for labelling time series data.
     
-    This class computes labels based on the first barrier hit (upper, lower, or vertical)
-    within a specified time window. It also allows for volatility-based adjustments to the barriers.
-    It inherits from the Labeller base class and implements methods to : 
-        - set parameter grids
-        - optionally smooth the input series
-        - compute the labels based on the barriers and volatility
+    This class computes labels based on the first barrier hit (upper, lower, or vertical) within a specified time window. 
+    It inherits from the Labeller base class and implements methods to:
+        - set_params : define parameter grids.
+        - process_data : optionally performs preprocessing on the input series.
+        - get_labels : compute the moving average feature over a rolling window
     """
     def __init__(
         self, 
-        series: pd.Series, 
         n_jobs: int = 1
     ):
         """
-        Initializes the TripleBarrierLabeller with a time series and number of jobs.
+        Initializes the TripleBarrierLabeller with a number of jobs.
         
         Parameters:
-            - series (pd.Series): The time series to be labelled.
             - n_jobs (int): The number of jobs to run in parallel. Default is 1.
         """
         super().__init__(
-            series=series, 
             n_jobs=n_jobs,
         )
     
@@ -73,44 +69,25 @@ class tripleBarrier_labeller(com.Labeller):
     #?____________________________________________________________________________________ #
     def process_data(
         self, 
-        smoothing_method: str = None, 
-        window_smooth: int = None, 
-        lambda_smooth: float = None
+        data: pd.Series,
     ):
         """
-        Applies a smoothing filter to the series before calculating the labels.
+        Applies preprocessing to the input data before labels extraction.
         
         Parameters:
-            - smoothing_method (str): The smoothing method to be applied. Options are "ewma" or "average".
-            - window_smooth (int): The window size for the smoothing method. It should a number of bars.
-            - lambda_smooth (float): The lambda parameter for the ewma method. It should be in [0, 1].
-            
+            - data (pd.Series): The input data to be processed.
+        
         Returns:
-            - processed_data (pd.Series): A pd.Series containing the smoothed data.
+            - processed_data (pd.Series): The smoothed series, or raw series if no smoothing is applied.
+        ________
+        N.B: The labeller does not require preprocessing, but this method is kept for consistency.
         """
-        # ======= I. Check if any smoothing should be applied =======
-        if smoothing_method is None:
-            processed_data = self.series
-            self.processed_data = processed_data
-            return processed_data
-        
-        # ======= II. Compute the smoothed series =======
-        elif smoothing_method == "ewma":
-            processed_data = fil.ewma_smoothing(price_series=self.series, window=window_smooth, ind_lambda=lambda_smooth)
-        elif smoothing_method == "average":
-            processed_data = fil.average_smoothing(price_series=self.series, window=window_smooth)
-            
-        else:
-            raise ValueError("Smoothing method not recognized")
-        
-        # ======= III. Save the processed data =======
-        self.processed_data = processed_data
-        
-        return self.processed_data
+        return data
 
     #?____________________________________________________________________________________ #
     def get_labels(
         self, 
+        data: pd.Series,
         upper_barrier: float,
         lower_barrier: float,
         vertical_barrier: int,
@@ -120,51 +97,61 @@ class tripleBarrier_labeller(com.Labeller):
         lambda_smooth: float,
     ):
         """
-        Computes the labels based on the triple barrier method.
-        
-        Parameters:
-            - upper_barrier (float): The upper barrier for the label, based on volatility.
-            - lower_barrier (float): The lower barrier for the label, based on volatility.
-            - vertical_barrier (int): The vertical barrier for the label, in number of bars.
+        Computes the triple barrier labels of the processed series.
+
+        Parameters: 
+            - data (pd.Series): The input series to be processed.
+            - upper_barrier (float): The upper barrier for the label.
+            - lower_barrier (float): The lower barrier for the label.
+            - vertical_barrier (int): The vertical barrier for the label.
             - vol_window (int): The window size for the volatility calculation.
             - smoothing_method (str): The smoothing method to be applied. Options are "ewma" or "average".
             - window_smooth (int): The window size for the smoothing method. It should a number of bars.
             - lambda_smooth (float): The lambda parameter for the ewma method. It should be in [0, 1].
-        
+            
         Returns:
-            - labels_series (pd.Series): A pd.Series containing the labels.
+            - labels_series (pd.Series): A series of {-1, 0, 1} labels based on future performance.
         """
-        # ======= I. Compute volatility target =======
-        series = self.process_data(smoothing_method=smoothing_method, window_smooth=window_smooth, lambda_smooth=lambda_smooth).dropna().copy()
-        returns_series = series.pct_change().fillna(0)
+        # ======= I. Smooth the Data & Preprocess =======
+        smoothed_series = self.smooth_data(
+            data=data, 
+            smoothing_method=smoothing_method, 
+            window_smooth=window_smooth, 
+            lambda_smooth=lambda_smooth
+        )
+        
+        processed_series = self.process_data(data=smoothed_series).dropna()
+
+        # ======= II. Compute the Volatility Series =======
+        returns_series = processed_series.pct_change().fillna(0)
         volatility_series = returns_series.rolling(vol_window).std() * np.sqrt(vol_window)
 
-        # ======= II. Initialize the labeled series and trade side =======
-        labels_series = pd.Series(index=series.index, dtype=int)
+        # ======= III. Initialize the labeled series and trade side =======
+        labels_series = pd.Series(index=processed_series.index, dtype=int)
         trade_side = 0
 
-        # ======= III. Iterate through the price series =======
-        for index in series.index:
-            # III.1 Extract the future prices over the horizon
-            start_idx = series.index.get_loc(index)
-            end_idx = min(start_idx + vertical_barrier, len(series))
-            future_prices = series.iloc[start_idx:end_idx]
+        # ======= IV. Iterate through the price series =======
+        for index in processed_series.index:
+            # IV.1 Extract the future prices over the horizon
+            start_idx = processed_series.index.get_loc(index)
+            end_idx = min(start_idx + vertical_barrier, len(processed_series))
+            future_prices = processed_series.iloc[start_idx:end_idx]
 
-            # III.2 Compute the range of future returns over the horizon
+            # IV.2 Compute the range of future returns over the horizon
             max_price = future_prices.max()
             min_price = future_prices.min()
 
             max_price_index = future_prices.idxmax()
             min_price_index = future_prices.idxmin()
 
-            max_return = (max_price - series.loc[index]) / series.loc[index]
-            min_return = (min_price - series.loc[index]) / series.loc[index]
+            max_return = (max_price - processed_series.loc[index]) / processed_series.loc[index]
+            min_return = (min_price - processed_series.loc[index]) / processed_series.loc[index]
 
-            # III.3 Adjust the barrier thresholds with the volatility
+            # IV.3 Adjust the barrier thresholds with the volatility
             upper_threshold = upper_barrier * volatility_series.loc[index]
             lower_threshold = lower_barrier * volatility_series.loc[index]
 
-            # III.4 Check if the horizontal barriers have been hit
+            # IV.4 Check if the horizontal barriers have been hit
             long_event = False
             short_event = False
 
@@ -186,7 +173,7 @@ class tripleBarrier_labeller(com.Labeller):
                 elif min_return < -upper_threshold:
                     short_event = True
 
-            # III.5 Label based on the first event that occurs
+            # IV.5 Label based on the first event that occurs
             if long_event and short_event:  # If both events occur, choose the first one
                 if max_price_index < min_price_index:
                     labels_series.loc[index] = 1
@@ -202,7 +189,7 @@ class tripleBarrier_labeller(com.Labeller):
             else:  # If no event occurs (vertical hit)
                 labels_series.loc[index] = 0
 
-            # III.6 Update the trade side
+            # IV.6 Update the trade side
             trade_side = labels_series.loc[index]
 
         return labels_series
@@ -212,29 +199,23 @@ class lookForward_labeller(com.Labeller):
     """
     Look-Forward Labelling Method for time series data.
     
-    This class labels data based on the future return over a look-ahead window, 
-    relative to its expected volatility. It supports trend filtering to remove short-lived moves 
-    and optional smoothing of the input series.
-
+    This class labels data based on the future return over a look-ahead window, relative to its expected volatility. 
     It inherits from the Labeller base class and implements methods to:
-        - set parameter grids
-        - optionally smooth the input series
-        - compute labels based on forward returns and volatility
+        - set_params : define parameter grids.
+        - process_data : optionally performs preprocessing on the input series.
+        - get_labels : compute the moving average feature over a rolling window
     """
     def __init__(
         self, 
-        series: pd.Series, 
         n_jobs: int = 1
     ):
         """
         Initializes the LookForwardLabeller with a time series and number of jobs.
         
         Parameters:
-            - series (pd.Series): The time series to be labelled.
             - n_jobs (int): The number of jobs to run in parallel. Default is 1.
         """
         super().__init__(
-            series=series, 
             n_jobs=n_jobs,
         )
     
@@ -273,44 +254,25 @@ class lookForward_labeller(com.Labeller):
     #?____________________________________________________________________________________ #
     def process_data(
         self, 
-        smoothing_method: str = None, 
-        window_smooth: int = None, 
-        lambda_smooth: float = None
+        data: pd.Series,
     ):
         """
-        Applies a smoothing filter to the input series before label computation.
-
+        Applies preprocessing to the input data before labels extraction.
+        
         Parameters:
-            - smoothing_method (str): Smoothing type ("ewma", "average", or None).
-            - window_smooth (int): Smoothing window size (number of bars).
-            - lambda_smooth (float): Decay rate for EWMA, must be between 0 and 1.
-
+            - data (pd.Series): The input data to be processed.
+        
         Returns:
-            - processed_data (pd.Series): Smoothed series (if applicable).
+            - processed_data (pd.Series): The smoothed series, or raw series if no smoothing is applied.
+        ________
+        N.B: The labeller does not require preprocessing, but this method is kept for consistency.
         """
-        # ======= I. Check if any smoothing should be applied =======
-        if smoothing_method is None:
-            processed_data = self.series
-            self.processed_data = processed_data
-            return processed_data
-        
-        # ======= II. Compute the smoothed series =======
-        elif smoothing_method == "ewma":
-            processed_data = fil.ewma_smoothing(price_series=self.series, window=window_smooth, ind_lambda=lambda_smooth)
-        elif smoothing_method == "average":
-            processed_data = fil.average_smoothing(price_series=self.series, window=window_smooth)
-            
-        else:
-            raise ValueError("Smoothing method not recognized")
-        
-        # ======= III. Save the processed data =======
-        self.processed_data = processed_data
-        
-        return self.processed_data
+        return data
 
     #?____________________________________________________________________________________ #
     def get_labels(
         self, 
+        data: pd.Series,
         window_lookForward: int,
         min_trend_size: int,
         volatility_threshold: float,
@@ -322,6 +284,7 @@ class lookForward_labeller(com.Labeller):
         Computes labels based on look-ahead returns and volatility ratios.
 
         Parameters:
+            - data (pd.Series): The input series to be processed.
             - window_lookForward (int): Number of bars to look ahead for return calculation.
             - min_trend_size (int): Minimum number of consecutive identical labels required.
             - volatility_threshold (float): Minimum return-to-volatility ratio for a label.
@@ -332,12 +295,19 @@ class lookForward_labeller(com.Labeller):
         Returns:
             - labels_series (pd.Series): A series of {-1, 0, 1} labels based on future performance.
         """
-        # ======= I. Prepare Series =======
-        series = self.process_data(smoothing_method=smoothing_method, window_smooth=window_smooth, lambda_smooth=lambda_smooth).dropna().copy()
+        # ======= I. Smooth the Data & Preprocess =======
+        smoothed_series = self.smooth_data(
+            data=data, 
+            smoothing_method=smoothing_method, 
+            window_smooth=window_smooth, 
+            lambda_smooth=lambda_smooth
+        )
+        
+        processed_series = self.process_data(data=smoothed_series).dropna()
 
         # ======= I. Significant look forward Label =======
         # ------- 1. Get the moving X days returns and the moving X days volatility -------
-        Xdays_returns = (series.shift(-window_lookForward) - series) / series
+        Xdays_returns = (processed_series.shift(-window_lookForward) - processed_series) / processed_series
         Xdays_vol = Xdays_returns.rolling(window=window_lookForward).std()
 
         # ------- 2. Compare the X days returns to the volatility  -------
@@ -345,7 +315,7 @@ class lookForward_labeller(com.Labeller):
         Xdays_label = Xdays_score.apply(lambda x: 1 if x > volatility_threshold else (-1 if x < -volatility_threshold else 0))
 
         # ------- 3. Eliminate the trends that are too small -------
-        labels_series = com.trend_filter(label_series=Xdays_label, window=min_trend_size)
+        labels_series = fil.segment_length_filter(label_series=Xdays_label, window=min_trend_size)
 
         return labels_series
 
@@ -354,30 +324,24 @@ class regR2rank_labeller(com.Labeller):
     """
     Regression R² Rank Labeller for time series data.
     
-    This class labels data points based on the strength of linear trends 
-    detected via rolling regression windows. It compares the R² of the 
-    linear fit over a range of horizons to a threshold, and assigns labels 
-    based on trend direction and significance.
-    
-    It inherits from the Labeller base class and implements methods to: 
-        - set parameter grids
-        - optionally smooth the input series
-        - compute labels based on regression strength and direction
+    This class labels data points based on the strength of linear trends  detected via rolling regression windows. 
+    It compares the R² of the linear fit over a range of horizons to a threshold, and assigns labels based on trend direction and significance.
+    It inherits from the Labeller base class and implements methods to:
+        - set_params : define parameter grids.
+        - process_data : optionally performs preprocessing on the input series.
+        - get_labels : compute the moving average feature over a rolling window
     """
     def __init__(
         self, 
-        series: pd.Series, 
         n_jobs: int = 1
     ):
         """
         Initializes the regR2rank_labeller with a time series and number of jobs.
         
         Parameters:
-            - series (pd.Series): The time series to be labelled.
             - n_jobs (int): The number of jobs to run in parallel. Default is 1.
         """
         super().__init__(
-            series=series, 
             n_jobs=n_jobs,
         )
     
@@ -419,44 +383,25 @@ class regR2rank_labeller(com.Labeller):
     #?____________________________________________________________________________________ #
     def process_data(
         self, 
-        smoothing_method: str = None, 
-        window_smooth: int = None, 
-        lambda_smooth: float = None
+        data: pd.Series,
     ):
         """
-        Applies optional smoothing to the time series before computing labels.
+        Applies preprocessing to the input data before labels extraction.
         
         Parameters:
-            - smoothing_method (str): The smoothing method to be applied. Options are "ewma" or "average".
-            - window_smooth (int): The window size for smoothing.
-            - lambda_smooth (float): The lambda parameter for EWMA smoothing.
-            
+            - data (pd.Series): The input data to be processed.
+        
         Returns:
-            - processed_data (pd.Series): The smoothed time series.
+            - processed_data (pd.Series): The smoothed series, or raw series if no smoothing is applied.
+        ________
+        N.B: The labeller does not require preprocessing, but this method is kept for consistency.
         """
-        # ======= I. Check if any smoothing should be applied =======
-        if smoothing_method is None:
-            processed_data = self.series
-            self.processed_data = processed_data
-            return processed_data
-        
-        # ======= II. Compute the smoothed series =======
-        elif smoothing_method == "ewma":
-            processed_data = fil.ewma_smoothing(price_series=self.series, window=window_smooth, ind_lambda=lambda_smooth)
-        elif smoothing_method == "average":
-            processed_data = fil.average_smoothing(price_series=self.series, window=window_smooth)
-            
-        else:
-            raise ValueError("Smoothing method not recognized")
-        
-        # ======= III. Save the processed data =======
-        self.processed_data = processed_data
-        
-        return self.processed_data
+        return data
 
     #?____________________________________________________________________________________ #
     def get_labels(
         self, 
+        data: pd.Series,
         horizon: int,
         horizon_extension: float,
         r2_threshold: float,
@@ -469,6 +414,7 @@ class regR2rank_labeller(com.Labeller):
         Computes labels by detecting statistically significant linear trends via R² score.
         
         Parameters:
+            - data (pd.Series): The input series to be processed.
             - horizon (int): Minimum look-ahead period (number of bars).
             - horizon_extension (float): Factor to extend the range of look-ahead periods.
             - r2_threshold (float): Threshold for R² value to consider a trend significant.
@@ -480,25 +426,32 @@ class regR2rank_labeller(com.Labeller):
         Returns:
             - labels_series (pd.Series): A pd.Series of -1, 0, or 1 labels based on trend direction.
         """
-        # ======= I. Prepare Series =======
-        series = self.process_data(smoothing_method=smoothing_method, window_smooth=window_smooth, lambda_smooth=lambda_smooth).dropna().copy()
-        nb_elements = len(series)
-
-        labels_series = pd.Series(0, index=series.index, dtype=int)  # Initialise à 0
+        # ======= I. Smooth the Data & Preprocess =======
+        smoothed_series = self.smooth_data(
+            data=data, 
+            smoothing_method=smoothing_method, 
+            window_smooth=window_smooth, 
+            lambda_smooth=lambda_smooth
+        )
+        
+        processed_series = self.process_data(data=smoothed_series).dropna()
 
         # ======= II. Labelling Process =======
+        nb_elements = len(processed_series)
+        labels_series = pd.Series(0, index=processed_series.index, dtype=int)
+
         horizon_max = round(horizon * (1 + horizon_extension))
         for idx in range(nb_elements - horizon + 1):
             # III.0 Skip the NaN values
-            if pd.isna(series.iloc[idx]):  # Correction ici
+            if pd.isna(processed_series.iloc[idx]): 
                 continue
 
             # III.1 Iterate over different horizons to find the most significant trend
             best_r2 = 0
             for current_horizon in range(horizon, horizon_max):
                 # ------ 1. Extract the future EMA values ------
-                future_ewma = series.iloc[idx:idx + current_horizon]
-                temporality = np.arange(len(future_ewma))  # Correction ici
+                future_ewma = processed_series.iloc[idx:idx + current_horizon]
+                temporality = np.arange(len(future_ewma))  
 
                 # ------ 2. Fit the Linear Regression and Extract R² ------
                 model = reg.OLSRegression()
@@ -509,10 +462,10 @@ class regR2rank_labeller(com.Labeller):
                 # ------ 3. Check if the trend is significant ------
                 if r2 > best_r2 and r2 > r2_threshold:
                     best_r2 = r2
-                    labels_series.iloc[idx] = 1 if slope > 0 else -1  # Correction ici
+                    labels_series.iloc[idx] = 1 if slope > 0 else -1  
         
         # ======= III. Eliminate the trends that are too small =======
-        labels_series = com.trend_filter(label_series=labels_series, window=min_trend_size)
+        labels_series = fil.segment_length_filter(label_series=labels_series, window=min_trend_size)
 
         return labels_series
 
@@ -521,29 +474,23 @@ class boostedlF_labeller(com.Labeller):
     """
     Boosted Look-Forward Labeller for time series data.
 
-    This ensemble labeller combines signals from both a look-forward volatility-based labeller 
-    and a regression-based trend strength labeller. The goal is to enhance robustness by requiring
-    confirmation of trends across different labelling perspectives.
-
-    It inherits from the Labeller base class and provides:
-        - Parameter grid setup
-        - A simple passthrough data processor
-        - An ensemble labelling strategy using two labellers: lookForward and regR2rank
+    This ensemble labeller combines signals from both a look-forward volatility-based labeller and a regression-based trend strength labeller. 
+    It inherits from the Labeller base class and implements methods to:
+        - set_params : define parameter grids.
+        - process_data : optionally performs preprocessing on the input series.
+        - get_labels : compute the moving average feature over a rolling window
     """
     def __init__(
         self, 
-        series: pd.Series, 
         n_jobs: int = 1
     ):
         """
         Initialize the boostedlF_labeller.
 
         Parameters:
-            - series (pd.Series): Time series to label.
             - n_jobs (int): Number of jobs for parallel processing (default is 1).
         """
         super().__init__(
-            series=series, 
             n_jobs=n_jobs,
         )
     
@@ -592,23 +539,27 @@ class boostedlF_labeller(com.Labeller):
         return self
     
     #?____________________________________________________________________________________ #
-    def process_data(self):
+    def process_data(
+        self, 
+        data: pd.Series,
+    ):
         """
-        Simply stores a copy of the input series as the processed series.
-
-        Returns:
-            - processed_data (pd.Series): Copy of the original time series.
-        """
-        processed_data = self.series.copy()
-
-        # ======= III. Save the processed data =======
-        self.processed_data = processed_data
+        Applies preprocessing to the input data before labels extraction.
         
-        return processed_data
+        Parameters:
+            - data (pd.Series): The input data to be processed.
+        
+        Returns:
+            - processed_data (pd.Series): The smoothed series, or raw series if no smoothing is applied.
+        ________
+        N.B: The labeller does not require preprocessing, but this method is kept for consistency.
+        """
+        return data
 
     #?____________________________________________________________________________________ #
     def get_labels(
         self, 
+        data: pd.Series,
         window_lookForward: int,
         min_trend_size: int,
         volatility_threshold: float,
@@ -624,6 +575,7 @@ class boostedlF_labeller(com.Labeller):
         Combines look-forward and regression labellers to generate a boosted label series.
 
         Parameters:
+            - data (pd.Series): The input series to be processed.
             - window_lookForward (int): Look-ahead window for the look-forward labeller.
             - min_trend_size (int): Minimum trend length for both labellers.
             - volatility_threshold (float): Volatility threshold for the look-forward labeller.
@@ -638,8 +590,11 @@ class boostedlF_labeller(com.Labeller):
         Returns:
             - labels_series (pd.Series): Final filtered label series combining both methods.
         """
+        # ======= I. Preprocess =======        
+        processed_series = self.process_data(data=data).dropna()
+
         # ======= I. Extract Labels =======
-        lF_labeller = lookForward_labeller(series=self.series, n_jobs=self.n_jobs)
+        lF_labeller = lookForward_labeller(n_jobs=self.n_jobs)
         lF_labeller.set_params(
             window_lookForward=[window_lookForward], 
             min_trend_size=[min_trend_size], 
@@ -648,7 +603,7 @@ class boostedlF_labeller(com.Labeller):
             window_smooth=[window_smooth], 
             lambda_smooth=[lambda_smooth]
         )
-        r2_labeller = regR2rank_labeller(series=self.series, n_jobs=self.n_jobs)
+        r2_labeller = regR2rank_labeller(n_jobs=self.n_jobs)
         r2_labeller.set_params(
             horizon=[horizon],
             horizon_extension=[horizon_extension],
@@ -659,8 +614,8 @@ class boostedlF_labeller(com.Labeller):
             lambda_smooth=[lambda_smooth],
         )
 
-        lF_labels = lF_labeller.extract()
-        r2_labels = r2_labeller.extract()
+        lF_labels = lF_labeller.extract(data=processed_series)
+        r2_labels = r2_labeller.extract(data=processed_series)
         
         # ======= II. Linking Trend Holes in regR2rank =======
         r2_labels = r2_labels.replace(0, np.nan)
@@ -673,7 +628,7 @@ class boostedlF_labeller(com.Labeller):
         # ------- 1. Combine the labels using lookForward as base -------
         ensemble_labels = lF_labels * 2 + r2_labels
         ensemble_labels = ensemble_labels.replace(1, np.nan).replace(-1, np.nan)
-        ensemble_labels = ensemble_labels.fillna(method="ffill")
+        ensemble_labels = ensemble_labels.ffill()
         ensemble_labels = ensemble_labels.replace(2, 1).replace(-2, -1).replace(3, 1).replace(-3, -1)
 
         # ------- 2. Manage the case of direct change in trend in reg_label -------
@@ -682,7 +637,7 @@ class boostedlF_labeller(com.Labeller):
         ensemble_labels[mask_positive_to_negative | mask_negative_to_positive] = 0
 
         # ------- 3. Eliminate the trends that are too small -------
-        labels_series = com.trend_filter(label_series=ensemble_labels, window=trend_size)
+        labels_series = fil.segment_length_filter(label_series=ensemble_labels, window=trend_size)
 
         # ------- 4. Eliminate the last point of each trend -------
         next_label = labels_series.shift(-1)
@@ -698,31 +653,23 @@ class slope_labeller(com.Labeller):
     """
     Slope-Based Labeller for time series data.
 
-    This binary labeller detects up/down trends by fitting linear regression
-    on future price segments and selecting the steepest slope.
-
-    The trend direction is determined by the sign of the best linear slope
-    over an extended horizon, and short-lived trends are filtered out.
-
-    It inherits from the Labeller base class and provides:
-        - Parameter grid setup
-        - Optional data smoothing via EWMA or simple average
-        - A slope-based trend detection labelling method
+    This binary labeller detects up/down trends by fitting linear regression on future price segments and selecting the steepest slope.
+    It inherits from the Labeller base class and implements methods to:
+        - set_params : define parameter grids.
+        - process_data : optionally performs preprocessing on the input series.
+        - get_labels : compute the moving average feature over a rolling window
     """
     def __init__(
         self, 
-        series: pd.Series, 
         n_jobs: int = 1
     ):
         """
         Initialize the slope_labeller.
 
         Parameters:
-            - series (pd.Series): Time series to label.
             - n_jobs (int): Number of jobs for parallel processing (default is 1).
         """
         super().__init__(
-            series=series, 
             n_jobs=n_jobs,
         )
     
@@ -761,44 +708,25 @@ class slope_labeller(com.Labeller):
     #?____________________________________________________________________________________ #
     def process_data(
         self, 
-        smoothing_method: str = None, 
-        window_smooth: int = None, 
-        lambda_smooth: float = None
+        data: pd.Series,
     ):
         """
-        Optionally smooths the input series before applying labelling.
-
+        Applies preprocessing to the input data before labels extraction.
+        
         Parameters:
-            - smoothing_method (str): Type of smoothing ("ewma", "average", or None).
-            - window_smooth (int): Number of bars in the smoothing window.
-            - lambda_smooth (float): EWMA smoothing lambda (0 < λ ≤ 1).
-
+            - data (pd.Series): The input data to be processed.
+        
         Returns:
-            - processed_data (pd.Series): The processed (smoothed or raw) series.
+            - processed_data (pd.Series): The smoothed series, or raw series if no smoothing is applied.
+        ________
+        N.B: The labeller does not require preprocessing, but this method is kept for consistency.
         """
-        # ======= I. Check if any smoothing should be applied =======
-        if smoothing_method is None:
-            processed_data = self.series
-            self.processed_data = processed_data
-            return processed_data
-        
-        # ======= II. Compute the smoothed series =======
-        elif smoothing_method == "ewma":
-            processed_data = fil.ewma_smoothing(price_series=self.series, window=window_smooth, ind_lambda=lambda_smooth)
-        elif smoothing_method == "average":
-            processed_data = fil.average_smoothing(price_series=self.series, window=window_smooth)
-            
-        else:
-            raise ValueError("Smoothing method not recognized")
-        
-        # ======= III. Save the processed data =======
-        self.processed_data = processed_data
-        
-        return self.processed_data
+        return data
 
     #?____________________________________________________________________________________ #
     def get_labels(
         self, 
+        data: pd.Series,
         horizon: int,
         horizon_extension: float,
         min_trend_size: int,
@@ -810,6 +738,7 @@ class slope_labeller(com.Labeller):
         Assigns +1/-1 binary labels based on best slope over a forward window.
 
         Parameters:
+            - data (pd.Series): The input series to be processed.
             - horizon (int): Base number of bars to look forward for trend estimation.
             - horizon_extension (float): Multiplier to stretch the max horizon.
             - min_trend_size (int): Minimum trend length to retain a label.
@@ -820,24 +749,31 @@ class slope_labeller(com.Labeller):
         Returns:
             - labels_series (pd.Series): Binary series with +1 (up), -1 (down) or NaN (no label).
         """
-        # ======= I. Prepare Series =======
-        series = self.process_data(smoothing_method=smoothing_method, window_smooth=window_smooth, lambda_smooth=lambda_smooth).dropna().copy()
-        nb_elements = len(series)
-
-        labels_series = pd.Series(0, index=series.index, dtype=int)
-
+        # ======= I. Smooth the Data & Preprocess =======
+        smoothed_series = self.smooth_data(
+            data=data, 
+            smoothing_method=smoothing_method, 
+            window_smooth=window_smooth, 
+            lambda_smooth=lambda_smooth
+        )
+        
+        processed_series = self.process_data(data=smoothed_series).dropna()
+        
         # ======= II. Labelling Process =======
+        nb_elements = len(processed_series)
+        labels_series = pd.Series(0, index=processed_series.index, dtype=int)
+
         horizon_max = round(horizon * (1 + horizon_extension))
         for idx in range(nb_elements - horizon + 1):
             # II.0 Skip the NaN values
-            if pd.isna(series.iloc[idx]):
+            if pd.isna(processed_series.iloc[idx]):
                 continue
 
             # II.1 Iterate over different horizons to find the most significant trend
             best_slope = 0
             for current_horizon in range(horizon, horizon_max):
                 # ------ 1. Extract the future EMA values ------
-                future_ewma = series.iloc[idx : idx + current_horizon]
+                future_ewma = processed_series.iloc[idx : idx + current_horizon]
                 temporality = np.arange(len(future_ewma))
 
                 # ------ 2. Fit the Linear Regression and Extract R² ------
@@ -851,7 +787,7 @@ class slope_labeller(com.Labeller):
                     labels_series.iloc[idx] = 1 if slope > 0 else -1
 
         # ======= III. Eliminate the trends that are too small =======
-        labels_series = com.trend_filter(label_series=labels_series, window=min_trend_size)
+        labels_series = fil.segment_length_filter(label_series=labels_series, window=min_trend_size)
         labels_series = labels_series.replace(0, np.nan).ffill()
 
         return labels_series

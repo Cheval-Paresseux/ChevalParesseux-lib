@@ -1,4 +1,5 @@
 from ...utils import function_tools as tools
+from ..Measures import Filters as fil
 
 import numpy as np
 import pandas as pd
@@ -18,11 +19,12 @@ class Feature(ABC):
     Subclasses must implement the following abstract methods:
         - __init__: Initializes the feature with name, and optionally number of jobs.
         - set_params: Defines the parameter grid as a dictionary of lists.
-        - process_data: Applies transformations or preprocessing to the data.
+        - process_data: Applies preprocessing to the data.
         - get_feature: Extracts the actual feature(s), returning a DataFrame.
 
     Main usage involves one core methods:
-        - extract: Returns extracted features, either filtered (if fitted) or raw (from parameter grid).
+        - smooth_data: Applies optional smoothing to the input data before feature computation.
+        - extract: Returns extracted features.
     """
     #?_____________________________ Initialization methods _______________________________ #
     @abstractmethod
@@ -69,16 +71,16 @@ class Feature(ABC):
         self,
         data: Union[tuple, pd.Series, pd.DataFrame],
         **kwargs
-    ) -> Union[pd.DataFrame, pd.Series]:
+    ) -> Union[tuple, pd.DataFrame, pd.Series]:
         """
-        Preprocesses or filters the data before feature extraction.
+        Preprocesses the data before feature extraction.
 
         Parameters:
             - data (tuple | pd.Series | pd.DataFrame): The input data to be processed.
             - **kwargs: Additional parameters for the data processing.
 
         Returns:
-            - pd.DataFrame or pd.Series: The processed data ready for feature extraction.
+            - tuple or pd.DataFrame or pd.Series: The processed data ready for feature extraction.
         """
         ...
     
@@ -102,6 +104,41 @@ class Feature(ABC):
         ...
        
     #?_________________________________ Callable methods _________________________________ #
+    def smooth_data(
+        self, 
+        data: pd.Series,
+        smoothing_method: str = None, 
+        window_smooth: int = None, 
+        lambda_smooth: float = None
+    ):
+        """
+        Applies optional smoothing to the input data before feature computation.
+
+        Parameters:
+            - data (pd.Series): The input data to be processed.
+            - smoothing_method (str): Type of smoothing to apply. Options: "ewma", "average", or None.
+            - window_smooth (int): Size of the smoothing window.
+            - lambda_smooth (float): EWMA decay parameter in [0, 1].
+
+        Returns:
+            - smoothed_data (pd.Series): The smoothed series, or raw series if no smoothing is applied.
+        """
+        # ======= I. Check if any smoothing should be applied =======
+        if smoothing_method is None:
+            return data
+        
+        # ======= II. Compute the smoothed series =======
+        elif smoothing_method == "ewma":
+            smoothed_data = fil.ewma_smoothing(price_series=data, window=window_smooth, ind_lambda=lambda_smooth)
+        elif smoothing_method == "average":
+            smoothed_data = fil.average_smoothing(price_series=data, window=window_smooth)
+            
+        else:
+            raise ValueError("Smoothing method not recognized")
+        
+        return smoothed_data
+    
+    #?____________________________________________________________________________________ #
     def extract(
         self, 
         data: Union[tuple, pd.Series, pd.DataFrame]

@@ -1,5 +1,5 @@
 from ..Tuning import common as com
-from ...utils import classificationMetrics as clsmetrics 
+from ...utils import metrics as clsmetrics 
 
 import pandas as pd
 import numpy as np

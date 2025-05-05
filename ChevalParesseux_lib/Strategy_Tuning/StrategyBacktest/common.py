@@ -1,4 +1,4 @@
-from ...utils import financialMetrics as ft
+from ...utils import metrics as ft
 
 import pandas as pd
 import numpy as np

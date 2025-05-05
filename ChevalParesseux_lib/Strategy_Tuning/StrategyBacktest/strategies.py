@@ -1,5 +1,5 @@
 from ..StrategyBacktest import common as com
-from ...utils import classificationMetrics as clsmet
+from ...utils import metrics as clsmet
 from ...utils import function_tools as util
 
 import numpy as np

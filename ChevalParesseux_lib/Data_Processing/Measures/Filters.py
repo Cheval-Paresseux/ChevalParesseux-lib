@@ -133,4 +133,34 @@ def kalmanOU_smoothing(
     return filtered_states, variances
 
 
+#! ==================================================================================== #
+#! ====================== Series Filters (with look forward) ========================== #
+def segment_length_filter(
+        label_series: pd.Series, 
+        window: int
+    ):
+    """
+    Filters out short-lived label segments that are smaller than a given window.
 
+    Parameters:
+        - label_series (pd.Series): Series of integer or categorical labels.
+        - window (int): Minimum segment length required to preserve a label.
+
+    Returns:
+        - labels_series (pd.Series): Filtered series with small segments replaced by 0.
+    """
+    # ======= I. Create an auxiliary DataFrame =======
+    auxiliary_df = pd.DataFrame()
+    auxiliary_df["label"] = label_series
+    
+    # ======= II. Create a group for each label and extract size =======
+    auxiliary_df["group"] = (auxiliary_df["label"] != auxiliary_df["label"].shift()).cumsum()
+    group_sizes = auxiliary_df.groupby("group")["label"].transform("size")
+
+    # ======= III. Filter the labels based on the group size =======
+    auxiliary_df["label"] = auxiliary_df.apply(lambda row: row["label"] if group_sizes.get(row.name, 0) >= window else 0, axis=1)
+    labels_series = auxiliary_df["label"]
+    
+    return labels_series
+
+#*____________________________________________________________________________________ #

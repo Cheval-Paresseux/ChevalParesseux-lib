@@ -4,6 +4,7 @@ import scipy.stats as stats
 
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
+import matplotlib.colors as mcolors
 from matplotlib.colors import LinearSegmentedColormap
 import seaborn as sns
 
@@ -197,42 +198,84 @@ def plot_series_labels(
     series: pd.Series,
     label_series: pd.Series,
     series_name: str = "close",
-    label_name: str = "label"
-) -> None:
+    label_name: str = "label",
+    marker_size: int = 50,
+    colormap_continuous=cm.viridis,
+):
     """
-    Plot a time series with overlaid label markers. If the number of unique labels > 10,
-    the labels are treated as continuous and colored using a colormap gradient.
-    
-    Parameters:
-        series (pd.Series): Time series to plot.
-        label_series (pd.Series): Series of class labels (can be categorical or continuous).
-        series_name (str): Name for the y-axis and title.
-        label_name (str): Label for the class/label series used in the title and legend.
-    """
-    fig, ax = plt.subplots(figsize=(17, 5))
-    ax.plot(series.index, series, label=series_name, color="blue", linewidth=1)
+    Plot a time series with overlaid label markers. Supports both categorical and continuous labels.
 
+    Parameters:
+        series (pd.Series): Time series to plot (indexed by datetime).
+        label_series (pd.Series): Labels aligned with the series (categorical or continuous).
+        series_name (str): Title and Y-axis label.
+        label_name (str): Label used in the legend and colorbar.
+        marker_size (int): Size of label scatter markers.
+        colormap_continuous: Matplotlib colormap for continuous values (default: viridis).
+    """
+    def generate_color_dict(unique_labels):
+        """
+        Maps labels to perceptually consistent diverging colors:
+        - Negative → red
+        - 0 → blue (neutral)
+        - Positive → green
+        """
+        unique_labels = sorted(unique_labels)
+        color_dict = {}
+
+        if len(unique_labels) == 1:
+            return {unique_labels[0]: '#000000'}
+
+        min_label, max_label = min(unique_labels), max(unique_labels)
+        norm_labels = [
+            (label - min_label) / (max_label - min_label) if min_label != max_label else 0.5
+            for label in unique_labels
+        ]
+
+        diverging_cmap = mcolors.LinearSegmentedColormap.from_list(
+            "custom_diverging",
+            ["red", "blue", "green"],
+            N=256
+        )
+
+        for label, norm_val in zip(unique_labels, norm_labels):
+            color = mcolors.to_hex(diverging_cmap(norm_val))
+            color_dict[label] = color
+
+        return color_dict
+
+    # ================= Plotting =================
+    fig, ax = plt.subplots(figsize=(17, 5))
+    ax.plot(series.index, series, label=series_name, color="black", linewidth=2, zorder=10)
+
+    label_series = label_series.reindex(series.index)  # align just in case
     unique_labels = np.sort(label_series.dropna().unique())
 
     if len(unique_labels) <= 10:
-        palette = sns.color_palette("tab10", len(unique_labels))
-        color_dict = {label: palette[i] for i, label in enumerate(unique_labels)}
-
+        # ===== Categorical Labels =====
+        color_dict = generate_color_dict(unique_labels)
         for label in unique_labels:
-            idx = label_series == label
+            mask = label_series == label
             ax.scatter(
-                series.index[idx], series[idx],
-                color=color_dict[label], label=f"{label_name}: {label}",
-                s=50, alpha=0.8
+                series.index[mask],
+                series[mask],
+                color=color_dict[label],
+                label=f"{label_name}: {label}",
+                s=marker_size,
+                alpha=0.8
             )
     else:
-        # Treat labels as continuous
+        # ===== Continuous Labels =====
         norm = plt.Normalize(label_series.min(), label_series.max())
-        cmap = cm.get_cmap('viridis')
         sc = ax.scatter(
-            series.index, series,
-            c=label_series, cmap=cmap, norm=norm,
-            s=50, alpha=0.8, label=label_name
+            series.index,
+            series,
+            c=label_series,
+            cmap=colormap_continuous,
+            norm=norm,
+            s=marker_size,
+            alpha=0.8,
+            label=label_name
         )
         cbar = plt.colorbar(sc, ax=ax)
         cbar.set_label(label_name)
@@ -240,6 +283,7 @@ def plot_series_labels(
     ax.set_title(f"{series_name} with {label_name}")
     ax.set_xlabel("Date")
     ax.set_ylabel(series_name)
-    ax.legend()
     ax.grid(True)
+    ax.legend(loc='upper left', fontsize='small', frameon=True)
+    plt.tight_layout()
     plt.show()

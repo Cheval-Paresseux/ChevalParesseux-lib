@@ -67,7 +67,10 @@ def get_distance_correlation(series_1: pd.Series, series_2: pd.Series, distance_
 def get_cointegration(series_1: pd.Series, series_2: pd.Series):
     # ======== I. Perform a Linear Regression ========
     model = reg.OLSRegression()
-    model.fit(series_2, series_1)
+    try:
+        model.fit(series_2, series_1)
+    except np.linalg.LinAlgError as e:
+        return np.nan, np.nan, (np.nan, np.nan), (np.nan, np.nan), pd.Series(dtype=float)
 
     # ======== II. Extract Regression Coefficients ========
     beta = model.coefficients[0]
