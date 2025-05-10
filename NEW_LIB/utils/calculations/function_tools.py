@@ -4,6 +4,8 @@ import pandas as pd
 from itertools import product
 import inspect
 
+
+
 #! ==================================================================================== #
 #! =========================== Dict-Function Interface ================================ #
 def get_dict_universe(

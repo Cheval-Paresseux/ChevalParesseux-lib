@@ -1,3 +1,5 @@
+from ..calculations import regression_models as reg
+
 # import os
 # os.environ["MKL_NUM_THREADS"] = "1"
 
@@ -6,6 +8,7 @@ import pandas as pd
 from statsmodels.tsa.stattools import adfuller
 from statsmodels.tsa.stattools import kpss
 import warnings
+
 
 
 #! ==================================================================================== #

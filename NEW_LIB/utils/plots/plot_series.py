@@ -8,6 +8,8 @@ import matplotlib.colors as mcolors
 from matplotlib.colors import LinearSegmentedColormap
 import seaborn as sns
 
+
+
 #! ==================================================================================== #
 #! ============================== Series description ================================= #
 def generate_series_report(

@@ -1,5 +1,8 @@
+from ..calculations import regression_models as reg
+
 import numpy as np
 import pandas as pd
+
 
 
 #! ==================================================================================== #
@@ -28,7 +31,7 @@ def get_momentum(
 #*____________________________________________________________________________________ #
 def get_Z_momentum(
     series: pd.Series
-    ) -> float:
+) -> float:
     """
     Compute the Z-momentum of a series.
     
@@ -151,4 +154,3 @@ def get_OU_estimation(
 
     return mu, theta, sigma, half_life
 
-#*____________________________________________________________________________________ #  

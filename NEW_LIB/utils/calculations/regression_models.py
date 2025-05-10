@@ -126,9 +126,7 @@ def get_regression_stats(
 #! ==================================================================================== #
 #! ================================ Regression Models ================================= #
 class OLSRegression():
-    def __init__(
-        self, 
-    ) -> None:
+    def __init__(self) -> None:
         # --- Data Fitted ---
         self.X_train = None
         self.y_train = None
@@ -256,9 +254,7 @@ class OLSRegression():
     
 #*____________________________________________________________________________________ #
 class MSERegression():
-    def __init__(
-        self,
-    ) -> None:
+    def __init__(self) -> None:
         # --- Data Fitted ---
         self.X_train = None
         self.y_train = None
@@ -459,9 +455,7 @@ class MSERegression():
     
 #*____________________________________________________________________________________ #
 class RidgeRegression():
-    def __init__(
-        self, 
-    ) -> None:        
+    def __init__(self) -> None:        
         # --- Data Fitted ---
         self.X_train = None
         self.y_train = None
@@ -483,6 +477,17 @@ class RidgeRegression():
         learning_rate: float = 0.01, 
         epochs: int = 1000
     ) -> Self:
+        """
+        Sets the parameters for the model.
+        
+        Parameters:
+            - lambda_ (float): The regularization parameter for Ridge regression.
+            - learning_rate (float): The learning rate for gradient descent.
+            - epochs (int): The number of iterations for gradient descent.
+        
+        Returns:
+            - self (Self): The instance of the class with updated parameters.
+        """
         self.params = {
             'lambda': lambda_,
             'learning_rate': learning_rate,
@@ -494,9 +499,20 @@ class RidgeRegression():
     #?_____________________________ Build Functions ______________________________________ #
     def process_data(
         self, 
-        X_train, 
-        y_train
+        X_train: Union[np.array, pd.DataFrame, pd.Series],
+        y_train: Union[np.array, pd.Series]
     ) -> tuple:
+        """
+        Transforms the input data into numpy arrays and stores them as class attributes.
+        
+        Parameters:
+            - X_train (Union[np.array, pd.DataFrame, pd.Series]): The input features.
+            - y_train (Union[np.array, pd.Series]): The target variable.
+        
+        Returns:
+            - X (np.array): The transformed input features as a numpy array.
+            - y (np.array): The transformed target variable as a numpy array.
+        """
         # ======= I. Convert X and y to numpy arrays =======
         X = np.array(X_train).reshape(-1, 1) if len(np.array(X_train).shape) == 1 else np.array(X_train)
         y = np.array(y_train)
@@ -516,7 +532,20 @@ class RidgeRegression():
         lambda_: float, 
         coefficients: np.array
     ) -> tuple:
+        """
+        Computes the gradient of the Ridge regression loss function.
         
+        Parameters:
+            - nb_observations (int): The number of observations in the dataset.
+            - errors (np.array): The errors between predictions and target values.
+            - features_matrix (np.array): The input features matrix.
+            - lambda_ (float): The regularization parameter for Ridge regression.
+            - coefficients (np.array): The model coefficients.
+        
+        Returns:
+            - gradient_coefficients (np.array): The computed gradient for the coefficients.
+            - gradient_intercept (float): The computed gradient for the intercept.
+        """
         gradient_coefficients = (-2 / nb_observations) * np.dot(features_matrix.T, errors) + 2 * lambda_ * coefficients
         gradient_intercept = (-2 / nb_observations) * np.sum(errors)
 
@@ -530,6 +559,19 @@ class RidgeRegression():
         features_matrix: np.array, 
         target_vector: np.array
     ) -> tuple:
+        """
+        Computes the coefficients and intercept using gradient descent.
+        
+        Parameters:
+            - learning_rate (float): The learning rate for gradient descent.
+            - epochs (int): The number of iterations for gradient descent.
+            - features_matrix (np.array): The input features matrix.
+            - target_vector (np.array): The target variable vector.
+        
+        Returns:
+            - coefficients (np.array): The optimized coefficients.
+            - intercept (float): The optimized intercept.
+        """
         # ======= I. Initialize coefficients and intercept to 0 =======
         learningRate = learning_rate
         nb_observations, nb_features = features_matrix.shape
@@ -571,9 +613,19 @@ class RidgeRegression():
     #?_____________________________ User Functions _______________________________________ #
     def fit(
         self, 
-        X_train, 
-        y_train
+        X_train: Union[np.array, pd.DataFrame, pd.Series],
+        y_train: Union[np.array, pd.Series]
     ) -> dict:
+        """
+        Computes the coefficients and intercept using gradient descent.
+        
+        Parameters:
+            - X_train (Union[np.array, pd.DataFrame, pd.Series]): The input features.
+            - y_train (Union[np.array, pd.Series]): The target variable.
+        
+        Returns:
+            - statistics (dict): A dictionary containing the computed statistics.
+        """
         # ======= I. Process Data =======
         X, y = self.process_data(X_train, y_train)
         
@@ -591,8 +643,17 @@ class RidgeRegression():
     #?____________________________________________________________________________________ #
     def predict(
         self, 
-        X_test
+        X_test: Union[np.array, pd.DataFrame, pd.Series]
     ) -> np.array:
+        """
+        Computes predictions using the fitted model.
+        
+        Parameters:
+            - X_test (Union[np.array, pd.DataFrame, pd.Series]): The input features for prediction.
+        
+        Returns:
+            - predictions (np.array): The computed predictions.
+        """
         # ======= I. Convert X to a numpy array =======
         X = np.array(X_test).reshape(-1, 1) if len(np.array(X_test).shape) == 1 else np.array(X_test)
         
@@ -603,9 +664,7 @@ class RidgeRegression():
     
 #*____________________________________________________________________________________ #
 class LassoRegression():
-    def __init__(
-        self, 
-    ) -> None:
+    def __init__(self) -> None:
         # --- Data Fitted ---
         self.X_train = None
         self.y_train = None
@@ -627,6 +686,17 @@ class LassoRegression():
         learning_rate: float = 0.01, 
         epochs: int = 1000
     ) -> Self:
+        """
+        Sets the parameters for the model.
+        
+        Parameters:
+            - lambda_ (float): The regularization parameter for Lasso regression.
+            - learning_rate (float): The learning rate for gradient descent.
+            - epochs (int): The number of iterations for gradient descent.
+        
+        Returns:
+            - self (Self): The instance of the class with updated parameters.
+        """
         self.params = {
             'lambda': lambda_,
             'learning_rate': learning_rate,
@@ -638,9 +708,20 @@ class LassoRegression():
     #?_____________________________ Build Functions ______________________________________ #
     def process_data(
         self, 
-        X_train, 
-        y_train
+        X_train: Union[np.array, pd.DataFrame, pd.Series],
+        y_train: Union[np.array, pd.Series]
     ) -> tuple:
+        """
+        Transforms the input data into numpy arrays and stores them as class attributes.
+        
+        Parameters:
+            - X_train (Union[np.array, pd.DataFrame, pd.Series]): The input features.
+            - y_train (Union[np.array, pd.Series]): The target variable.
+        
+        Returns:
+            - X (np.array): The transformed input features as a numpy array.
+            - y (np.array): The transformed target variable as a numpy array.
+        """
         # ======= I. Convert X and y to numpy arrays =======
         X = np.array(X_train).reshape(-1, 1) if len(np.array(X_train).shape) == 1 else np.array(X_train)
         y = np.array(y_train)
@@ -660,6 +741,20 @@ class LassoRegression():
         lambda_: float, 
         coefficients: np.array
     ) -> tuple:
+        """
+        Computes the gradient of the Lasso regression loss function.
+        
+        Parameters:
+            - nb_observations (int): The number of observations in the dataset.
+            - errors (np.array): The errors between predictions and target values.
+            - features_matrix (np.array): The input features matrix.
+            - lambda_ (float): The regularization parameter for Lasso regression.
+            - coefficients (np.array): The model coefficients.
+        
+        Returns:
+            - gradient_coefficients (np.array): The computed gradient for the coefficients.
+            - gradient_intercept (float): The computed gradient for the intercept.
+        """
         
         gradient_coefficients = (-2 / nb_observations) * np.dot(features_matrix.T, errors) + lambda_ * np.sign(coefficients)
         gradient_intercept = (-2 / nb_observations) * np.sum(errors)
@@ -674,6 +769,19 @@ class LassoRegression():
         features_matrix: np.array, 
         target_vector: np.array
     ) -> tuple:
+        """
+        Computes the coefficients and intercept using gradient descent.
+        
+        Parameters:
+            - learning_rate (float): The learning rate for gradient descent.
+            - epochs (int): The number of iterations for gradient descent.
+            - features_matrix (np.array): The input features matrix.
+            - target_vector (np.array): The target variable vector.
+        
+        Returns:
+            - coefficients (np.array): The optimized coefficients.
+            - intercept (float): The optimized intercept.
+        """
         # ======= I. Initialize coefficients and intercept to 0 =======
         learningRate = learning_rate
         nb_observations, nb_features = features_matrix.shape
@@ -715,9 +823,19 @@ class LassoRegression():
     #?_____________________________ User Functions _______________________________________ #
     def fit(
         self, 
-        X_train, 
-        y_train
+        X_train: Union[np.array, pd.DataFrame, pd.Series],
+        y_train: Union[np.array, pd.Series]
     ) -> dict:
+        """
+        Computes the coefficients and intercept using gradient descent.
+        
+        Parameters:
+            - X_train (Union[np.array, pd.DataFrame, pd.Series]): The input features.
+            - y_train (Union[np.array, pd.Series]): The target variable.
+        
+        Returns:
+            - statistics (dict): A dictionary containing the computed statistics.
+        """
         # ======= I. Process Data =======
         X, y = self.process_data(X_train, y_train)
         
@@ -735,8 +853,17 @@ class LassoRegression():
     #?____________________________________________________________________________________ #
     def predict(
         self, 
-        X_test
+        X_test: Union[np.array, pd.DataFrame, pd.Series]
     ) -> np.array:
+        """
+        Computes predictions using the fitted model.
+        
+        Parameters:
+            - X_test (Union[np.array, pd.DataFrame, pd.Series]): The input features for prediction.
+        
+        Returns:
+            - predictions (np.array): The computed predictions.
+        """
         # ======= I. Convert X to a numpy array =======
         X = np.array(X_test).reshape(-1, 1) if len(np.array(X_test).shape) == 1 else np.array(X_test)
         
@@ -770,6 +897,18 @@ class ElasticNetRegression():
         learning_rate: float = 0.01, 
         epochs: int = 1000
     ) -> Self:
+        """
+        Sets the parameters for the model.
+        
+        Parameters:
+            - lambda1 (float): The regularization parameter for Lasso regression.
+            - lambda2 (float): The regularization parameter for Ridge regression.
+            - learning_rate (float): The learning rate for gradient descent.
+            - epochs (int): The number of iterations for gradient descent.
+        
+        Returns:
+            - self (Self): The instance of the class with updated parameters.
+        """
         self.params = {
             'lambda1': lambda1,
             'lambda2': lambda2,
@@ -780,7 +919,22 @@ class ElasticNetRegression():
         return self
         
     #?_____________________________ Build Functions ______________________________________ #
-    def process_data(self, X_train, y_train):
+    def process_data(
+        self, 
+        X_train: Union[np.array, pd.DataFrame, pd.Series],
+        y_train: Union[np.array, pd.Series]
+    ) -> tuple:
+        """
+        Transforms the input data into numpy arrays and stores them as class attributes.
+        
+        Parameters:
+            - X_train (Union[np.array, pd.DataFrame, pd.Series]): The input features.
+            - y_train (Union[np.array, pd.Series]): The target variable.
+        
+        Returns:
+            - X (np.array): The transformed input features as a numpy array.
+            - y (np.array): The transformed target variable as a numpy array.
+        """
         # ======= I. Convert X and y to numpy arrays =======
         X = np.array(X_train).reshape(-1, 1) if len(np.array(X_train).shape) == 1 else np.array(X_train)
         y = np.array(y_train)
@@ -792,15 +946,60 @@ class ElasticNetRegression():
         return X, y
 
     #?____________________________________________________________________________________ #
-    def elastic_net_gradient(self, nb_observations: int, errors: np.array, features_matrix: np.array, lambda1: float, lambda2: float, coefficients: np.array):
+    def elastic_net_gradient(
+        self, 
+        nb_observations: int, 
+        errors: np.array, 
+        features_matrix: np.array, 
+        lambda1: float, 
+        lambda2: float, 
+        coefficients: np.array
+    ) -> tuple:
+        """
+        Computes the gradient of the Elastic Net loss function.
         
+        Parameters:
+            - nb_observations (int): The number of observations in the dataset.
+            - errors (np.array): The errors between predictions and target values.
+            - features_matrix (np.array): The input features matrix.
+            - lambda1 (float): The regularization parameter for Lasso regression.
+            - lambda2 (float): The regularization parameter for Ridge regression.
+            - coefficients (np.array): The model coefficients.
+        
+        Returns:
+            - gradient_coefficients (np.array): The computed gradient for the coefficients.
+            - gradient_intercept (float): The computed gradient for the intercept.
+        """
         gradient_coefficients = (-2 / nb_observations) * np.dot(features_matrix.T, errors) + 2 * lambda1 * coefficients + lambda2 * np.sign(coefficients)
         gradient_intercept = (-2 / nb_observations) * np.sum(errors)
 
         return gradient_coefficients, gradient_intercept
     
     #?____________________________________________________________________________________ #
-    def gradient_descent(self, learning_rate: float, epochs: int, features_matrix: np.array, target_vector: np.array, lambda1: float, lambda2: float):
+    def gradient_descent(
+        self, 
+        learning_rate: float, 
+        epochs: int, 
+        features_matrix: np.array, 
+        target_vector: np.array, 
+        lambda1: float, 
+        lambda2: float
+    ) -> tuple:
+        """
+        Computes the coefficients and intercept using gradient descent.
+        
+        Parameters:
+            - learning_rate (float): The learning rate for gradient descent.
+            - epochs (int): The number of iterations for gradient descent.
+            - features_matrix (np.array): The input features matrix.
+            - target_vector (np.array): The target variable vector.
+            - lambda1 (float): The regularization parameter for Lasso regression.
+            - lambda2 (float): The regularization parameter for Ridge regression.
+        
+        Returns:
+            - coefficients (np.array): The optimized coefficients.
+            - intercept (float): The optimized intercept.
+        """
         # ======= I. Initialize coefficients and intercept to 0 =======
         learningRate = learning_rate
         nb_observations, nb_features = features_matrix.shape
@@ -821,8 +1020,8 @@ class ElasticNetRegression():
             loss_history.append(loss)
             
             # II.3 Update Learning Rate based on the loss
-            learningRate = com.adapt_learning_rate(learningRate, loss, last_loss)
-            early_stop = com.early_stopping(loss, last_loss)
+            learningRate = adapt_learning_rate(learningRate, loss, last_loss)
+            early_stop = early_stopping(loss, last_loss)
             if early_stop:
                 break
             last_loss = loss
@@ -839,7 +1038,21 @@ class ElasticNetRegression():
         return coefficients, intercept
     
     #?_____________________________ User Functions _______________________________________ #
-    def fit(self, X_train, y_train):
+    def fit(
+        self, 
+        X_train: Union[np.array, pd.DataFrame, pd.Series],
+        y_train: Union[np.array, pd.Series]
+    ) -> dict:
+        """
+        Computes the coefficients and intercept using gradient descent.
+        
+        Parameters:
+            - X_train (Union[np.array, pd.DataFrame, pd.Series]): The input features.
+            - y_train (Union[np.array, pd.Series]): The target variable.
+        
+        Returns:
+            - statistics (dict): A dictionary containing the computed statistics.
+        """
         # ======= I. Process Data =======
         X, y = self.process_data(X_train, y_train)
         
@@ -850,12 +1063,24 @@ class ElasticNetRegression():
         train_predictions = self.predict(X)
 
         # ======= IV. Compute Statistics =======
-        self.statistics, self.residuals = com.get_regression_stats(train_predictions, X, y, self.coefficients)
+        self.statistics, self.residuals = get_regression_stats(train_predictions, X, y, self.coefficients)
         
         return self.statistics
         
     #?____________________________________________________________________________________ #
-    def predict(self, X_test):
+    def predict(
+        self, 
+        X_test: Union[np.array, pd.DataFrame, pd.Series]
+    ) -> np.array:
+        """
+        Computes predictions using the fitted model.
+        
+        Parameters:
+            - X_test (Union[np.array, pd.DataFrame, pd.Series]): The input features for prediction.
+        
+        Returns:
+            - predictions (np.array): The computed predictions.
+        """
         # ======= I. Convert X to a numpy array =======
         X = np.array(X_test).reshape(-1, 1) if len(np.array(X_test).shape) == 1 else np.array(X_test)
         

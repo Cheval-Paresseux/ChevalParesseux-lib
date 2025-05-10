@@ -1,7 +1,9 @@
-from ..Measures import Momentum as mom
+from ..calculations import trending_measures as trend
 
 import numpy as np
 import pandas as pd
+
+
 
 #! ==================================================================================== #
 #! =========================== Series Smoothing Functions ============================= #
@@ -158,7 +160,7 @@ def kalmanOU_smoothing(
         return estimate_t, variance_t
 
     # ======== I. Estimate OU parameters ========
-    mu, theta, sigma, _ = mom.get_OU_estimation(series)
+    mu, theta, sigma, _ = trend.get_OU_estimation(series)
     theta = max(theta, 1e-4)
 
     # ======== II. Initialize Kalman Filter ========
@@ -189,5 +191,4 @@ def kalmanOU_smoothing(
     variances = pd.Series(variances, index=index)
     
     return filtered_states, variances
-
 
