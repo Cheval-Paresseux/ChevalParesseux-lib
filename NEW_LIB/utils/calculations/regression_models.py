@@ -95,7 +95,7 @@ def get_regression_stats(
     # ======= III. Compute R-Squared =======
     SST = np.sum((y_train - np.mean(y_train))**2)
     SSR = np.sum((predictions - np.mean(y_train))**2)
-    R_squared = SSR / SST if SST != 0 else 0
+    r2 = SSR / SST if SST != 0 else 0
     
     # ======= IV. Compute t-Statistics and p-Values =======
     XTX = X_train.T @ X_train
@@ -111,12 +111,12 @@ def get_regression_stats(
 
     # ======= V. Store the Statistics =======
     statistics = {
-        "Variance": variance,
-        "Mean": mean,
-        "Median": median,
-        "R_squared": R_squared,
-        "T_stats": t_stats.tolist(),
-        "P_values": p_values
+        "variance": variance,
+        "mean": mean,
+        "median": median,
+        "r2": r2,
+        "t_stats": t_stats.tolist(),
+        "p_values": p_values
     }
 
     return statistics, residuals

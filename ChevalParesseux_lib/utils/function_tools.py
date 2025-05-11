@@ -8,7 +8,7 @@ import inspect
 #! =========================== Dict-Function Interface ================================ #
 def get_dict_universe(
     params_grid: dict
-) -> list[dict]:
+) -> list:
     """
     Generate all combinations of parameters from a grid dictionary.
 

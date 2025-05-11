@@ -93,12 +93,12 @@ def get_regression_stats(predictions: np.array, X_train: np.array, y_train: np.a
 
     # ======= V. Store the Statistics =======
     statistics = {
-        "Variance": variance,
-        "Mean": mean,
-        "Median": median,
-        "R_squared": R_squared,
-        "T_stats": t_stats.tolist(),
-        "P_values": p_values
+        "variance": variance,
+        "mean": mean,
+        "median": median,
+        "r2": R_squared,
+        "t_stats": t_stats.tolist(),
+        "p_values": p_values
     }
 
     return statistics, residuals

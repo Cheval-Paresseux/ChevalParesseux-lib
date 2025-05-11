@@ -1,6 +1,10 @@
+from ..labelling import common as com
+
 import numpy as np
 import pandas as pd
-from typing import Union
+from typing import Union, Self
+
+
 
 #! ==================================================================================== #
 #! =============================== BINARY LABELLERS ================================== #
@@ -15,15 +19,18 @@ class binaryMeta_labeller(com.Labeller):
     """
     def __init__(
         self, 
+        name: str = "binaryMeta",
         n_jobs: int = 1
-    ):
+    ) -> None:
         """
         Initialize the binaryMeta_labeller.
 
         Parameters:
+            - name (str): Name of the labeller (default is "binaryMeta").
             - n_jobs (int): Number of jobs for parallel processing (default is 1).
         """
         super().__init__(
+            name=name,
             n_jobs=n_jobs,
         )
     
@@ -32,7 +39,7 @@ class binaryMeta_labeller(com.Labeller):
         self,
         trade_lock: bool = [True, False],
         noZero: bool = [True, False],
-    ):
+    ) -> Self:
         """
         Sets the parameter grid for the labeller.
 
@@ -51,7 +58,7 @@ class binaryMeta_labeller(com.Labeller):
     def process_data(
         self, 
         data: Union[tuple, pd.DataFrame],
-    ):
+    ) -> pd.DataFrame:
         """
         Applies preprocessing to the input data before labels extraction.
         
@@ -95,7 +102,7 @@ class binaryMeta_labeller(com.Labeller):
         data: Union[tuple, pd.DataFrame],
         trade_lock: bool,
         noZero: bool,
-    ):
+    ) -> pd.Series:
         """
         Compute binary meta labels based on the input data.
 
@@ -123,9 +130,12 @@ class binaryMeta_labeller(com.Labeller):
             processed_data["meta_label"] = np.where(processed_data["signal"] == processed_data["label"], 1, 0)
             label_series = processed_data["meta_label"]
         
+        # ======= III. Change name =======
+        label_series.name = f"{self.name}_{trade_lock}_{noZero}"
+        
         return label_series
         
-#*____________________________________________________________________________________ #
+
 
 #! ==================================================================================== #
 #! =============================== TRINARY LABELLERS =================================== #
@@ -140,9 +150,18 @@ class trinaryMeta_labeller(com.Labeller):
     """
     def __init__(
         self, 
+        name: str = "trinaryMeta",
         n_jobs: int = 1
-    ):
+    ) -> None:
+        """
+        Initialize the trinaryMeta_labeller.
+        
+        Parameters:
+            - name (str): Name of the labeller (default is "trinaryMeta").
+            - n_jobs (int): Number of jobs for parallel processing (default is 1).
+        """
         super().__init__(
+            name=name,
             n_jobs=n_jobs,
         )
     
@@ -151,7 +170,7 @@ class trinaryMeta_labeller(com.Labeller):
         self,
         extension: bool = [True, False],
         noZero: bool = [True, False],
-    ):
+    ) -> Self:
         """ Set parameters for the labeller.
         
         Parameters:
@@ -169,7 +188,7 @@ class trinaryMeta_labeller(com.Labeller):
     def process_data(
         self, 
         data: Union[tuple, pd.DataFrame],
-    ):
+    ) -> pd.DataFrame:
         """
         Applies preprocessing to the input data before labels extraction.
         
@@ -213,7 +232,7 @@ class trinaryMeta_labeller(com.Labeller):
         data: Union[tuple, pd.DataFrame],
         extension: bool, 
         noZero: bool
-    ):
+    ) -> pd.Series:
         """
         Compute trinary meta labels based on the input data.
 
@@ -243,6 +262,9 @@ class trinaryMeta_labeller(com.Labeller):
         # ======= III. Labelling =======
         processed_data["meta_label"] = np.select([is_good, is_neutral, is_ugly], [1, 0, -1], default=0)
         labels_series = processed_data["meta_label"]
+        
+        # ======= IV. Change name =======
+        labels_series.name = f"{self.name}_{extension}_{noZero}"
         
         return labels_series
         

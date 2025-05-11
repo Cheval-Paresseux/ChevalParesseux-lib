@@ -1,6 +1,11 @@
+from ..features import common as com
+from ...utils import calculations as calc
+
 import pandas as pd
 import numpy as np
-from typing import Union
+from typing import Union, Self
+
+
 
 #! ==================================================================================== #
 #! =========================== Relationship Measures Features ========================= #
@@ -19,7 +24,7 @@ class cointegration_feature(com.Feature):
         self, 
         name: str = "cointegration", 
         n_jobs: int = 1
-    ):
+    ) -> None:
         """
         Initializes the Cointegration_feature object.
 
@@ -39,7 +44,7 @@ class cointegration_feature(com.Feature):
         smoothing_method: list = [None, "ewma", "average"], 
         window_smooth: list = [5, 10], 
         lambda_smooth: list = [0.1, 0.2, 0.5]
-    ):
+    ) -> Self:
         """
         Sets the parameter grid for cointegration feature extraction.
 
@@ -62,7 +67,7 @@ class cointegration_feature(com.Feature):
     def process_data(
         self, 
         data: Union[tuple, pd.DataFrame],
-    ):
+    ) -> tuple:
         """
         Applies preprocessing to the input data before feature extraction.
         
@@ -149,7 +154,7 @@ class cointegration_feature(com.Feature):
             series2_window = series_2.iloc[i : i + window]
 
             # IV.2 Perform Cointegration Test
-            beta, intercept, adf_results, kpss_results, residuals = cod.get_cointegration(
+            beta, intercept, adf_results, kpss_results, residuals = calc.get_cointegration(
                 series_1=series1_window, 
                 series_2=series2_window
             )
@@ -167,14 +172,15 @@ class cointegration_feature(com.Feature):
         # ======== V. Create the Final DataFrame ========
         index = series_1.index[window:]
         features_df = pd.DataFrame({
-            f"beta_{window}_{smoothing_method}_{window_smooth}_{lambda_smooth}": beta_values,
-            f"intercept_{window}_{smoothing_method}_{window_smooth}_{lambda_smooth}": intercept_values,
-            f"ADF_pvalue_{window}_{smoothing_method}_{window_smooth}_{lambda_smooth}": adf_p_values,
-            f"KPSS_pvalue_{window}_{smoothing_method}_{window_smooth}_{lambda_smooth}": kpss_p_values,
-            f"residuals_{window}_{smoothing_method}_{window_smooth}_{lambda_smooth}": residuals_values,
+            f"{self.name}_beta_{window}_{smoothing_method}_{window_smooth}_{lambda_smooth}": beta_values,
+            f"{self.name}_intercept_{window}_{smoothing_method}_{window_smooth}_{lambda_smooth}": intercept_values,
+            f"{self.name}_ADF_pvalue_{window}_{smoothing_method}_{window_smooth}_{lambda_smooth}": adf_p_values,
+            f"{self.name}_KPSS_pvalue_{window}_{smoothing_method}_{window_smooth}_{lambda_smooth}": kpss_p_values,
+            f"{self.name}_residuals_{window}_{smoothing_method}_{window_smooth}_{lambda_smooth}": residuals_values,
         }, index=index)
 
         return features_df
+
 
 
 #! ==================================================================================== #
@@ -194,7 +200,7 @@ class OU_feature(com.Feature):
         self, 
         name: str = "OrnsteinUhlenbeck", 
         n_jobs: int = 1
-    ):
+    ) -> None:
         """
         Initializes the OU_feature object with a pair of input series.
 
@@ -215,7 +221,7 @@ class OU_feature(com.Feature):
         smoothing_method: list = [None, "ewma", "average"],
         window_smooth: list = [5, 10],
         lambda_smooth: list = [0.1, 0.2, 0.5],
-    ):
+    ) -> Self:
         """
         Sets the parameter grid for OU feature extraction.
 
@@ -240,7 +246,7 @@ class OU_feature(com.Feature):
     def process_data(
         self, 
         data: Union[tuple, pd.DataFrame],
-    ):
+    ) -> tuple:
         """
         Applies preprocessing to the input data before feature extraction.
         
@@ -285,7 +291,7 @@ class OU_feature(com.Feature):
         smoothing_method: str,
         window_smooth: int,
         lambda_smooth: float,
-    ):
+    ) -> pd.DataFrame:
         """
         Computes Ornstein-Uhlenbeck parameters for the spread over a rolling window.
 
@@ -335,7 +341,7 @@ class OU_feature(com.Feature):
                 residuals = series1_window - residuals_weights[0] * series2_window - residuals_weights[1]
             
             # IV.3 Perform Ornstein-Uhlenbeck Estimation
-            mu, theta, sigma, half_life = mom.get_OU_estimation(series=residuals)
+            mu, theta, sigma, half_life = calc.get_OU_estimation(series=residuals)
             
             # IV.4 Store Results
             mu_values[i] = mu
@@ -349,10 +355,10 @@ class OU_feature(com.Feature):
 
         index = series_1.index[window:]
         features_df = pd.DataFrame({
-            f"OU_mu_{window}_b{residuals_weights[0]}a{residuals_weights[1]}_{smoothing_method}_{window_smooth}_{lambda_smooth}": mu_values,
-            f"OU_theta_{window}_b{residuals_weights[0]}a{residuals_weights[1]}_{smoothing_method}_{window_smooth}_{lambda_smooth}": theta_values,
-            f"OU_sigma_{window}_b{residuals_weights[0]}a{residuals_weights[1]}_{smoothing_method}_{window_smooth}_{lambda_smooth}": sigma_values,
-            f"OU_half_life_{window}_b{residuals_weights[0]}a{residuals_weights[1]}_{smoothing_method}_{window_smooth}_{lambda_smooth}": half_life_values,
+            f"{self.name}_mu_{window}_b{residuals_weights[0]}a{residuals_weights[1]}_{smoothing_method}_{window_smooth}_{lambda_smooth}": mu_values,
+            f"{self.name}_theta_{window}_b{residuals_weights[0]}a{residuals_weights[1]}_{smoothing_method}_{window_smooth}_{lambda_smooth}": theta_values,
+            f"{self.name}_sigma_{window}_b{residuals_weights[0]}a{residuals_weights[1]}_{smoothing_method}_{window_smooth}_{lambda_smooth}": sigma_values,
+            f"{self.name}_half_life_{window}_b{residuals_weights[0]}a{residuals_weights[1]}_{smoothing_method}_{window_smooth}_{lambda_smooth}": half_life_values,
         }, index=index)
         
         return features_df
@@ -373,7 +379,7 @@ class kalmanOU_feature(com.Feature):
         self, 
         name: str = "kalmanOU", 
         n_jobs: int = 1
-    ):
+    ) -> None:
         """
         Initializes the kalmanOU_feature object with a pair of input series.
 
@@ -395,7 +401,7 @@ class kalmanOU_feature(com.Feature):
         smoothing_method: list = [None, "ewma", "average"], 
         window_smooth: list = [5, 10], 
         lambda_smooth: list = [0.1, 0.2, 0.5]
-    ):
+    ) -> Self:
         """
         Sets the parameter grid for Kalman OU feature extraction.
 
@@ -425,7 +431,7 @@ class kalmanOU_feature(com.Feature):
     def process_data(
         self, 
         data: Union[tuple, pd.DataFrame],
-    ):
+    ) -> tuple:
         """
         Applies preprocessing to the input data before feature extraction.
         
@@ -471,7 +477,7 @@ class kalmanOU_feature(com.Feature):
         smoothing_method: str,
         window_smooth: int,
         lambda_smooth: float,
-    ):
+    ) -> pd.DataFrame:
         """
         Computes filtered state and variance estimates of an OU process using the Kalman filter over a rolling window.
 
@@ -521,7 +527,7 @@ class kalmanOU_feature(com.Feature):
                 residuals = series1_window - residuals_weights[0] * series2_window - residuals_weights[1]
             
             # IV.3 Perform Ornstein-Uhlenbeck Estimation
-            filtered_states, variances = fil.kalmanOU_smoothing(series=residuals, smooth_coefficient=smooth_coefficient)
+            filtered_states, variances = calc.kalmanOU_smoothing(series=residuals, smooth_coefficient=smooth_coefficient)
             
             # IV.4 Store Results
             state_values[i] = filtered_states.iloc[-1]
@@ -533,8 +539,8 @@ class kalmanOU_feature(com.Feature):
 
         index = series_1.index[window:]
         features_df = pd.DataFrame({
-            f"KF_state_{window}_b{residuals_weights[0]}a{residuals_weights[1]}_{smoothing_method}_{window_smooth}_{lambda_smooth}": state_values,
-            f"KF_variance_{window}_b{residuals_weights[0]}a{residuals_weights[1]}_{smoothing_method}_{window_smooth}_{lambda_smooth}": variance_values,
+            f"{self.name}_state_{window}_b{residuals_weights[0]}a{residuals_weights[1]}_{smoothing_method}_{window_smooth}_{lambda_smooth}": state_values,
+            f"{self.name}_variance_{window}_b{residuals_weights[0]}a{residuals_weights[1]}_{smoothing_method}_{window_smooth}_{lambda_smooth}": variance_values,
         }, index=index)
         
         return features_df

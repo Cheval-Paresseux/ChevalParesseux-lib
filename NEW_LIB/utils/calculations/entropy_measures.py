@@ -280,7 +280,7 @@ def get_gini_impurity(
     return gini_impurity
 
 #*____________________________________________________________________________________ #
-def calculate_sample_entropy(
+def get_sample_entropy(
     series: pd.Series, 
     sub_vector_size: int = 2, 
     threshold_distance: float = 0.2

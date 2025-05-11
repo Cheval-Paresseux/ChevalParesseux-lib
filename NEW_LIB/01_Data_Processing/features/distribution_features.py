@@ -1,5 +1,9 @@
+from ..features import common as com
+
 import numpy as np
 import pandas as pd
+from typing import Union, Self
+
 
 
 #! ==================================================================================== #
@@ -18,7 +22,7 @@ class average_feature(com.Feature):
         self, 
         name: str = "average" , 
         n_jobs: int = 1
-    ):
+    ) -> None:
         """
         Initializes the average_feature object with input data, name, and parallel jobs.
         
@@ -38,7 +42,7 @@ class average_feature(com.Feature):
         smoothing_method: list = [None, "ewma", "average"],
         window_smooth: list = [5, 10],
         lambda_smooth: list = [0.1, 0.2, 0.5],
-    ):
+    ) -> Self:
         """
         Defines the parameter grid for feature extraction.
 
@@ -61,7 +65,7 @@ class average_feature(com.Feature):
     def process_data(
         self, 
         data: pd.Series,
-    ):
+    ) -> pd.Series:
         """
         Applies preprocessing to the input data before feature extraction.
         
@@ -83,7 +87,7 @@ class average_feature(com.Feature):
         smoothing_method: str,
         window_smooth: int,
         lambda_smooth: float,
-    ):
+    ) -> pd.Series:
         """
         Computes the normalized rolling average of the processed series.
 
@@ -114,7 +118,7 @@ class average_feature(com.Feature):
         rolling_average = (pd.Series(rolling_average, index=processed_series.index) / (processed_series + 1e-8)) - 1
         
         # ======= IV. Change Name =======
-        rolling_average.name = f"average_{window}_{smoothing_method}_{window_smooth}_{lambda_smooth}"
+        rolling_average.name = f"{self.name}_{window}_{smoothing_method}_{window_smooth}_{lambda_smooth}"
 
         return rolling_average
 
@@ -133,7 +137,7 @@ class median_feature(com.Feature):
         self, 
         name: str = "median", 
         n_jobs: int = 1
-    ):
+    ) -> None:
         """
         Initializes the median_feature object with input data, name, and parallel jobs.
         
@@ -153,7 +157,7 @@ class median_feature(com.Feature):
         smoothing_method: list = [None, "ewma", "average"],
         window_smooth: list = [5, 10],
         lambda_smooth: list = [0.1, 0.2, 0.5],
-    ):
+    ) -> Self:
         """
         Defines the parameter grid for feature extraction.
 
@@ -176,7 +180,7 @@ class median_feature(com.Feature):
     def process_data(
         self, 
         data: pd.Series,
-    ):
+    ) -> pd.Series:
         """
         Applies preprocessing to the input data before feature extraction.
         
@@ -198,7 +202,7 @@ class median_feature(com.Feature):
         smoothing_method: str,
         window_smooth: int,
         lambda_smooth: float,
-    ):
+    ) -> pd.Series:
         """
         Computes the normalized rolling median of the processed series.
 
@@ -229,7 +233,7 @@ class median_feature(com.Feature):
         rolling_median = (pd.Series(rolling_median, index=processed_series.index) / (processed_series + 1e-8)) - 1
         
         # ======= IV. Change Name =======
-        rolling_median.name = f"median_{window}_{smoothing_method}_{window_smooth}_{lambda_smooth}"
+        rolling_median.name = f"{self.name}_{window}_{smoothing_method}_{window_smooth}_{lambda_smooth}"
 
         return rolling_median
 
@@ -248,7 +252,7 @@ class minimum_feature(com.Feature):
         self, 
         name: str = "minimum" , 
         n_jobs: int = 1
-    ):
+    ) -> None:
         """
         Initializes the minimum_feature object with input data, name, and parallel jobs.
 
@@ -268,7 +272,7 @@ class minimum_feature(com.Feature):
         smoothing_method: list = [None, "ewma", "average"],
         window_smooth: list = [5, 10],
         lambda_smooth: list = [0.1, 0.2, 0.5],
-    ):
+    ) -> Self:
         """
         Defines the parameter grid for feature extraction.
 
@@ -291,7 +295,7 @@ class minimum_feature(com.Feature):
     def process_data(
         self, 
         data: pd.Series,
-    ):
+    ) -> pd.Series:
         """
         Applies preprocessing to the input data before feature extraction.
         
@@ -344,7 +348,7 @@ class minimum_feature(com.Feature):
         rolling_min = (pd.Series(rolling_min, index=processed_series.index) / (processed_series + 1e-8)) - 1
         
         # ======= III. Change Name =======
-        rolling_min.name = f"min_{window}_{smoothing_method}_{window_smooth}_{lambda_smooth}"
+        rolling_min.name = f"{self.name}_{window}_{smoothing_method}_{window_smooth}_{lambda_smooth}"
 
         return rolling_min
     
@@ -363,7 +367,7 @@ class maximum_feature(com.Feature):
         self, 
         name: str = "maximum" , 
         n_jobs: int = 1
-    ):
+    ) -> None:
         """
         Initializes the maximum_feature object with input data, name, and parallel jobs.
 
@@ -384,7 +388,7 @@ class maximum_feature(com.Feature):
         smoothing_method: list = [None, "ewma", "average"],
         window_smooth: list = [5, 10],
         lambda_smooth: list = [0.1, 0.2, 0.5],
-    ):
+    ) -> Self:
         """
         Defines the parameter grid for feature extraction.
 
@@ -407,7 +411,7 @@ class maximum_feature(com.Feature):
     def process_data(
         self, 
         data: pd.Series,
-    ):
+    ) -> pd.Series:
         """
         Applies preprocessing to the input data before feature extraction.
         
@@ -429,7 +433,7 @@ class maximum_feature(com.Feature):
         smoothing_method: str,
         window_smooth: int,
         lambda_smooth: float,
-    ):
+    ) -> pd.Series:
         """
         Computes the normalized rolling maximum of the processed series.
 
@@ -460,7 +464,7 @@ class maximum_feature(com.Feature):
         rolling_max = (pd.Series(rolling_max, index=processed_series.index) / (processed_series + 1e-8)) - 1
         
         # ======= III. Change Name =======
-        rolling_max.name = f"max_{window}_{smoothing_method}_{window_smooth}_{lambda_smooth}"
+        rolling_max.name = f"{self.name}_{window}_{smoothing_method}_{window_smooth}_{lambda_smooth}"
 
         return rolling_max
 
@@ -484,7 +488,7 @@ class volatility_feature(com.Feature):
         self, 
         name: str = "volatility" , 
         n_jobs: int = 1
-    ):
+    ) -> None:
         """
         Initializes the volatility_feature object with data, feature name, and parallel jobs.
 
@@ -505,7 +509,7 @@ class volatility_feature(com.Feature):
         smoothing_method: list = [None, "ewma", "average"],
         window_smooth: list = [5, 10],
         lambda_smooth: list = [0.1, 0.2, 0.5],
-    ):
+    ) -> Self:
         """
         Defines the parameter grid for volatility feature extraction.
 
@@ -528,7 +532,7 @@ class volatility_feature(com.Feature):
     def process_data(
         self, 
         data: pd.Series,
-    ):
+    ) -> pd.Series:
         """
         Applies preprocessing to the input data before feature extraction.
         
@@ -550,7 +554,7 @@ class volatility_feature(com.Feature):
         smoothing_method: str,
         window_smooth: int,
         lambda_smooth: float,
-    ):
+    ) -> pd.Series:
         """
         Computes the rolling volatility (standard deviation of percentage returns).
 
@@ -582,7 +586,7 @@ class volatility_feature(com.Feature):
         rolling_vol = pd.Series(rolling_vol, index=processed_series.index)
         
         # ======= III. Change Name =======
-        rolling_vol.name = f"vol_{window}_{smoothing_method}_{window_smooth}_{lambda_smooth}"
+        rolling_vol.name = f"{self.name}_{window}_{smoothing_method}_{window_smooth}_{lambda_smooth}"
 
         return rolling_vol
 
@@ -602,7 +606,7 @@ class skewness_feature(com.Feature):
         self, 
         name: str = "skewness" , 
         n_jobs: int = 1
-    ):
+    ) -> None:
         """
         Initializes the skewness_feature object with the input series and parameters.
 
@@ -623,7 +627,7 @@ class skewness_feature(com.Feature):
         smoothing_method: list = [None, "ewma", "average"],
         window_smooth: list = [5, 10],
         lambda_smooth: list = [0.1, 0.2, 0.5],
-    ):
+    ) -> Self:
         """
         Sets the parameter grid for skewness feature extraction.
 
@@ -646,7 +650,7 @@ class skewness_feature(com.Feature):
     def process_data(
         self, 
         data: pd.Series,
-    ):
+    ) -> pd.Series:
         """
         Applies preprocessing to the input data before feature extraction.
         
@@ -668,7 +672,7 @@ class skewness_feature(com.Feature):
         smoothing_method: str,
         window_smooth: int,
         lambda_smooth: float,
-    ):
+    ) -> pd.Series:
         """
         Computes the rolling skewness of percentage returns over a given window.
 
@@ -700,7 +704,7 @@ class skewness_feature(com.Feature):
         rolling_skew = pd.Series(rolling_skew, index=processed_series.index)
         
         # ======= III. Change Name =======
-        rolling_skew.name = f"skew_{window}_{smoothing_method}_{window_smooth}_{lambda_smooth}"
+        rolling_skew.name = f"{self.name}_{window}_{smoothing_method}_{window_smooth}_{lambda_smooth}"
 
         return rolling_skew
 
@@ -720,7 +724,7 @@ class kurtosis_feature(com.Feature):
         self, 
         name: str = "kurtosis" , 
         n_jobs: int = 1
-    ):
+    ) -> None:
         """
         Initializes the kurtosis_feature object with the input series and basic config.
 
@@ -741,7 +745,7 @@ class kurtosis_feature(com.Feature):
         smoothing_method: list = [None, "ewma", "average"],
         window_smooth: list = [5, 10],
         lambda_smooth: list = [0.1, 0.2, 0.5],
-    ):
+    ) -> Self:
         """
         Sets the parameter grid for kurtosis feature extraction.
 
@@ -764,7 +768,7 @@ class kurtosis_feature(com.Feature):
     def process_data(
         self, 
         data: pd.Series,
-    ):
+    ) -> pd.Series:
         """
         Applies preprocessing to the input data before feature extraction.
         
@@ -786,7 +790,7 @@ class kurtosis_feature(com.Feature):
         smoothing_method: str,
         window_smooth: int,
         lambda_smooth: float,
-    ):
+    ) -> pd.Series:
         """
         Computes the rolling kurtosis of percentage returns over a given window.
 
@@ -818,7 +822,7 @@ class kurtosis_feature(com.Feature):
         rolling_kurt = pd.Series(rolling_kurt, index=processed_series.index)
         
         # ======= III. Change Name =======
-        rolling_kurt.name = f"kurt_{window}_{smoothing_method}_{window_smooth}_{lambda_smooth}"
+        rolling_kurt.name = f"{self.name}_{window}_{smoothing_method}_{window_smooth}_{lambda_smooth}"
 
         return rolling_kurt
 
@@ -838,7 +842,7 @@ class quantile_feature(com.Feature):
         self, 
         name: str = "quantile" , 
         n_jobs: int = 1
-    ):
+    ) -> None:
         """
         Initializes the quantile_feature object with the input series and basic config.
 
@@ -860,7 +864,7 @@ class quantile_feature(com.Feature):
         smoothing_method: list = [None, "ewma", "average"],
         window_smooth: list = [5, 10],
         lambda_smooth: list = [0.1, 0.2, 0.5],
-    ):
+    ) -> Self:
         """
         Sets the parameter grid for quantile feature extraction.
 
@@ -885,7 +889,7 @@ class quantile_feature(com.Feature):
     def process_data(
         self, 
         data: pd.Series,
-    ):
+    ) -> pd.Series:
         """
         Applies preprocessing to the input data before feature extraction.
         
@@ -908,7 +912,7 @@ class quantile_feature(com.Feature):
         smoothing_method: str,
         window_smooth: int,
         lambda_smooth: float,
-    ):
+    ) -> pd.Series:
         """
         Computes the rolling quantile of percentage returns over a specified window.
 
@@ -941,7 +945,7 @@ class quantile_feature(com.Feature):
         rolling_quantile = pd.Series(rolling_quantile, index=processed_series.index)
         
         # ======= III. Change Name =======
-        rolling_quantile.name = f"quantile_{quantile}_{window}_{smoothing_method}_{window_smooth}_{lambda_smooth}"
+        rolling_quantile.name = f"{self.name}_{quantile}_{window}_{smoothing_method}_{window_smooth}_{lambda_smooth}"
 
         return rolling_quantile
 

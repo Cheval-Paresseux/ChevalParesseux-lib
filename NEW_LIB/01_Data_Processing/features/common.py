@@ -1,9 +1,13 @@
+from ...utils import calculations as calc
+
 import numpy as np
 import pandas as pd
 from typing import Union
 from typing import Self
 from abc import ABC, abstractmethod
 from joblib import Parallel, delayed
+
+
 
 #! ==================================================================================== #
 #! ================================= Base Model ======================================= #
@@ -100,7 +104,7 @@ class Feature(ABC):
         """
         ...
        
-    #?_________________________________ Callable methods _________________________________ #
+    #?____________________________________________________________________________________ #
     def smooth_data(
         self, 
         data: pd.Series,
@@ -126,16 +130,16 @@ class Feature(ABC):
         
         # ======= II. Compute the smoothed series =======
         elif smoothing_method == "ewma":
-            smoothed_data = fil.ewma_smoothing(price_series=data, window=window_smooth, ind_lambda=lambda_smooth)
+            smoothed_data = calc.ewma_smoothing(price_series=data, window=window_smooth, ind_lambda=lambda_smooth)
         elif smoothing_method == "average":
-            smoothed_data = fil.average_smoothing(price_series=data, window=window_smooth)
+            smoothed_data = calc.average_smoothing(price_series=data, window=window_smooth)
             
         else:
             raise ValueError("Smoothing method not recognized")
         
         return smoothed_data
     
-    #?____________________________________________________________________________________ #
+    #?_________________________________ Callable methods _________________________________ #
     def extract(
         self, 
         data: Union[tuple, pd.Series, pd.DataFrame]
@@ -150,7 +154,7 @@ class Feature(ABC):
             - features_df (pd.DataFrame): The extracted features as a DataFrame.
         """
         # ======= I. Extract the Parameters Universe =======
-        params_grid = tools.get_dict_universe(self.params)
+        params_grid = calc.get_dict_universe(self.params)
 
         # ======= II. Extract the features for each Parameters =======
         features = Parallel(n_jobs=self.n_jobs)(delayed(self.get_feature)(data, **params) for params in params_grid)

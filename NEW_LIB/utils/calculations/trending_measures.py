@@ -80,7 +80,7 @@ def get_simple_TempReg(
     statistics = model.statistics
     residuals = model.residuals
 
-    return intercept, coefficients, statistics,residuals
+    return intercept, coefficients, statistics, residuals
 
 #*____________________________________________________________________________________ #
 def get_quad_TempReg(

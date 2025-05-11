@@ -1,7 +1,10 @@
+from ..features import common as com
+from ...utils import calculations as calc
+
 import numpy as np
 import pandas as pd
-
-
+from joblib import Parallel, delayed
+from typing import Self
 
 
 
@@ -21,7 +24,7 @@ class momentum_feature(com.Feature):
         self, 
         name: str = "momentum" , 
         n_jobs: int = 1
-    ):
+    ) -> None:
         """
         Initializes the momentum_feature object with the input series.
 
@@ -42,7 +45,7 @@ class momentum_feature(com.Feature):
         smoothing_method: list = [None, "ewma", "average"],
         window_smooth: list = [5, 10],
         lambda_smooth: list = [0.1, 0.2, 0.5],
-    ):
+    ) -> Self:
         """
         Sets the parameter grid for momentum feature extraction.
 
@@ -65,7 +68,7 @@ class momentum_feature(com.Feature):
     def process_data(
         self, 
         data: pd.Series,
-    ):
+    ) -> pd.Series:
         """
         Applies preprocessing to the input data before feature extraction.
         
@@ -87,7 +90,7 @@ class momentum_feature(com.Feature):
         smoothing_method: str,
         window_smooth: int,
         lambda_smooth: float,
-    ):
+    ) -> pd.Series:
         """
         Computes the rolling momentum from the smoothed series.
 
@@ -112,13 +115,13 @@ class momentum_feature(com.Feature):
         processed_series = self.process_data(data=smoothed_series).dropna()
 
         # ======= II. Compute the moving momentum =======
-        rolling_momentum = processed_series.rolling(window=window ).apply(mom.get_momentum, raw=False)
+        rolling_momentum = processed_series.rolling(window=window ).apply(calc.get_momentum, raw=False)
         
         # ======= III. Convert to pd.Series and Center =======
         rolling_momentum = pd.Series(rolling_momentum, index=processed_series.index)
         
         # ======= IV. Change Name =======
-        rolling_momentum.name = f"momentum_{window}_{smoothing_method}_{window_smooth}_{lambda_smooth}"
+        rolling_momentum.name = f"{self.name}_{window}_{smoothing_method}_{window_smooth}_{lambda_smooth}"
 
         return rolling_momentum
 
@@ -137,7 +140,7 @@ class Z_momentum_feature(com.Feature):
         self, 
         name: str = "Z_momentum" , 
         n_jobs: int = 1
-    ):
+    ) -> None:
         """
         Initializes the Z_momentum_feature object with the input series.
 
@@ -158,7 +161,7 @@ class Z_momentum_feature(com.Feature):
         smoothing_method: list = [None, "ewma", "average"],
         window_smooth: list = [5, 10],
         lambda_smooth: list = [0.1, 0.2, 0.5],
-    ):
+    ) -> Self:
         """
         Sets the parameter grid for Z-momentum feature extraction.
 
@@ -181,7 +184,7 @@ class Z_momentum_feature(com.Feature):
     def process_data(
         self, 
         data: pd.Series,
-    ):
+    ) -> pd.Series:
         """
         Applies preprocessing to the input data before feature extraction.
         
@@ -228,18 +231,18 @@ class Z_momentum_feature(com.Feature):
         processed_series = self.process_data(data=smoothed_series).dropna()
 
         # ======= II. Compute the moving Z-momentum =======
-        rolling_Z_momentum = processed_series.rolling(window=window).apply(mom.get_Z_momentum, raw=False)
+        rolling_Z_momentum = processed_series.rolling(window=window).apply(calc.get_Z_momentum, raw=False)
         
         # ======= III. Convert to pd.Series and Center =======
         rolling_Z_momentum = pd.Series(rolling_Z_momentum, index=processed_series.index)
         
         # ======= IV. Change Name =======
-        rolling_Z_momentum.name = f"Z_momentum_{window}_{smoothing_method}_{window_smooth}_{lambda_smooth}"
+        rolling_Z_momentum.name = f"{self.name}_{window}_{smoothing_method}_{window_smooth}_{lambda_smooth}"
 
         return rolling_Z_momentum
 
 #*____________________________________________________________________________________ #
-class linear_tempReg_feature(com.Feature):
+class linear_tempReg_feature():
     """
     Rolling Linear Temporal Regression Feature
 
@@ -254,7 +257,7 @@ class linear_tempReg_feature(com.Feature):
         self, 
         name: str = "linear_tempreg" , 
         n_jobs: int = 1
-    ):
+    ) -> None:
         """
         Initializes the linear_tempReg_feature object with the input time series.
 
@@ -275,7 +278,7 @@ class linear_tempReg_feature(com.Feature):
         smoothing_method: list = [None, "ewma", "average"],
         window_smooth: list = [5, 10],
         lambda_smooth: list = [0.1, 0.2, 0.5],
-    ):
+    ) -> Self:
         """
         Sets the parameter grid for the rolling linear regression feature extraction.
 
@@ -298,7 +301,7 @@ class linear_tempReg_feature(com.Feature):
     def process_data(
         self, 
         data: pd.Series,
-    ):
+    ) -> pd.Series:
         """
         Applies preprocessing to the input data before feature extraction.
         
@@ -320,7 +323,7 @@ class linear_tempReg_feature(com.Feature):
         smoothing_method: str,
         window_smooth: int,
         lambda_smooth: float,
-    ):
+    ) -> pd.DataFrame:
         """
         Computes rolling linear regression statistics (slope, t-stat, p-value, R-squared)
         on the smoothed series over the specified window.
@@ -336,29 +339,17 @@ class linear_tempReg_feature(com.Feature):
             - features_df (pd.DataFrame): DataFrame containing regression statistics.
         """
         # ======= 0. Intermediate functions =======
-        def compute_slope(series):
-            _, coefficients, _, _ = mom.get_simple_TempReg(series)
-            slope = coefficients[0]
+        def compute_regression(
+            series: pd.Series, 
+            start_idx: int, 
+            window: int
+        ) -> tuple:
             
-            return slope
-
-        def compute_T_stats(series):
-            _, _, statistics, _ = mom.get_simple_TempReg(series)
-            T_stats = statistics['T_stats'][0]
+            current_window = series.iloc[start_idx - window + 1: start_idx + 1]
+            intercept, coefficients, statistics, residuals = calc.get_simple_TempReg(series=current_window)
             
-            return T_stats
-        
-        def compute_Pvalue(series):
-            _, _, statistics, _ = mom.get_simple_TempReg(series)
-            P_value = statistics['P_values'][0]
+            return start_idx, intercept, coefficients, statistics, residuals
             
-            return P_value
-        
-        def compute_R_squared(series):
-            _, _, statistics, _ = mom.get_simple_TempReg(series)
-            R_squared = statistics['R_squared']
-            
-            return R_squared
 
         # ======= I. Smooth the Data & Preprocess =======
         smoothed_series = self.smooth_data(
@@ -371,23 +362,32 @@ class linear_tempReg_feature(com.Feature):
         processed_series = self.process_data(data=smoothed_series).dropna()
 
         # ======= II. Compute the rolling regression statistics =======
-        rolling_slope = processed_series.rolling(window=window).apply(compute_slope, raw=False)
-        rolling_tstat = processed_series.rolling(window=window).apply(compute_T_stats, raw=False)
-        rolling_pvalue = processed_series.rolling(window=window).apply(compute_Pvalue, raw=False)
-        rolling_r_squared = processed_series.rolling(window=window).apply(compute_R_squared, raw=False)
+        results = Parallel(n_jobs=self.n_jobs)(
+            delayed(compute_regression)(processed_series, i, window)
+            for i in range(window - 1, len(processed_series))
+        )
 
-        # ======= III. Convert to pd.Series and Unscale =======
-        rolling_slope = pd.Series(rolling_slope, index=processed_series.index) / (processed_series + 1e-8)
-        rolling_tstat = pd.Series(rolling_tstat, index=processed_series.index)
-        rolling_pvalue = pd.Series(rolling_pvalue, index=processed_series.index)
-        rolling_r_squared = pd.Series(rolling_r_squared, index=processed_series.index)
+        # ======= III. Convert to pd.Series =======
+        rolling_slope = pd.Series({i: coeffs[0] for i, _, coeffs, _, _ in results}) 
+        rolling_tstat = pd.Series({i: stats['t_stats'][0] for i, _, _, stats, _ in results})
+        rolling_pvalue = pd.Series({i: stats['p_values'][0] for i, _, _, stats, _ in results})
+        rolling_r2 = pd.Series({i: stats['r2'] for i, _, _, stats, _ in results})
+        
+        # ======= IV. Rearrange the index =======
+        rolling_slope.index = processed_series.index[window - 1:]
+        rolling_tstat.index = processed_series.index[window - 1:]
+        rolling_pvalue.index = processed_series.index[window - 1:]
+        rolling_r2.index = processed_series.index[window - 1:]
+        
+        # ======= V. Center =======
+        rolling_slope = rolling_slope / (processed_series.loc[rolling_slope.index] + 1e-8)
         
         # ======= IV. Change Name =======
         features_df = pd.DataFrame({
-            f"linear_slope_{window}_{smoothing_method}_{window_smooth}_{lambda_smooth}": rolling_slope,
-            f"linear_tstat_{window}_{smoothing_method}_{window_smooth}_{lambda_smooth}": rolling_tstat,
-            f"linear_pvalue_{window}_{smoothing_method}_{window_smooth}_{lambda_smooth}": rolling_pvalue,
-            f"linear_r_squared_{window}_{smoothing_method}_{window_smooth}_{lambda_smooth}": rolling_r_squared,
+            f"{self.name}_slope_{window}_{smoothing_method}_{window_smooth}_{lambda_smooth}": rolling_slope,
+            f"{self.name}_tstat_{window}_{smoothing_method}_{window_smooth}_{lambda_smooth}": rolling_tstat,
+            f"{self.name}_pvalue_{window}_{smoothing_method}_{window_smooth}_{lambda_smooth}": rolling_pvalue,
+            f"{self.name}_r2_{window}_{smoothing_method}_{window_smooth}_{lambda_smooth}": rolling_r2,
         })
         
         return features_df
@@ -408,7 +408,7 @@ class nonlinear_tempReg_feature(com.Feature):
         self, 
         name: str = "nonlinear_tempreg" , 
         n_jobs: int = 1
-    ):
+    ) -> None:
         """
         Initializes the nonlinear_tempReg_feature object with the input series.
 
@@ -429,7 +429,7 @@ class nonlinear_tempReg_feature(com.Feature):
         smoothing_method: list = [None, "ewma", "average"],
         window_smooth: list = [5, 10],
         lambda_smooth: list = [0.1, 0.2, 0.5],
-    ):
+    ) -> Self:
         """
         Sets the parameter grid for nonlinear regression feature extraction.
 
@@ -452,7 +452,7 @@ class nonlinear_tempReg_feature(com.Feature):
     def process_data(
         self, 
         data: pd.Series,
-    ):
+    ) -> pd.Series:
         """
         Applies preprocessing to the input data before feature extraction.
         
@@ -474,7 +474,7 @@ class nonlinear_tempReg_feature(com.Feature):
         smoothing_method: str,
         window_smooth: int,
         lambda_smooth: float,
-    ):
+    ) -> pd.DataFrame:
         """
         Computes rolling nonlinear regression features from the smoothed series.
 
@@ -490,35 +490,17 @@ class nonlinear_tempReg_feature(com.Feature):
               t-statistic, p-value, and R-squared for each window.
         """
         # ======= 0. Intermediate functions =======
-        def compute_slope(series):
-            _, coefficients, _, _ = mom.get_quad_TempReg(series)
-            slope = coefficients[0]
+        def compute_regression(
+            series: pd.Series, 
+            start_idx: int, 
+            window: int
+        ) -> tuple:
             
-            return slope
-        
-        def compute_acceleration(series):
-            _, coefficients, _, _ = mom.get_quad_TempReg(series)
-            acceleration = coefficients[1]
+            current_window = series.iloc[start_idx - window + 1: start_idx + 1]
+            intercept, coefficients, statistics, residuals = calc.get_quad_TempReg(series=current_window)
             
-            return acceleration
-
-        def compute_T_stats(series):
-            _, _, statistics, _ = mom.get_quad_TempReg(series)
-            T_stats = statistics['T_stats'][0]
+            return start_idx, intercept, coefficients, statistics, residuals
             
-            return T_stats
-        
-        def compute_Pvalue(series):
-            _, _, statistics, _ = mom.get_quad_TempReg(series)
-            P_value = statistics['P_values'][0]
-            
-            return P_value
-        
-        def compute_R_squared(series):
-            _, _, statistics, _ = mom.get_quad_TempReg(series)
-            R_squared = statistics['R_squared']
-            
-            return R_squared
 
         # ======= I. Smooth the Data & Preprocess =======
         smoothed_series = self.smooth_data(
@@ -531,26 +513,36 @@ class nonlinear_tempReg_feature(com.Feature):
         processed_series = self.process_data(data=smoothed_series).dropna()
 
         # ======= II. Compute the rolling regression statistics =======
-        rolling_slope = processed_series.rolling(window=window).apply(compute_slope, raw=False)
-        rolling_acceleration = processed_series.rolling(window=window).apply(compute_acceleration, raw=False)
-        rolling_tstat = processed_series.rolling(window=window).apply(compute_T_stats, raw=False)
-        rolling_pvalue = processed_series.rolling(window=window).apply(compute_Pvalue, raw=False)
-        rolling_r_squared = processed_series.rolling(window=window).apply(compute_R_squared, raw=False)
+        results = Parallel(n_jobs=self.n_jobs)(
+            delayed(compute_regression)(processed_series, i, window)
+            for i in range(window - 1, len(processed_series))
+        )
 
-        # ======= III. Convert to pd.Series and Unscale =======
-        rolling_slope = pd.Series(rolling_slope, index=processed_series.index) / (processed_series + 1e-8)
-        rolling_acceleration = pd.Series(rolling_acceleration, index=processed_series.index) / (processed_series + 1e-8)
-        rolling_tstat = pd.Series(rolling_tstat, index=processed_series.index)
-        rolling_pvalue = pd.Series(rolling_pvalue, index=processed_series.index)
-        rolling_r_squared = pd.Series(rolling_r_squared, index=processed_series.index)
+        # ======= III. Convert to pd.Series =======
+        rolling_slope = pd.Series({i: coeffs[0] for i, _, coeffs, _, _ in results}) 
+        rolling_acceleration = pd.Series({i: coeffs[1] for i, _, coeffs, _, _ in results})
+        rolling_tstat = pd.Series({i: stats['t_stats'][0] for i, _, _, stats, _ in results})
+        rolling_pvalue = pd.Series({i: stats['p_values'][0] for i, _, _, stats, _ in results})
+        rolling_r2 = pd.Series({i: stats['r2'] for i, _, _, stats, _ in results})
+        
+        # ======= IV. Rearrange the index =======
+        rolling_slope.index = processed_series.index[window - 1:]
+        rolling_acceleration.index = processed_series.index[window - 1:]
+        rolling_tstat.index = processed_series.index[window - 1:]
+        rolling_pvalue.index = processed_series.index[window - 1:]
+        rolling_r2.index = processed_series.index[window - 1:]
+        
+        # ======= V. Center =======
+        rolling_slope = rolling_slope / (processed_series.loc[rolling_slope.index] + 1e-8)
+        rolling_acceleration = rolling_acceleration / (processed_series.loc[rolling_slope.index] + 1e-8)
         
         # ======= IV. Change Name =======
         features_df = pd.DataFrame({
-            f"nonlinear_slope_{window}_{smoothing_method}_{window_smooth}_{lambda_smooth}": rolling_slope,
-            f"nonlinear_acceleration_{window}_{smoothing_method}_{window_smooth}_{lambda_smooth}": rolling_acceleration,
-            f"nonlinear_tstat_{window}_{smoothing_method}_{window_smooth}_{lambda_smooth}": rolling_tstat,
-            f"nonlinear_pvalue_{window}_{smoothing_method}_{window_smooth}_{lambda_smooth}": rolling_pvalue,
-            f"nonlinear_r_squared_{window}_{smoothing_method}_{window_smooth}_{lambda_smooth}": rolling_r_squared,
+            f"{self.name}_slope_{window}_{smoothing_method}_{window_smooth}_{lambda_smooth}": rolling_slope,
+            f"{self.name}_acceleration_{window}_{smoothing_method}_{window_smooth}_{lambda_smooth}": rolling_acceleration,
+            f"{self.name}_tstat_{window}_{smoothing_method}_{window_smooth}_{lambda_smooth}": rolling_tstat,
+            f"{self.name}_pvalue_{window}_{smoothing_method}_{window_smooth}_{lambda_smooth}": rolling_pvalue,
+            f"{self.name}_r2_{window}_{smoothing_method}_{window_smooth}_{lambda_smooth}": rolling_r2,
         })
 
         return features_df
@@ -569,9 +561,9 @@ class hurst_exponent_feature(com.Feature):
     """
     def __init__(
         self, 
-        name: str = "hurst_exponent" , 
+        name: str = "hurst" , 
         n_jobs: int = 1
-    ):
+    ) -> None:
         """
         Initializes the hurst_exponent_feature object with the input series.
 
@@ -592,7 +584,7 @@ class hurst_exponent_feature(com.Feature):
         smoothing_method: list = [None, "ewma", "average"],
         window_smooth: list = [5, 10],
         lambda_smooth: list = [0.1, 0.2, 0.5],
-    ):
+    ) -> Self:
         """
         Sets the parameter grid for Hurst exponent feature extraction.
 
@@ -615,7 +607,7 @@ class hurst_exponent_feature(com.Feature):
     def process_data(
         self, 
         data: pd.Series,
-    ):
+    ) -> pd.Series:
         """
         Applies preprocessing to the input data before feature extraction.
         
@@ -637,7 +629,7 @@ class hurst_exponent_feature(com.Feature):
         smoothing_method: str,
         window_smooth: int,
         lambda_smooth: float,
-    ):
+    ) -> pd.DataFrame:
         """
         Computes rolling Hurst exponent values, along with t-statistics and p-values.
 
@@ -695,7 +687,7 @@ class hurst_exponent_feature(com.Feature):
 
                 Y = np.append(Y, np.log2(np.average(rs_array)))
 
-            model = reg.OLSRegression()
+            model = calc.OLSRegression()
             model.fit(X, Y)
             
             hurst = model.coefficients[0]
@@ -719,9 +711,9 @@ class hurst_exponent_feature(com.Feature):
         
         # ======= IV. Change Name =======
         features_df = pd.DataFrame({
-            f"hurst_exponent{power}_{smoothing_method}_{window_smooth}_{lambda_smooth}": hursts,
-            f"hurst_tstat_{power}_{smoothing_method}_{window_smooth}_{lambda_smooth}": tstats,
-            f"hurst_pvalue_{power}_{smoothing_method}_{window_smooth}_{lambda_smooth}": pvalues,
+            f"{self.name}_exponent{power}_{smoothing_method}_{window_smooth}_{lambda_smooth}": hursts,
+            f"{self.name}_tstat_{power}_{smoothing_method}_{window_smooth}_{lambda_smooth}": tstats,
+            f"{self.name}_pvalue_{power}_{smoothing_method}_{window_smooth}_{lambda_smooth}": pvalues,
         })
         
         return features_df

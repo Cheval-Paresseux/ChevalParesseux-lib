@@ -1,43 +1,11 @@
-import pandas as pd
-import numpy as np
+from ...utils import calculations as calc
 
-#! ==================================================================================== #
-#! ====================== Series Filters (with look forward) ========================== #
-def segment_length_filter(
-    label_series: pd.Series, 
-    window: int
-) -> pd.Series:
-    """
-    Filters out short-lived label segments that are smaller than a given window.
-
-    Parameters:
-        - label_series (pd.Series): Series of integer or categorical labels.
-        - window (int): Minimum segment length required to preserve a label.
-
-    Returns:
-        - labels_series (pd.Series): Filtered series with small segments replaced by 0.
-    """
-    # ======= I. Create an auxiliary DataFrame =======
-    auxiliary_df = pd.DataFrame()
-    auxiliary_df["label"] = label_series
-    
-    # ======= II. Create a group for each label and extract size =======
-    auxiliary_df["group"] = (auxiliary_df["label"] != auxiliary_df["label"].shift()).cumsum()
-    group_sizes = auxiliary_df.groupby("group")["label"].transform("size")
-
-    # ======= III. Filter the labels based on the group size =======
-    auxiliary_df["label"] = auxiliary_df.apply(lambda row: row["label"] if group_sizes.get(row.name, 0) >= window else 0, axis=1)
-    labels_series = auxiliary_df["label"]
-    
-    return labels_series
-
-#*____________________________________________________________________________________ #
 import numpy as np
 import pandas as pd
 from abc import ABC, abstractmethod
-from typing import Union
-from typing import Self
+from typing import Union, Self
 from joblib import Parallel, delayed
+
 
 
 #! ==================================================================================== #
@@ -60,8 +28,9 @@ class Labeller(ABC):
     @abstractmethod
     def __init__(
         self, 
+        name: str,
         n_jobs: int = 1
-    ):
+    ) -> None:
         """
         Initializes the Labeller object.
 
@@ -69,6 +38,7 @@ class Labeller(ABC):
             - n_jobs (int): Number of parallel jobs to use for computation.
         """
         # ======= I. Initialize Class =======
+        self.name = name
         self.n_jobs = n_jobs
 
         # ======= II. Initialize Auxilaries =======
@@ -137,7 +107,7 @@ class Labeller(ABC):
         smoothing_method: str = None, 
         window_smooth: int = None, 
         lambda_smooth: float = None
-    ):
+    ) -> pd.Series:
         """
         Applies optional smoothing to the input data before labels computation.
 
@@ -156,9 +126,9 @@ class Labeller(ABC):
         
         # ======= II. Compute the smoothed series =======
         elif smoothing_method == "ewma":
-            smoothed_data = fil.ewma_smoothing(price_series=data, window=window_smooth, ind_lambda=lambda_smooth)
+            smoothed_data = calc.ewma_smoothing(price_series=data, window=window_smooth, ind_lambda=lambda_smooth)
         elif smoothing_method == "average":
-            smoothed_data = fil.average_smoothing(price_series=data, window=window_smooth)
+            smoothed_data = calc.average_smoothing(price_series=data, window=window_smooth)
             
         else:
             raise ValueError("Smoothing method not recognized")
@@ -180,17 +150,44 @@ class Labeller(ABC):
             - labels_df (pd.DataFrame): The extracted labels as a DataFrame.
         """
         # ======= I. Extract the Parameters Universe =======
-        params_grid = tools.get_dict_universe(self.params)
+        params_grid = calc.get_dict_universe(self.params)
 
-        # ======= II. Extract the features for each Parameters =======
+        # ======= II. Extract the labels for each Parameters =======
         labels = Parallel(n_jobs=self.n_jobs)(delayed(self.get_labels)(data, **params) for params in params_grid)
 
-        # ======= III. Create a DataFrame with the features =======
-        labels_df = pd.concat(
-            [series.to_frame().rename(lambda col: f"set_{i}", axis=1) for i, series in enumerate(labels)], 
-            axis=1
-        )
+        # ======= III. Create a DataFrame with the labels =======
+        labels_df = pd.concat(labels, axis=1)
 
         return labels_df
 
+
+
+#! ==================================================================================== #
+#! =============================== Helper Functions =================================== #
+def segment_length_filter(
+    label_series: pd.Series, 
+    window: int
+) -> pd.Series:
+    """
+    Filters out short-lived label segments that are smaller than a given window.
+
+    Parameters:
+        - label_series (pd.Series): Series of integer or categorical labels.
+        - window (int): Minimum segment length required to preserve a label.
+
+    Returns:
+        - labels_series (pd.Series): Filtered series with small segments replaced by 0.
+    """
+    # ======= I. Create an auxiliary DataFrame =======
+    auxiliary_df = pd.DataFrame()
+    auxiliary_df["label"] = label_series
     
+    # ======= II. Create a group for each label and extract size =======
+    auxiliary_df["group"] = (auxiliary_df["label"] != auxiliary_df["label"].shift()).cumsum()
+    group_sizes = auxiliary_df.groupby("group")["label"].transform("size")
+
+    # ======= III. Filter the labels based on the group size =======
+    auxiliary_df["label"] = auxiliary_df.apply(lambda row: row["label"] if group_sizes.get(row.name, 0) >= window else 0, axis=1)
+    labels_series = auxiliary_df["label"]
+    
+    return labels_series

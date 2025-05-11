@@ -119,9 +119,10 @@ def plot_series_distribution(
     plt.show()
 
 
+
 #! ==================================================================================== #
 #! ============================== Labels Visualization  =============================== #
-def analyze_feature_vs_label(
+def plot_feature_vs_label(
     feature_series: pd.Series, 
     label_series: pd.Series, 
     feature_name: str = None

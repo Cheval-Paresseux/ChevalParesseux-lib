@@ -1,5 +1,11 @@
+from ..labelling import common as com
+from ...utils import calculations as calc
+
 import numpy as np
 import pandas as pd
+from typing import Self
+
+
 
 #! ==================================================================================== #
 #! =============================== TRINARY LABELLERS ================================== #
@@ -15,15 +21,18 @@ class tripleBarrier_labeller(com.Labeller):
     """
     def __init__(
         self, 
+        name: str = "tripleBarrier",
         n_jobs: int = 1
-    ):
+    ) -> None:
         """
         Initializes the TripleBarrierLabeller with a number of jobs.
         
         Parameters:
+            - name (str): The name of the labeller.
             - n_jobs (int): The number of jobs to run in parallel. Default is 1.
         """
         super().__init__(
+            name=name,
             n_jobs=n_jobs,
         )
     
@@ -37,7 +46,7 @@ class tripleBarrier_labeller(com.Labeller):
         smoothing_method: list = [None, "ewma", "average"],
         window_smooth: list = [5, 10, 15],
         lambda_smooth: list = [0.2, 0.5, 0.7],
-    ):
+    ) -> Self:
         """
         Defines the parameters grid for the TripleBarrierLabeller.
         
@@ -66,7 +75,7 @@ class tripleBarrier_labeller(com.Labeller):
     def process_data(
         self, 
         data: pd.Series,
-    ):
+    ) -> pd.Series:
         """
         Applies preprocessing to the input data before labels extraction.
         
@@ -91,7 +100,7 @@ class tripleBarrier_labeller(com.Labeller):
         smoothing_method: str,
         window_smooth: int,
         lambda_smooth: float,
-    ):
+    ) -> pd.Series:
         """
         Computes the triple barrier labels of the processed series.
 
@@ -187,6 +196,9 @@ class tripleBarrier_labeller(com.Labeller):
 
             # IV.6 Update the trade side
             trade_side = labels_series.loc[index]
+        
+        # ======= V. Change name =======
+        labels_series.name = f"{self.name}_{upper_barrier}_{lower_barrier}_{vertical_barrier}_{vol_window}_{smoothing_method}_{window_smooth}_{lambda_smooth}"
 
         return labels_series
 
@@ -202,16 +214,19 @@ class lookForward_labeller(com.Labeller):
         - get_labels : compute the moving average feature over a rolling window
     """
     def __init__(
-        self, 
+        self,
+        name: str = "lookForward",
         n_jobs: int = 1
-    ):
+    ) -> None:
         """
         Initializes the LookForwardLabeller with a time series and number of jobs.
         
         Parameters:
+            - name (str): The name of the labeller.
             - n_jobs (int): The number of jobs to run in parallel. Default is 1.
         """
         super().__init__(
+            name=name,
             n_jobs=n_jobs,
         )
     
@@ -224,7 +239,7 @@ class lookForward_labeller(com.Labeller):
         smoothing_method: list = [None, "ewma", "average"],
         window_smooth: list = [5, 10, 15],
         lambda_smooth: list = [0.2, 0.5, 0.7],
-    ):
+    ) -> Self:
         """
         Defines the parameter grid for the LookForwardLabeller.
         
@@ -251,7 +266,7 @@ class lookForward_labeller(com.Labeller):
     def process_data(
         self, 
         data: pd.Series,
-    ):
+    ) -> pd.Series:
         """
         Applies preprocessing to the input data before labels extraction.
         
@@ -275,7 +290,7 @@ class lookForward_labeller(com.Labeller):
         smoothing_method: str,
         lambda_smooth: float,
         window_smooth: int,
-    ):
+    ) -> pd.Series:
         """
         Computes labels based on look-ahead returns and volatility ratios.
 
@@ -301,7 +316,7 @@ class lookForward_labeller(com.Labeller):
         
         processed_series = self.process_data(data=smoothed_series).dropna()
 
-        # ======= I. Significant look forward Label =======
+        # ======= II. Significant look forward Label =======
         # ------- 1. Get the moving X days returns and the moving X days volatility -------
         Xdays_returns = (processed_series.shift(-window_lookForward) - processed_series) / processed_series
         Xdays_vol = Xdays_returns.rolling(window=window_lookForward).std()
@@ -310,8 +325,11 @@ class lookForward_labeller(com.Labeller):
         Xdays_score = Xdays_returns / Xdays_vol
         Xdays_label = Xdays_score.apply(lambda x: 1 if x > volatility_threshold else (-1 if x < -volatility_threshold else 0))
 
-        # ------- 3. Eliminate the trends that are too small -------
-        labels_series = fil.segment_length_filter(label_series=Xdays_label, window=min_trend_size)
+        # ======= III. Eliminate the trends that are too small =======
+        labels_series = com.segment_length_filter(label_series=Xdays_label, window=min_trend_size)
+        
+        # ======= IV. Change name =======
+        labels_series.name = f"{self.name}_{window_lookForward}_{min_trend_size}_{volatility_threshold}_{smoothing_method}_{window_smooth}_{lambda_smooth}"
 
         return labels_series
 
@@ -329,15 +347,18 @@ class regR2rank_labeller(com.Labeller):
     """
     def __init__(
         self, 
+        name: str = "regR2rank",
         n_jobs: int = 1
     ):
         """
         Initializes the regR2rank_labeller with a time series and number of jobs.
         
         Parameters:
+            - name (str): The name of the labeller.
             - n_jobs (int): The number of jobs to run in parallel. Default is 1.
         """
         super().__init__(
+            name=name,
             n_jobs=n_jobs,
         )
     
@@ -351,7 +372,7 @@ class regR2rank_labeller(com.Labeller):
         smoothing_method: list = [None, "ewma", "average"],
         window_smooth: list = [5, 10, 15],
         lambda_smooth: list = [0.2, 0.5, 0.7],
-    ):
+    ) -> Self:
         """
         Defines the parameter grid for the regR2rank_labeller.
         
@@ -380,7 +401,7 @@ class regR2rank_labeller(com.Labeller):
     def process_data(
         self, 
         data: pd.Series,
-    ):
+    ) -> pd.Series:
         """
         Applies preprocessing to the input data before labels extraction.
         
@@ -405,7 +426,7 @@ class regR2rank_labeller(com.Labeller):
         smoothing_method: str,
         window_smooth: int,
         lambda_smooth: float,
-    ):
+    ) -> pd.Series:
         """
         Computes labels by detecting statistically significant linear trends via R² score.
         
@@ -450,7 +471,7 @@ class regR2rank_labeller(com.Labeller):
                 temporality = np.arange(len(future_ewma))  
 
                 # ------ 2. Fit the Linear Regression and Extract R² ------
-                model = reg.OLSRegression()
+                model = calc.OLSRegression()
                 model.fit(temporality, future_ewma)
                 r2 = model.statistics["R_squared"]
                 slope = model.coefficients[0]
@@ -461,7 +482,10 @@ class regR2rank_labeller(com.Labeller):
                     labels_series.iloc[idx] = 1 if slope > 0 else -1  
         
         # ======= III. Eliminate the trends that are too small =======
-        labels_series = fil.segment_length_filter(label_series=labels_series, window=min_trend_size)
+        labels_series = com.segment_length_filter(label_series=labels_series, window=min_trend_size)
+        
+        # ======= IV. Change name =======
+        labels_series.name = f"{self.name}_{horizon}_{horizon_extension}_{r2_threshold}_{min_trend_size}_{smoothing_method}_{window_smooth}_{lambda_smooth}"
 
         return labels_series
 
@@ -478,15 +502,18 @@ class boostedlF_labeller(com.Labeller):
     """
     def __init__(
         self, 
+        name: str = "boostedlF",
         n_jobs: int = 1
-    ):
+    ) -> None:
         """
         Initialize the boostedlF_labeller.
 
         Parameters:
+            - name (str): The name of the labeller.
             - n_jobs (int): Number of jobs for parallel processing (default is 1).
         """
         super().__init__(
+            name=name,
             n_jobs=n_jobs,
         )
     
@@ -503,7 +530,7 @@ class boostedlF_labeller(com.Labeller):
         smoothing_method: list = [None, "ewma", "average"],
         window_smooth: list = [5, 10, 15],
         lambda_smooth: list = [0.2, 0.5, 0.7],
-    ):
+    ) -> Self:
         """
         Sets the parameter grid for the boosted look-forward labeller.
 
@@ -538,7 +565,7 @@ class boostedlF_labeller(com.Labeller):
     def process_data(
         self, 
         data: pd.Series,
-    ):
+    ) -> pd.Series:
         """
         Applies preprocessing to the input data before labels extraction.
         
@@ -566,7 +593,7 @@ class boostedlF_labeller(com.Labeller):
         smoothing_method: str,
         window_smooth: int,
         lambda_smooth: float,
-    ):
+    ) -> pd.Series:
         """
         Combines look-forward and regression labellers to generate a boosted label series.
 
@@ -633,11 +660,14 @@ class boostedlF_labeller(com.Labeller):
         ensemble_labels[mask_positive_to_negative | mask_negative_to_positive] = 0
 
         # ------- 3. Eliminate the trends that are too small -------
-        labels_series = fil.segment_length_filter(label_series=ensemble_labels, window=trend_size)
+        labels_series = com.segment_length_filter(label_series=ensemble_labels, window=trend_size)
 
         # ------- 4. Eliminate the last point of each trend -------
         next_label = labels_series.shift(-1)
         labels_series[next_label == 0] = 0
+        
+        # ======= III. Change name =======
+        labels_series.name = f"{self.name}_{window_lookForward}_{min_trend_size}_{volatility_threshold}_{horizon}_{horizon_extension}_{r2_threshold}_{trend_size}_{smoothing_method}_{window_smooth}_{lambda_smooth}"
 
         return labels_series
 
@@ -657,15 +687,18 @@ class slope_labeller(com.Labeller):
     """
     def __init__(
         self, 
+        name: str = "slope",
         n_jobs: int = 1
-    ):
+    ) -> None:
         """
         Initialize the slope_labeller.
 
-        Parameters:
+        Parameters: 
+            - name (str): The name of the labeller.
             - n_jobs (int): Number of jobs for parallel processing (default is 1).
         """
         super().__init__(
+            name=name,
             n_jobs=n_jobs,
         )
     
@@ -678,7 +711,7 @@ class slope_labeller(com.Labeller):
         smoothing_method: list = [None, "ewma", "average"],
         window_smooth: list = [5, 10, 15],
         lambda_smooth: list = [0.2, 0.5, 0.7],
-    ):
+    ) -> Self:
         """
         Sets the parameter grid for the slope-based labeller.
 
@@ -705,7 +738,7 @@ class slope_labeller(com.Labeller):
     def process_data(
         self, 
         data: pd.Series,
-    ):
+    ) -> pd.Series:
         """
         Applies preprocessing to the input data before labels extraction.
         
@@ -729,7 +762,7 @@ class slope_labeller(com.Labeller):
         smoothing_method: str,
         window_smooth: int,
         lambda_smooth: float,
-    ):
+    ) -> pd.Series:
         """
         Assigns +1/-1 binary labels based on best slope over a forward window.
 
@@ -773,7 +806,7 @@ class slope_labeller(com.Labeller):
                 temporality = np.arange(len(future_ewma))
 
                 # ------ 2. Fit the Linear Regression and Extract R² ------
-                model = reg.OLSRegression()
+                model = calc.OLSRegression()
                 model.fit(temporality, future_ewma)
                 slope = model.coefficients[0]
 
@@ -783,8 +816,11 @@ class slope_labeller(com.Labeller):
                     labels_series.iloc[idx] = 1 if slope > 0 else -1
 
         # ======= III. Eliminate the trends that are too small =======
-        labels_series = fil.segment_length_filter(label_series=labels_series, window=min_trend_size)
+        labels_series = com.segment_length_filter(label_series=labels_series, window=min_trend_size)
         labels_series = labels_series.replace(0, np.nan).ffill()
+        
+        # ======= IV. Change name =======
+        labels_series.name = f"{self.name}_{horizon}_{horizon_extension}_{min_trend_size}_{smoothing_method}_{window_smooth}_{lambda_smooth}"
 
         return labels_series
 
