@@ -8,7 +8,7 @@ from typing import Union, Self
 
 #! ==================================================================================== #
 #! ================================= Center Features ================================== #
-class average_feature(com.Feature):
+class Average_feature(com.Feature):
     """
     Moving Average Feature
 
@@ -123,7 +123,7 @@ class average_feature(com.Feature):
         return rolling_average
 
 #*____________________________________________________________________________________ #
-class median_feature(com.Feature):
+class Median_feature(com.Feature):
     """
     Rolling Median Feature
 
@@ -238,7 +238,7 @@ class median_feature(com.Feature):
         return rolling_median
 
 #*____________________________________________________________________________________ #
-class minimum_feature(com.Feature):
+class Minimum_feature(com.Feature):
     """
     Rolling Minimum Feature
 
@@ -353,7 +353,7 @@ class minimum_feature(com.Feature):
         return rolling_min
     
 #*____________________________________________________________________________________ #
-class maximum_feature(com.Feature):
+class Maximum_feature(com.Feature):
     """
     Rolling Maximum Feature
 
@@ -472,7 +472,7 @@ class maximum_feature(com.Feature):
 
 #! ==================================================================================== #
 #! ================================ Dispersion Features =============================== #
-class volatility_feature(com.Feature):
+class Volatility_feature(com.Feature):
     """
     Rolling Volatility Feature
 
@@ -591,7 +591,7 @@ class volatility_feature(com.Feature):
         return rolling_vol
 
 #*____________________________________________________________________________________ #
-class skewness_feature(com.Feature):
+class Skewness_feature(com.Feature):
     """
     Rolling Skewness Feature
 
@@ -709,7 +709,7 @@ class skewness_feature(com.Feature):
         return rolling_skew
 
 #*____________________________________________________________________________________ #
-class kurtosis_feature(com.Feature):
+class Kurtosis_feature(com.Feature):
     """
     Rolling Kurtosis Feature
 
@@ -827,7 +827,7 @@ class kurtosis_feature(com.Feature):
         return rolling_kurt
 
 #*____________________________________________________________________________________ #
-class quantile_feature(com.Feature):
+class Quantile_feature(com.Feature):
     """
     Rolling Quantile Feature
 

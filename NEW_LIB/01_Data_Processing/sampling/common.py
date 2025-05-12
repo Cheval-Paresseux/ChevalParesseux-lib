@@ -71,7 +71,7 @@ class DatasetBuilder(ABC):
         self,
         data: Union[tuple, pd.Series, pd.DataFrame],
         **kwargs
-    ) -> pd.DataFrame:
+    ) -> Union[list, pd.DataFrame]:
         """
         Core method for Dataset extraction.
         
@@ -80,7 +80,7 @@ class DatasetBuilder(ABC):
             - **kwargs: Additional parameters for the dataset extraction.
         
         Returns:
-            - pd.DataFrame : The extracted dataset as a pd.DataFrame.
+            - Union[list, pd.DataFrame] : The extracted dataset(s) as a pd.DataFrame or a list of pd.DataFrame.
         """
         ...
         

@@ -1,0 +1,361 @@
+from ..sampling import common as com
+
+import pandas as pd
+import numpy as np
+from joblib import Parallel, delayed
+from typing import Union, Self, Optional
+
+
+
+#! ==================================================================================== #
+#! ================================= Main Function ==================================== #
+class Temporal_uniqueness_selection(com.DatasetBuilder):
+    #?_____________________________ Initialization methods _______________________________ #
+    def __init__(
+        self, 
+        n_jobs: int = 1, 
+        random_state: int = 72
+    ):
+        """
+        Constructor for the temporal_uniqueness_selection class.
+        
+        Parameters:
+            - n_jobs (int): The number of jobs to run in parallel. Default is 1 (no parallelization).
+            - random_state (int): The random state for reproducibility. Default is 72.
+        """
+        super().__init__(n_jobs=n_jobs)
+        self.random_state = random_state
+    
+    #?____________________________________________________________________________________ #
+    def set_params(
+        self,
+        label_column: list = ['label'],
+        price_column: list = ['close'],
+        n_samples: list = [1000],
+        replacement: list = [False],
+        vol_window: list = [10],
+        upper_barrier: list = [0.5],
+        vertical_barrier: list = [20],
+        grouping_column: Optional[list] = None,
+    ) -> Self:
+        """
+        Set the parameters for the temporal uniqueness selection.
+        
+        Parameters:
+            - label_column (list): The column names for the labels. Default is ['label'].
+            - price_column (list): The column names for the prices. Default is ['close'].
+            - n_samples (list): The number of samples to extract. Default is [1000].
+            - replacement (list): Whether to sample with replacement. Default is [False].
+            - vol_window (list): The window size for calculating the rolling volatility. Default is [10].
+            - upper_barrier (list): The upper barrier for the event. Default is [0.5].
+            - vertical_barrier (list): The vertical barrier for the event. Default is [20].
+        
+        Returns:
+            - self: The instance of the class with the updated parameters.
+        """
+        self.params = {
+            'label_column': label_column,
+            'price_column': price_column,
+            'n_samples': n_samples,
+            'replacement': replacement,
+            'vol_window': vol_window,
+            'upper_barrier': upper_barrier,
+            'vertical_barrier': vertical_barrier,
+            'grouping_column': grouping_column,
+        }
+        
+        return self
+    
+    #?____________________________________________________________________________________ #
+    def process_data(
+        self,
+        data: Union[pd.DataFrame, list],
+        grouping_column: str,
+    ) -> list:
+        """
+        This function groups the DataFrame by the specified column name and returns a list of DataFrames, each representing a group.
+        
+        Parameters:
+            - data (pd.DataFrame) : The DataFrame to be grouped.
+            - grouping_column (str) : The column name to group by.
+        
+        Returns:
+            - List of DataFrames, each representing a group.
+        """
+        # ======= 0. Define grouping method =======
+        def groupby_method(
+            df: pd.DataFrame, 
+            grouping_column: str
+        ) -> list:
+            """
+            Groups the DataFrame by the specified column name and returns a list of DataFrames, each representing a group.
+            
+            Parameters:
+                - df (pd.DataFrame) : The DataFrame to be grouped.
+                - grouping_column (str) : The column name to group by.
+            
+            Returns:
+                - List of DataFrames, each representing a group.
+            """
+            if grouping_column is not None:
+                df_grouped = df.groupby(grouping_column)
+                dfs_list = [df_grouped.get_group(x) for x in df_grouped.groups]
+            
+            else:
+                dfs_list = [df]
+            
+            return dfs_list
+        
+        # ======= 1. Apply grouping =======
+        if isinstance(data, list):
+            processed_data = []
+            for df in data:
+                dfs_list = groupby_method(df, grouping_column)
+                processed_data.extend(dfs_list)    
+        else:
+            processed_data = groupby_method(data, grouping_column)
+
+        return processed_data
+    
+    #?________________________________ Auxiliary methods _________________________________ #
+    def extract_event(
+        self,
+        idx: int, 
+        row: pd.Series, 
+        df: pd.DataFrame, 
+        upper_barrier: float, 
+        vertical_barrier: int, 
+        label_column: str, 
+        price_column: str
+    ) -> tuple:
+        """
+        Extracts the event information from the current row of the DataFrame.
+        
+        Parameters:
+            - idx (int): The index of the current row.
+            - row (pd.Series): The current row of the DataFrame.
+            - df (pd.DataFrame): The DataFrame containing the data.
+            - upper_barrier (float): The upper barrier for the event.
+            - vertical_barrier (int): The vertical barrier for the event.
+            - label_column (str): The name of the labels column.
+            - price_column (str): The name of the price column.
+        
+        Returns:
+            - tuple: A tuple containing the start index, end index, and event returns.
+        """
+        # ======= I. Extract close and barrier =======
+        current_close = row[price_column]
+        barrier = row['volatility'] * upper_barrier # This row is setted up in the parent function
+        
+        # ======= II. Define the event =======
+        if row[label_column] == 1:
+            target_close = current_close * (1 + barrier)
+            barrier_cross = df[(df[price_column] >= target_close) & (df.index > idx)]
+
+        elif row[label_column] == -1:
+            target_close = current_close * (1 - barrier)
+            barrier_cross = df[(df[price_column] <= target_close) & (df.index > idx)]
+            
+        else:
+            event_returns = (1 + barrier) / 2
+            return idx, idx + vertical_barrier, event_returns
+        
+        # ======= III. Get the event start and end =======
+        barrier_hit_idx = barrier_cross.index.min() if not barrier_cross.empty else idx + vertical_barrier
+        
+        # ======= IV. Get the event returns =======
+        if barrier_hit_idx < idx + vertical_barrier:
+            hit_close = df.loc[barrier_hit_idx, price_column]
+            event_returns = np.abs(np.log(hit_close / current_close))
+        else:
+            event_returns = np.nan
+            
+        return idx, barrier_hit_idx, event_returns
+
+    #?____________________________________________________________________________________ #
+    def count_concurrent_events(
+        self,
+        row: pd.Series, 
+        df: pd.DataFrame, 
+        label_column: str
+    ) -> int:
+        """
+        Counts the number of concurrent events for the current row in the DataFrame.
+        
+        Parameters:
+            - row (pd.Series): The current row of the DataFrame.
+            - df (pd.DataFrame): The DataFrame containing the data.
+            - label_column (str): The name of the labels column.
+
+        Returns:
+            - int: The number of concurrent events.
+        """
+        # ======= I. Get the label and event indices =======
+        label = row[label_column]
+        start_idx = row['start_event']
+        end_idx = row['end_event']
+        
+        # ======= II. Get the concurrent events =======
+        mask_prev = (df[label_column] == label) & (df['start_event'] < start_idx) & (df['end_event'] >= start_idx)
+        mask_next = (df[label_column] == label) & (df['start_event'] < end_idx) & (df['end_event'] >= end_idx)
+        
+        # ======= III. Count the concurrent events =======
+        nb_concurrents_events_prev = df[mask_prev].shape[0]
+        nb_concurrents_events_next = df[mask_next].shape[0]
+        
+        nb_concurrents_events = nb_concurrents_events_prev + nb_concurrents_events_next + 1
+        
+        return nb_concurrents_events
+
+    #?____________________________________________________________________________________ #
+    def get_linear_Tdecay(
+        self,
+        series: pd.Series
+    ) -> pd.Series:
+        """
+        Computes the linear time decay for a given series.
+        
+        Parameters:
+            - series (pd.Series): The input series for which to compute the time decay.
+        
+        Returns:
+            - pd.Series: The series containing the time decay values.
+        """
+        # ======= I. Compute the weights =======
+        n = len(series)
+        weights = np.linspace(1/n, 1, n)
+        
+        # ======= II. Transform into series =======
+        time_decay = pd.Series(weights, index=series.index)
+        
+        return time_decay
+    
+    #?____________________________________________________________________________________ #
+    def get_samples_weights(
+        self,
+        label_series: pd.Series, 
+        price_series: pd.Series, 
+        vol_window: int, 
+        upper_barrier: float, 
+        vertical_barrier: int,
+        label_column: str,
+        price_column: str,
+    ) -> pd.DataFrame:
+        """
+        This function computes the sample weights for each event in the dataset, based on the average uniqueness,
+        time decay, and event returns. The sample weights are used to balance the dataset for training a model.
+        
+        Parameters:
+            - label_series (pd.Series): The series containing the labels for the events.
+            - price_series (pd.Series): The series containing the price data.
+            - vol_window (int): The window size for calculating the rolling volatility.
+            - upper_barrier (float): The upper barrier for the event.
+            - vertical_barrier (int): The vertical barrier for the event.
+            - label_column (str): The name of the labels column. 
+            - price_column (str): The name of the price column.
+        
+        Returns:
+            - sample_weights (pd.Series): The series containing the sample weights for each event.
+            - auxiliary_df (pd.DataFrame): The DataFrame containing the auxiliary data for the events.
+        """
+        # ======= I. Prepare the Auxiliary DataFrame =======
+        labels = label_series.dropna().copy()
+        price = price_series.loc[labels.index].copy()
+        rolling_vol = price_series.pct_change().rolling(vol_window).std() * np.sqrt(vol_window)
+        rolling_vol.rename('volatility', inplace=True)
+
+        auxiliary_df = pd.concat([labels, price, rolling_vol], axis=1).dropna()
+        
+        # ======= II. Extract Events =======
+        events = Parallel(n_jobs=self.n_jobs)(
+            delayed(self.extract_event)(idx, row, auxiliary_df, upper_barrier, vertical_barrier, label_column, price_column)
+            for idx, row in auxiliary_df.iterrows()
+        )
+        auxiliary_df['start_event'] = [event[0] for event in events]
+        auxiliary_df['end_event'] = [event[1] for event in events]
+        auxiliary_df['event_returns'] = [event[2] for event in events]
+        
+        # ======= III. Compute the Average Uniqueness =======
+        concurrent_events = auxiliary_df.apply(lambda row: self.count_concurrent_events(row, auxiliary_df, label_column), axis=1)
+        auxiliary_df['average_uniqueness'] = 1 / concurrent_events
+        auxiliary_df['time_decay'] = self.get_linear_Tdecay(auxiliary_df['event_returns'])
+        
+        # ======= IV. Compute the Sample Weights =======
+        auxiliary_df['event_returns'] /= auxiliary_df['event_returns'].sum()
+        auxiliary_df['average_uniqueness'] /= auxiliary_df['average_uniqueness'].sum()
+        auxiliary_df['time_decay'] /= auxiliary_df['time_decay'].sum()
+        
+        auxiliary_df['sample_weights'] = auxiliary_df['average_uniqueness'] * auxiliary_df['time_decay'] * auxiliary_df['event_returns']
+        auxiliary_df['sample_weights'] /= auxiliary_df['sample_weights'].sum()
+        
+        sample_weights = auxiliary_df['sample_weights'].copy()
+        
+        # ======= Ensure Same Index as labels_series =======
+        sample_weights = sample_weights.reindex(label_series.index)
+        
+        return sample_weights, auxiliary_df
+    
+    #?____________________________________________________________________________________ #
+    def get_dataset(
+        self, 
+        data: Union[pd.DataFrame, list],
+        grouping_column: str,
+        label_column: str,
+        price_column: str,
+        vol_window: int,
+        upper_barrier: float,
+        vertical_barrier: int,
+        n_samples: int,
+        replacement: bool,
+    ) -> pd.DataFrame:
+        
+        # ======= I. Process Data =======
+        np.random.seed(self.random_state)
+        processed_data = self.process_data(data=data, grouping_column=grouping_column)
+        
+        # ======= II. Create the DataFrames =======
+        results = []
+        for df in processed_data:
+            # ----- 1. Extract the sample weights -----
+            training_df = df.copy()
+            training_df.dropna(inplace=True)
+            
+            sample_weights, _ = self.get_samples_weights(
+                label_series=training_df[label_column], 
+                price_series=training_df[price_column], 
+                vol_window=vol_window, 
+                upper_barrier=upper_barrier, 
+                vertical_barrier=vertical_barrier,
+                label_column=label_column,
+                price_column=price_column,
+            )
+            training_df = pd.concat([training_df, sample_weights], axis=1)
+            training_df = training_df.dropna(axis=0)
+
+            # ----- II. Separate Classes -----
+            available_labels = training_df[label_column].unique()
+            labels_specific_dfs = [training_df[training_df[label_column] == label].copy() for label in available_labels]
+
+            # ----- III. Sample Each Class -----
+            nb_labels = len(labels_specific_dfs)
+            nb_samples_per_label = n_samples // nb_labels
+            
+            sampled_dfs = []
+            for unique_df in labels_specific_dfs:
+                unique_df['sample_weights'] = unique_df['sample_weights'] / unique_df['sample_weights'].sum()
+                
+                if not replacement:
+                    nb_samples_per_label = min(nb_samples_per_label, unique_df.shape[0])
+                    
+                sampled_indices = np.random.choice(unique_df.index, size=nb_samples_per_label, replace=replacement, p=unique_df["sample_weights"])
+                
+                df_sampled = unique_df.loc[sampled_indices].reset_index(drop=True)
+                sampled_dfs.append(df_sampled)
+            
+            # ----- IV. Concatenate the Sampled DataFrames -----
+            df_sampled = pd.concat(sampled_dfs, axis=0).reset_index(drop=True)
+            df_sampled = df_sampled.drop(columns=['sample_weights'])
+            results.append(df_sampled)
+        
+        return results
+

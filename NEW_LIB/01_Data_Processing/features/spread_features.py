@@ -9,7 +9,7 @@ from typing import Union, Self
 
 #! ==================================================================================== #
 #! =========================== Relationship Measures Features ========================= #
-class cointegration_feature(com.Feature):
+class Cointegration_feature(com.Feature):
     """
     Rolling Cointegration Feature Extraction
 
@@ -364,7 +364,7 @@ class OU_feature(com.Feature):
         return features_df
 
 #*____________________________________________________________________________________ #
-class kalmanOU_feature(com.Feature):
+class KalmanOU_feature(com.Feature):
     """
     Rolling Kalman Filter-Based Ornstein-Uhlenbeck Feature Extraction
 

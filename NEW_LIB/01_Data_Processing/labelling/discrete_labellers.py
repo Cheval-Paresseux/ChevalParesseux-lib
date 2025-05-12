@@ -9,7 +9,7 @@ from typing import Self
 
 #! ==================================================================================== #
 #! =============================== TRINARY LABELLERS ================================== #
-class tripleBarrier_labeller(com.Labeller):
+class TripleBarrier_labeller(com.Labeller):
     """
     Triple Barrier Method for labelling time series data.
     
@@ -203,7 +203,7 @@ class tripleBarrier_labeller(com.Labeller):
         return labels_series
 
 #*____________________________________________________________________________________ #
-class lookForward_labeller(com.Labeller):
+class LookForward_labeller(com.Labeller):
     """
     Look-Forward Labelling Method for time series data.
     
@@ -334,7 +334,7 @@ class lookForward_labeller(com.Labeller):
         return labels_series
 
 #*____________________________________________________________________________________ #
-class regR2rank_labeller(com.Labeller):
+class RegR2rank_labeller(com.Labeller):
     """
     Regression R² Rank Labeller for time series data.
     
@@ -490,7 +490,7 @@ class regR2rank_labeller(com.Labeller):
         return labels_series
 
 #*____________________________________________________________________________________ #
-class boostedlF_labeller(com.Labeller):
+class BoostedlF_labeller(com.Labeller):
     """
     Boosted Look-Forward Labeller for time series data.
 
@@ -675,7 +675,7 @@ class boostedlF_labeller(com.Labeller):
 
 #! ==================================================================================== #
 #! =============================== BINARY LABELLERS =================================== #
-class slope_labeller(com.Labeller):
+class Slope_labeller(com.Labeller):
     """
     Slope-Based Labeller for time series data.
 

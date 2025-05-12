@@ -78,7 +78,7 @@ class Labeller(ABC):
             - **kwargs: Additional parameters for the data processing.
 
         Returns:
-            - tuple or pd.DataFrame or pd.Series: The processed data ready for feature extraction.
+            - tuple or pd.DataFrame or pd.Series: The processed data ready for labels extraction.
         """
         ...
     

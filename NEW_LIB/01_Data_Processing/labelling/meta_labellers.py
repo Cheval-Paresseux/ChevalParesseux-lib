@@ -8,7 +8,7 @@ from typing import Union, Self
 
 #! ==================================================================================== #
 #! =============================== BINARY LABELLERS ================================== #
-class binaryMeta_labeller(com.Labeller):
+class BinaryMeta_labeller(com.Labeller):
     """
     Binary Meta Labeller for discrete time series data.
 
@@ -139,7 +139,7 @@ class binaryMeta_labeller(com.Labeller):
 
 #! ==================================================================================== #
 #! =============================== TRINARY LABELLERS =================================== #
-class trinaryMeta_labeller(com.Labeller):
+class TrinaryMeta_labeller(com.Labeller):
     """
     Trinary Meta Labeller for discrete time series data.
 

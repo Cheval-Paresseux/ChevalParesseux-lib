@@ -1,4 +1,4 @@
-from ..dataset_building import common as com
+from ..sampling import common as com
 
 import pandas as pd
 import numpy as np
@@ -9,7 +9,7 @@ from typing import Union, Self, Optional
 
 #! ==================================================================================== #
 #! =================================== Builders  ====================================== #
-class cumsum_bars(com.DatasetBuilder):
+class Cumsum_bars(com.DatasetBuilder):
     """
     Class for building a dataset based on cumulative sum bars.
     
@@ -18,7 +18,7 @@ class cumsum_bars(com.DatasetBuilder):
         - grouping data given a column name
         - extracting cumulative sum bars from the data
     """
-    #?____________________________________________________________________________________ #
+    #?_____________________________ Initialization methods _______________________________ #
     def __init__(
         self, 
         n_jobs: int = 1
@@ -78,6 +78,57 @@ class cumsum_bars(com.DatasetBuilder):
         return self
     
     #?____________________________________________________________________________________ #
+    def process_data(
+        self,
+        data: Union[pd.DataFrame, list],
+        grouping_column: str,
+    ) -> list:
+        """
+        This function groups the DataFrame by the specified column name and returns a list of DataFrames, each representing a group.
+        
+        Parameters:
+            - data (pd.DataFrame) : The DataFrame to be grouped.
+            - grouping_column (str) : The column name to group by.
+        
+        Returns:
+            - List of DataFrames, each representing a group.
+        """
+        # ======= 0. Define grouping method =======
+        def groupby_method(
+            df: pd.DataFrame, 
+            grouping_column: str
+        ) -> list:
+            """
+            Groups the DataFrame by the specified column name and returns a list of DataFrames, each representing a group.
+            
+            Parameters:
+                - df (pd.DataFrame) : The DataFrame to be grouped.
+                - grouping_column (str) : The column name to group by.
+            
+            Returns:
+                - List of DataFrames, each representing a group.
+            """
+            if grouping_column is not None:
+                df_grouped = df.groupby(grouping_column)
+                dfs_list = [df_grouped.get_group(x) for x in df_grouped.groups]
+            
+            else:
+                dfs_list = [df]
+            
+            return dfs_list
+        
+        # ======= 1. Apply grouping =======
+        if isinstance(data, list):
+            processed_data = []
+            for df in data:
+                dfs_list = groupby_method(df, grouping_column)
+                processed_data.extend(dfs_list)    
+        else:
+            processed_data = groupby_method(data, grouping_column)
+
+        return processed_data
+    
+    #?________________________________ Auxiliary methods _________________________________ #
     def get_cumsum_resample(
         self,
         data: pd.DataFrame, 
@@ -146,34 +197,9 @@ class cumsum_bars(com.DatasetBuilder):
         return auxiliary_df
 
     #?____________________________________________________________________________________ #
-    def process_data(
-        self,
-        data: pd.DataFrame,
-        grouping_column: str,
-    ) -> list:
-        """
-        This function groups the DataFrame by the specified column name and returns a list of DataFrames, each representing a group.
-        
-        Parameters:
-            - data (pd.DataFrame) : The DataFrame to be grouped.
-            - grouping_column (str) : The column name to group by.
-        
-        Returns:
-            - List of DataFrames, each representing a group.
-        """
-        if grouping_column is not None:
-            df_grouped = data.groupby(grouping_column)
-            dfs_list = [df_grouped.get_group(x) for x in df_grouped.groups]
-        
-        else:
-            dfs_list = [data]
-
-        return dfs_list
-    
-    #?____________________________________________________________________________________ #
     def get_dataset(
         self, 
-        data: pd.DataFrame,
+        data: Union[pd.DataFrame, list],
         cumsum_column: str,
         aggregation_rules: dict,
         general_aggregation_rules: str,
@@ -188,7 +214,7 @@ class cumsum_bars(com.DatasetBuilder):
         This function extracts the dataset based on the specified parameters.
         
         Parameters:
-            - data (pd.DataFrame) : The DataFrame to be processed.
+            - data (Union[pd.DataFrame, list]) : The DataFrame to be processed.
             - cumsum_column (str) : The column name to calculate the cumulative sum.
             - aggregation_rules (dict) : Dictionary defining the aggregation rules.
             - general_aggregation_rules (str) : General aggregation rules to be applied.

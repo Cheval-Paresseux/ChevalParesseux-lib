@@ -10,7 +10,7 @@ from typing import Self
 
 #! ==================================================================================== #
 #! ============================= Series Trending Features ============================= #
-class momentum_feature(com.Feature):
+class Momentum_feature(com.Feature):
     """
     Rolling Momentum Feature
 
@@ -242,7 +242,7 @@ class Z_momentum_feature(com.Feature):
         return rolling_Z_momentum
 
 #*____________________________________________________________________________________ #
-class linear_tempReg_feature():
+class Linear_tempReg_feature():
     """
     Rolling Linear Temporal Regression Feature
 
@@ -393,7 +393,7 @@ class linear_tempReg_feature():
         return features_df
 
 #*____________________________________________________________________________________ #
-class nonlinear_tempReg_feature(com.Feature):
+class Nonlinear_tempReg_feature(com.Feature):
     """
     Rolling Nonlinear (Quadratic) Temporal Regression Feature
 
@@ -548,7 +548,7 @@ class nonlinear_tempReg_feature(com.Feature):
         return features_df
 
 #*____________________________________________________________________________________ #
-class hurst_exponent_feature(com.Feature):
+class Hurst_exponent_feature(com.Feature):
     """
     Rolling Hurst Exponent Feature
 

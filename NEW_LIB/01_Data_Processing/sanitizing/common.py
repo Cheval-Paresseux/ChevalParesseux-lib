@@ -10,7 +10,7 @@ import inspect
 
 #! ==================================================================================== #
 #! ==================================== Cleaning ====================================== #
-class FeaturesSanitizer():
+class Features_sanitizer():
     """
     Cleaner class for preprocessing time series features data.
     

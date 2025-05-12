@@ -9,7 +9,7 @@ from typing import Self
 
 #! ==================================================================================== #
 #! ============================= Signal Processing Features =========================== #
-class shannon_entropy_feature(com.Feature):
+class Shannon_entropy_feature(com.Feature):
     """
     Rolling Shannon Entropy Feature Extraction
 
@@ -125,7 +125,7 @@ class shannon_entropy_feature(com.Feature):
         return rolling_shannon
 
 #*____________________________________________________________________________________ #
-class plugin_entropy_feature(com.Feature):
+class Plugin_entropy_feature(com.Feature):
     """
     Rolling Plugin Entropy Feature Extraction
 
@@ -241,7 +241,7 @@ class plugin_entropy_feature(com.Feature):
         return rolling_plugin
 
 #*____________________________________________________________________________________ #
-class lempelZiv_entropy_feature(com.Feature):
+class LempelZiv_entropy_feature(com.Feature):
     """
     Rolling Lempel-Ziv Entropy Feature Extraction
 
@@ -357,7 +357,7 @@ class lempelZiv_entropy_feature(com.Feature):
         return rolling_lempelZiv
 
 #*____________________________________________________________________________________ #
-class kontoyiannis_entropy_feature(com.Feature):
+class Kontoyiannis_entropy_feature(com.Feature):
     """
     Rolling Kontoyiannis Entropy Feature Extraction
 
@@ -473,7 +473,7 @@ class kontoyiannis_entropy_feature(com.Feature):
         return rolling_kontoyiannis
 
 #*____________________________________________________________________________________ #
-class sample_entropy_feature(com.Feature):
+class Sample_entropy_feature(com.Feature):
     """
     Sample Entropy Feature
 
