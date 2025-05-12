@@ -1,90 +1,90 @@
+from ...utils import calculations as calc
+
+import pandas as pd
+import numpy as np
+from typing import Union, Self
+from abc import ABC, abstractmethod
+from joblib import Parallel, delayed
+
+
 
 #! ==================================================================================== #
-#! =================================== Sampling  ====================================== #
-class DataSampler():
+#! =================================== Builders  ====================================== #
+class DatasetBuilder(ABC):
+    #?_____________________________ Initialization methods _______________________________ #
+    @abstractmethod
     def __init__(
         self, 
-        data: pd.DataFrame,
         n_jobs: int = 1
-    ):
-        # ======= II. Store the inputs =======
-        self.data = data
+    ) -> None:
+        """
+        Initializes the DatasetBuilder object.
+
+        Parameters:
+            - n_jobs (int): Number of parallel jobs to use for computation.
+        """
+        # ======= I. Initialize Class =======
         self.n_jobs = n_jobs
-        
-        self.available_methods = {
-            "daily_volBars": sampl.daily_volBars,
-            "daily_cumsumTargetBars": sampl.daily_cumsumTargetBars,
-            "daily_cumsumWeightedTargetBars": sampl.daily_cumsumWeightedTargetBars,
-        }
-        
-        # ======= III. Initialize Results =======
-        self.params = None
-        self.resampled_data = None
+
+        # ======= II. Initialize Auxilaries =======
+        self.params = {}
     
-    #?__________________________________________________________________________________ #
+    #?____________________________________________________________________________________ #
+    @abstractmethod
     def set_params(
         self,
-        sampling_method: str = "daily_volBars",
-        column_name: str = "close",
-        grouping_column: str = "date",
-        new_cols_methods: str = "mean",
-        target_bars: int = 100,
-        window_bars_estimation: int = 10,
-        pre_threshold: float = 1000,
-        weight_column_name: str = "close",
-        vol_threshold: float = 0.0005,
-        aggregation_dict: dict = {
-            "open": "first",
-            "high": "max",
-            "low": "min",
-            "close": "last",
-            "volume": "sum",
-            "ts": ["first", "last"],
-            "date": "first",
-            "bid_open": "first",
-            "ask_open": "first",
-        },
-    ):
-        self.params = {
-            'sampling_method': sampling_method,
-            'column_name': column_name,
-            'grouping_column': grouping_column,
-            'new_cols_methods': new_cols_methods,
-            'target_bars': target_bars,
-            'window_bars_estimation': window_bars_estimation,
-            'pre_threshold': pre_threshold,
-            'weight_column_name': weight_column_name,
-            'vol_threshold': vol_threshold,
-            'aggregation_dict': aggregation_dict,
-        }
-        
-        return self
+        **kwargs
+    ) -> Self:
+        """
+        Sets the parameter grid for the datset extraction.
 
+        Parameters:
+            - **kwargs: Each parameter should be a list of possible values.
+
+        Returns:
+            - Self: The instance of the class with the parameter grid set.
+        """
+        ...
+    
+    #?________________________________ Auxiliary methods _________________________________ #
+    @abstractmethod
+    def process_data(
+        self,
+        data: Union[tuple, pd.Series, pd.DataFrame],
+        **kwargs
+    ) -> Union[tuple, pd.DataFrame, pd.Series]:
+        """
+        Preprocesses the data before building the dataset.
+
+        Parameters:
+            - data (tuple | pd.Series | pd.DataFrame): The input data to be processed.
+            - **kwargs: Additional parameters for the data processing.
+
+        Returns:
+            - tuple or pd.DataFrame or pd.Series: The processed data ready for dataset extraction.
+        """
+        ...
+    
     #?____________________________________________________________________________________ #
-    def extract(self):
+    @abstractmethod
+    def get_dataset(
+        self,
+        data: Union[tuple, pd.Series, pd.DataFrame],
+        **kwargs
+    ) -> pd.DataFrame:
+        """
+        Core method for Dataset extraction.
         
-        def filter_params_for_function(func, param_dict):
-            sig = inspect.signature(func)
-            valid_keys = sig.parameters.keys()
-            
-            return {k: v for k, v in param_dict.items() if k in valid_keys}
+        Parameters:
+            - data (tuple | pd.Series | pd.DataFrame): The input data to extract the dataset from
+            - **kwargs: Additional parameters for the dataset extraction.
         
-        # ======= I. Check Sampling Method =======
-        if self.params['sampling_method'] not in self.available_methods.keys():
-            raise ValueError(f"Sampling method {self.params['sampling_method']} is not available.")
+        Returns:
+            - pd.DataFrame : The extracted dataset as a pd.DataFrame.
+        """
+        ...
         
-        sampling_method = self.available_methods[self.params['sampling_method']]
-        
-        # ======= II. Apply Sampling =======
-        resampled_data = sampling_method(data=self.data, **filter_params_for_function(sampling_method, self.params))
-        
-        # ======= III. Store Results =======
-        self.resampled_data = resampled_data
-        
-        return resampled_data
-
-
-#?____________________________________________________________________________________ #
+    #?_________________________________ Callable methods _________________________________ #
     def vertical_stacking(
         self, 
         dfs_list: list
@@ -109,6 +109,27 @@ class DataSampler():
 
         # ======= II. Concatenate DataFrames horizontally =======
         stacked_data = pd.concat(dfs_list, axis=0, ignore_index=True)
-        self.stacked_data = stacked_data.copy()
         
         return stacked_data
+    
+    #?____________________________________________________________________________________ #
+    def extract(
+        self, 
+        data: Union[tuple, pd.Series, pd.DataFrame]
+    ) -> list:
+        """
+        Main method to extract dataset.
+
+        Parameters:
+            - data (tuple | pd.Series | pd.DataFrame): The input data to extract the datset from
+        
+        Returns:
+            - datasets (list): List of DataFrames, each representing a dataset for a specific parameter combination.
+        """
+        # ======= I. Extract the Parameters Universe =======
+        params_grid = calc.get_dict_universe(self.params)
+
+        # ======= II. Extract the dataset for each Parameters =======
+        datasets = Parallel(n_jobs=self.n_jobs)(delayed(self.get_datset)(data, **params) for params in params_grid)
+
+        return datasets

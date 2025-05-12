@@ -110,4 +110,92 @@ def get_european_biTree(
             call_values[j] = disc * (p * call_values[j] + (1 - p) * call_values[j + 1])
             put_values[j] = disc * (p * put_values[j] + (1 - p) * put_values[j + 1])
 
-    return call_values[0], put_values[0]
+    # ======= VI. Return the option prices =======
+    call_price = call_values[0]
+    put_price = put_values[0]
+
+    return call_price, put_price
+
+#*____________________________________________________________________________________ #
+def get_IV_interpolation(
+    spot: float, 
+    strike: float, 
+    maturity: float, 
+    risk_free_rate: float, 
+    call_price: float = 0,
+    put_price: float = 0, 
+    convergence_threshold: float = 1e-6, 
+    max_iterations: int = 1000
+):
+    """
+    Computes the implied volatility of European call and put options using linear interpolation.
+
+    Args:
+        call_price (float): Market price of the call option, default is 0.
+        put_price (float): Market price of the put option, default is 0.
+        spot (float): Current price of the underlying asset.
+        strike (float): Option strike price.
+        maturity (float): Time to maturity in years.
+        risk_free_rate (float): Continuously compounded risk-free interest rate.
+        convergence_threshold (float): Desired accuracy of interpolation.
+        max_iterations (int): Max number of iterations allowed.
+
+    Returns:
+        tuple: (call_vol, put_vol) implied volatilities.
+    """
+    # ======= I. Initialize variables =======
+    # I.1 volatility bounds
+    vol_min, vol_max = 1e-5, 5.0
+    iteration = 0
+
+    # I.2 initial call and put prices
+    call_price_min, put_price_min = get_european_BSM(spot, strike, maturity, risk_free_rate, vol_min)
+    call_price_max, put_price_max = get_european_BSM(spot, strike, maturity, risk_free_rate, vol_max)
+    call_vol_mid, put_vol_mid = None, None
+
+    # ====== II. Iterative interpolation =======
+    while iteration < max_iterations:
+        # ---- 1. Compute the min_max range ----
+        call_denominator = call_price_max - call_price_min
+        put_denominator = put_price_max - put_price_min
+
+        # ---- 2. Interpolate implied volatilities ----
+        call_vol_mid = vol_min + (call_price - call_price_min) * (vol_max - vol_min) / call_denominator
+        put_vol_mid  = vol_min + (put_price - put_price_min) * (vol_max - vol_min) / put_denominator
+
+        # ---- 3. Compute new options prices ----
+        call_price_mid, _ = get_european_BSM(spot, strike, maturity, risk_free_rate, call_vol_mid)
+        _, put_price_mid  = get_european_BSM(spot, strike, maturity, risk_free_rate, put_vol_mid)
+
+        # ---- 4. Check convergence ----
+        call_error = abs(call_price_mid - call_price)
+        put_error  = abs(put_price_mid - put_price)
+
+        if call_error < convergence_threshold and put_error < convergence_threshold:
+            return call_vol_mid, put_vol_mid
+
+        # ---- 5. Update bounds ----
+        # 5.1 Call option
+        if call_price_mid < call_price:
+            vol_min = call_vol_mid
+            call_price_min = call_price_mid
+        else:
+            vol_max = call_vol_mid
+            call_price_max = call_price_mid
+
+        # 5.2 Put option
+        if put_price_mid < put_price:
+            vol_min = min(vol_min, put_vol_mid)
+            put_price_min = put_price_mid
+        else:
+            vol_max = max(vol_max, put_vol_mid)
+            put_price_max = put_price_mid
+
+        iteration += 1
+
+    return call_vol_mid, put_vol_mid
+
+
+
+
+

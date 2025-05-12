@@ -35,6 +35,7 @@ class Labeller(ABC):
         Initializes the Labeller object.
 
         Parameters:
+            - name (str): Name of the labeller.
             - n_jobs (int): Number of parallel jobs to use for computation.
         """
         # ======= I. Initialize Class =======
