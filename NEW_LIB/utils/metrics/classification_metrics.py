@@ -6,7 +6,7 @@ import numpy as np
 
 
 #! ==================================================================================== #
-#! ============================ Classification Metrics ================================ #
+#! ============================== General Functions =================================== #
 def generate_classification_metrics(
     predictions: pd.Series, 
     labels: pd.Series, 
@@ -69,7 +69,10 @@ def generate_classification_report(
     
     return report
 
-#*____________________________________________________________________________________ #
+
+
+#! ==================================================================================== #
+#! ============================ Classification Metrics ================================ #
 def get_accuracy(
     predictions: pd.Series, 
     labels: pd.Series

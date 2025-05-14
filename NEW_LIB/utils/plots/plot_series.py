@@ -11,7 +11,7 @@ import seaborn as sns
 
 
 #! ==================================================================================== #
-#! ============================== Series description ================================= #
+#! ============================== Series description ================================== #
 def generate_series_report(
     series: pd.Series
 ) -> dict:
@@ -118,85 +118,35 @@ def plot_series_distribution(
     plt.grid(True)
     plt.show()
 
+#*____________________________________________________________________________________ #
+def plot_QQ(
+    residuals: np.array
+) -> None:
+    """
+    Generates a QQ plot to visually inspect normality of residuals.
+    
+    Parameters:
+        - residuals (np.array): The residuals of the regression model.
+    """
+    # ======= I. Sort residuals =======
+    sorted_residuals = np.sort(residuals)
+    
+    # ======= II. Generate theoretical quantiles =======
+    quantiles = np.percentile(np.random.normal(0, 1, 10000), np.linspace(0, 100, len(sorted_residuals)))
+    
+    # ======= III. Create QQ plot =======
+    plt.figure(figsize=(17,5))
+    plt.scatter(quantiles, sorted_residuals)
+    plt.plot([min(quantiles), max(quantiles)], [min(sorted_residuals), max(sorted_residuals)], color='r', linestyle='--')
+    plt.title("QQ Plot for Residuals")
+    plt.xlabel("Theoretical Quantiles")
+    plt.ylabel("Sample Quantiles")
+    plt.show()
+
 
 
 #! ==================================================================================== #
 #! ============================== Labels Visualization  =============================== #
-def plot_feature_vs_label(
-    feature_series: pd.Series, 
-    label_series: pd.Series, 
-    feature_name: str = None
-) -> None:
-    """
-    Visualize and analyze the relationship between a numerical feature and its corresponding labels.
-
-    This function produces three visualizations:
-    1. Time-series plot of the feature with overlaid label markers.
-    2. Boxplot of the feature values grouped by label.
-    3. Correlation heatmap between the feature and label.
-
-    Parameters:
-        feature_series (pd.Series): Numerical feature Series indexed by time.
-        label_series (pd.Series): Label Series indexed identically to `feature_series`, with values in {-1, 0, 1}.
-        feature_name (str, optional): Name of the feature for titles/labels. If None, a generic name is used.
-
-    Returns:
-        None
-    """
-    if feature_name is None:
-        feature_name = "Feature"
-
-    # ======= I. Time-series visualization with label markers =======
-    plt.figure(figsize=(17, 5))
-    plt.plot(feature_series.index, feature_series, label=feature_name, linewidth=2)
-
-    # Unique label legend tracker to avoid duplicates
-    shown_labels = set()
-    for i, label in label_series.items():
-        color = {1: 'green', 0: 'black', -1: 'red'}.get(label, 'gray')
-        label_str = {
-            1: 'Reg: Upward Movement',
-            0: 'Reg: Neutral Movement',
-            -1: 'Reg: Downward Movement'
-        }.get(label, f'Label: {label}')
-        if label_str not in shown_labels:
-            plt.scatter(i, 0, color=color, label=label_str, s=10, zorder=5)
-            shown_labels.add(label_str)
-        else:
-            plt.scatter(i, 0, color=color, s=10, zorder=5)
-
-    plt.title(f'{feature_name} over Time with Labels')
-    plt.xlabel('Date')
-    plt.ylabel(f'{feature_name} Value')
-    plt.legend()
-    plt.grid(False)
-    plt.tight_layout()
-    plt.show()
-
-    # ======= II. Boxplot by label =======
-    label_feature_df = pd.DataFrame({'label': label_series, feature_name: feature_series})
-    plt.figure(figsize=(17, 5))
-    sns.boxplot(x='label', y=feature_name, data=label_feature_df)
-    plt.title(f'Boxplot of {feature_name} by Label')
-    plt.xlabel('Labels')
-    plt.ylabel(f'{feature_name} Values')
-    plt.tight_layout()
-    plt.show()
-
-    # ======= III. Correlation heatmap =======
-    light_green = (0, 0.7, 0.3, 0.2)
-    colors = [(0, 'green'), (0.5, light_green), (0.99, 'green'), (1, 'grey')]
-    cmap_name = 'green_white'
-    cm = LinearSegmentedColormap.from_list(cmap_name, colors, N=1000)
-
-    corr_matrix = label_feature_df.corr()
-    plt.figure(figsize=(17, 3))
-    sns.heatmap(corr_matrix, annot=True, cmap=cm, vmin=-1, vmax=1, fmt='.2f', linewidths=0.5)
-    plt.title(f'Correlation between {feature_name} and Label')
-    plt.tight_layout()
-    plt.show()
-
-#*____________________________________________________________________________________ #
 def plot_series_labels(
     series: pd.Series,
     label_series: pd.Series,
@@ -290,3 +240,81 @@ def plot_series_labels(
     ax.legend(loc='upper left', fontsize='small', frameon=True)
     plt.tight_layout()
     plt.show()
+
+#*____________________________________________________________________________________ #
+def plot_feature_vs_label(
+    feature_series: pd.Series, 
+    label_series: pd.Series, 
+    feature_name: str = None
+) -> None:
+    """
+    Visualize and analyze the relationship between a numerical feature and its corresponding labels.
+
+    This function produces three visualizations:
+    1. Time-series plot of the feature with overlaid label markers.
+    2. Boxplot of the feature values grouped by label.
+    3. Correlation heatmap between the feature and label.
+
+    Parameters:
+        feature_series (pd.Series): Numerical feature Series indexed by time.
+        label_series (pd.Series): Label Series indexed identically to `feature_series`, with values in {-1, 0, 1}.
+        feature_name (str, optional): Name of the feature for titles/labels. If None, a generic name is used.
+
+    Returns:
+        None
+    """
+    if feature_name is None:
+        feature_name = "Feature"
+
+    # ======= I. Time-series visualization with label markers =======
+    plt.figure(figsize=(17, 5))
+    plt.plot(feature_series.index, feature_series, label=feature_name, linewidth=2)
+
+    # Unique label legend tracker to avoid duplicates
+    shown_labels = set()
+    for i, label in label_series.items():
+        color = {1: 'green', 0: 'black', -1: 'red'}.get(label, 'gray')
+        label_str = {
+            1: 'Reg: Upward Movement',
+            0: 'Reg: Neutral Movement',
+            -1: 'Reg: Downward Movement'
+        }.get(label, f'Label: {label}')
+        if label_str not in shown_labels:
+            plt.scatter(i, 0, color=color, label=label_str, s=10, zorder=5)
+            shown_labels.add(label_str)
+        else:
+            plt.scatter(i, 0, color=color, s=10, zorder=5)
+
+    plt.title(f'{feature_name} over Time with Labels')
+    plt.xlabel('Date')
+    plt.ylabel(f'{feature_name} Value')
+    plt.legend()
+    plt.grid(False)
+    plt.tight_layout()
+    plt.show()
+
+    # ======= II. Boxplot by label =======
+    label_feature_df = pd.DataFrame({'label': label_series, feature_name: feature_series})
+    plt.figure(figsize=(17, 5))
+    sns.boxplot(x='label', y=feature_name, data=label_feature_df)
+    plt.title(f'Boxplot of {feature_name} by Label')
+    plt.xlabel('Labels')
+    plt.ylabel(f'{feature_name} Values')
+    plt.tight_layout()
+    plt.show()
+
+    # ======= III. Correlation heatmap =======
+    light_green = (0, 0.7, 0.3, 0.2)
+    colors = [(0, 'green'), (0.5, light_green), (0.99, 'green'), (1, 'grey')]
+    cmap_name = 'green_white'
+    cm = LinearSegmentedColormap.from_list(cmap_name, colors, N=1000)
+
+    corr_matrix = label_feature_df.corr()
+    plt.figure(figsize=(17, 3))
+    sns.heatmap(corr_matrix, annot=True, cmap=cm, vmin=-1, vmax=1, fmt='.2f', linewidths=0.5)
+    plt.title(f'Correlation between {feature_name} and Label')
+    plt.tight_layout()
+    plt.show()
+
+
+

@@ -4,6 +4,12 @@ import pandas as pd
 
 
 #! ==================================================================================== #
+#! ============================== General Functions =================================== #
+
+
+
+
+#! ==================================================================================== #
 #! ================================ Financial Metrics  ================================ #
 def get_distribution(
     returns_series: pd.Series, 
@@ -214,5 +220,5 @@ def get_performance_measures(
         "calmar_ratio": calmar_ratio,
     }
     
-    return performance_stats, distribution_stats, risk_stats, market_sensitivity_stats
+    return performance_stats
 

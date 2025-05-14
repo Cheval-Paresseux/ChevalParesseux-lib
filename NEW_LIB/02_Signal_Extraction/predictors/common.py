@@ -1,9 +1,9 @@
+from ...utils import metrics as met
+
 import numpy as np
 import pandas as pd
 from abc import ABC, abstractmethod
-from scipy.stats import t
-import matplotlib.pyplot as plt
-from typing import Union, Self
+from typing import Union, Self, Optional
 from joblib import Parallel, delayed
 
 
@@ -11,6 +11,16 @@ from joblib import Parallel, delayed
 #! ==================================================================================== #
 #! =================================== Base Models ==================================== #
 class Model(ABC):
+    """
+    This class defines the core structure and interface for models. It is meant to be subclassed
+    by specific model implementations.
+    Subclasses must implement the following abstract methods:
+        - __init__: Initializes the model with number of jobs.
+        - set_params: Defines the parameter grid as a dictionary of lists.
+        - process_data: Applies preprocessing to the data.
+        - fit: Fits the model to the training data.
+        - predict: Makes predictions on the test data.
+    """
     #?_____________________________ Initialization methods _______________________________ #
     @abstractmethod
     def __init__(
@@ -28,6 +38,7 @@ class Model(ABC):
 
         # ======= II. Initialize Auxilaries =======
         self.params = {}
+        self.metrics = {}
     
     #?____________________________________________________________________________________ #
     @abstractmethod
@@ -67,131 +78,159 @@ class Model(ABC):
 
     #?________________________________ Auxiliary methods _________________________________ #
     @abstractmethod
-    def fit(self):
-        pass
+    def fit(
+        self,
+        X_train: Union[pd.DataFrame, pd.Series],
+        y_train: pd.Series,
+        **kwargs
+    ) -> Self:
+        """
+        Fit the model to the training data.
+        
+        Parameters:
+            - X_train (pd.DataFrame | pd.Series): The input features for training.
+            - y_train (pd.Series): The target variable for training.
+            - **kwargs: Additional parameters for fitting the model.
+        
+        Returns:
+            - None
+        """
+        ...
     
     #?_________________________________ Callable methods _________________________________ #
     @abstractmethod
-    def predict(self):
-        pass
+    def predict(
+        self,
+        X_test: Union[pd.DataFrame, pd.Series],
+        **kwargs
+    ) -> Union[pd.DataFrame, pd.Series]:
+        """
+        Makes predictions on the test data.
+        
+        Parameters:
+            - X_test (pd.DataFrame | pd.Series): The input features for testing.
+            - **kwargs: Additional parameters for making predictions.
+        
+        Returns:
+            - pd.DataFrame or pd.Series: The predicted values.
+        """
+        ...
 
-#! ==================================================================================== #
-#! ================================= Helper Functions ================================= #
-def adapt_learning_rate(learning_rate: float, loss: float, last_loss: float):
-    new_rate = learning_rate
-    if loss > last_loss:
-        new_rate /= 2
-    else:
-        new_rate *= 1.05
+    #?__________________________________ Common methods __________________________________ #
+    def get_learning_rate(
+        self,
+        learning_rate: float, 
+        current_loss: float, 
+        last_loss: float,
+        increasing_speed: float = 0.5,
+        decreasing_speed: float = 1.05
+    ) -> float:
+        """
+        Computes the new learning rate based on the loss.
+        
+        Parameters:
+            - learning_rate (float): The current learning rate.
+            - current_loss (float): The current loss value.
+            - last_loss (float): The previous loss value.
+        
+        Returns:
+            - float: The updated learning rate.
+        """
+        # ----- 1. The loss is increasing -----
+        if current_loss > last_loss:
+            speed = increasing_speed
+        
+        # ----- 2. The loss is decreasing -----
+        else:
+            speed = decreasing_speed
+        
+        # ----- 3. Compute the new learning rate -----
+        new_rate = learning_rate * speed
+        
+        return new_rate
     
-    return new_rate
-
-#*____________________________________________________________________________________ #
-def early_stopping(loss: float, last_loss: float):
-    # ======= I. Check the loss diference =======
-    if last_loss == np.inf:
-        return False
+    #?____________________________________________________________________________________ #
+    def early_stopping(
+        self,
+        current_loss: float, 
+        last_loss: float,
+        threshold: float = 1e-5
+    ) -> bool:
+        """
+        Checks if the model should stop training based on the loss difference.
+        
+        Parameters:
+            - current_loss (float): The current loss value.
+            - last_loss (float): The previous loss value.
+            - threshold (float): The threshold for early stopping.
+        
+        Returns:
+            - bool: True if early stopping is triggered, False otherwise.
+        """
+        # ======= I. Check the loss diference =======
+        if last_loss == np.inf:
+            return False
+        
+        loss_diff = np.abs(current_loss - last_loss)
+        early_stop = False
+        
+        # ======= II. Check if the loss difference is small enough =======
+        if loss_diff < threshold:
+            early_stop = True
+        
+        return early_stop
     
-    loss_diff = np.abs(loss - last_loss)
-    early_stop = False
+    #?____________________________________________________________________________________ #
+    def get_regression_metrics(
+        self,
+        predictions: np.array,
+        features_matrix: np.array,
+        y_true: np.array, 
+        coefficients: np.array,
+        feature_names: Optional[list] = None
+    ):
+        """
+        Computes regression metrics for the model predictions.
+        
+        Parameters:
+            - predictions (np.array): The predicted values.
+            - features_matrix (np.array): The training feature matrix.
+            - y_true (np.array): The actual target values.
+            - coefficients (np.array): The model coefficients.
+            - feature_names (list, optional): The names of the features.
+        
+        Returns:
+            - dict: A dictionary containing various regression metrics.
+        """
+        # ======= I. Prediction Accuracy =======
+        rmse = met.get_regression_rmse(predictions, y_true)
+        mse = met.get_regression_mse(predictions, y_true)
+        smape = met.get_regression_smape(predictions, y_true)
+        max_error = met.get_regression_max_error(predictions, y_true)
+        
+        # ======= II. Significance Measures =======
+        r2 = met.get_regression_r2(predictions, y_true)
+        significance_df = met.get_regression_significance(predictions, features_matrix, y_true, coefficients, feature_names)
+        
+        # ======= III. Residuals Measures =======
+        residuals = y_true - predictions
+        durbin_watson = met.get_durbin_watson(residuals)
+        JB_stat, JB_p_value = met.get_jarque_bera(residuals)
+        lm_stat, lm_p_value = met.breusch_pagan_test(features_matrix, residuals)
+        
+        # ======= IV. Create the metrics dictionary =======
+        metrics_dict = {
+            "rmse": rmse,
+            "mse": mse,
+            "smape": smape,
+            "max_error": max_error,
+            "r2": r2,
+            "significance": significance_df,
+            "durbin_watson": durbin_watson,
+            "JB_stat": (JB_stat, JB_p_value),
+            "lm_stat": (lm_stat, lm_p_value)
+        }
+        
+        return metrics_dict
     
-    # ======= II. Check if the loss difference is small enough =======
-    if loss_diff < 1e-5:
-        early_stop = True
-    
-    return early_stop
-
-#*____________________________________________________________________________________ #
-def get_regression_stats(predictions: np.array, X_train: np.array, y_train: np.array, coefficients: np.array):
-    """
-    Computes regression statistics including R-squared, variance, and p-values.
-    """
-    # ======= I. Compute Residuals =======
-    residuals = y_train - predictions
-    
-    # ======= II. Compute Residual Statistics =======
-    nb_observations, nb_features = X_train.shape
-
-    if nb_observations <= nb_features:
-        raise ValueError("Number of observations must be greater than the number of features to compute statistics.")
-
-    variance = np.sum(residuals**2) / (nb_observations - nb_features)
-    mean = np.mean(residuals)
-    median = np.median(residuals)
-
-    # ======= III. Compute R-Squared =======
-    SST = np.sum((y_train - np.mean(y_train))**2)
-    SSR = np.sum((predictions - np.mean(y_train))**2)
-    R_squared = SSR / SST if SST != 0 else 0
-    
-    # ======= IV. Compute t-Statistics and p-Values =======
-    XTX = X_train.T @ X_train
-
-    # Use pseudo-inverse to avoid singularity issues
-    var_covar_matrix = variance * np.linalg.pinv(XTX)
-    se_coefficients = np.sqrt(np.diag(var_covar_matrix))
-    t_stats = coefficients / se_coefficients if np.all(se_coefficients != 0) else np.zeros_like(coefficients)
-
-    # Degrees of freedom check
-    degrees_freedom = nb_observations - nb_features
-    p_values = [2 * (1 - t.cdf(np.abs(t_stat), degrees_freedom)) for t_stat in t_stats]
-
-    # ======= V. Store the Statistics =======
-    statistics = {
-        "variance": variance,
-        "mean": mean,
-        "median": median,
-        "r2": R_squared,
-        "t_stats": t_stats.tolist(),
-        "p_values": p_values
-    }
-
-    return statistics, residuals
-
-#*____________________________________________________________________________________ #
-def plot_tree(node, depth=0, x=0.5, y=1.0, dx=0.3, dy=0.2, ax=None, feature_names=None):
-    """
-    Recursively plots a decision tree using Matplotlib.
-
-    Parameters:
-    - node: Root node of the tree (Node class)
-    - depth: Current depth of recursion
-    - x, y: Position of the current node
-    - dx, dy: Horizontal & vertical spacing
-    - ax: Matplotlib axis (created if None)
-    - feature_names: List of feature names (optional)
-    """
-    if ax is None:
-        fig, ax = plt.subplots(figsize=(17, 8))
-        ax.set_xlim(0, 1)
-        ax.set_ylim(0, 1)
-        ax.axis("off")
-
-    if node.is_leaf_node():  
-        label = f"Leaf\nClass: {node.value}\nSamples: {node.samples}\nImpurity: {node.impurity:.2f}"
-        ax.text(x, y, label, ha="center", va="center", fontsize=10,
-                bbox=dict(boxstyle="round,pad=0.3", edgecolor="black", facecolor="lightblue"))
-    
-    else:  
-        feature_label = feature_names[node.feature] if feature_names else f"X[{node.feature}]"
-        label = f"{feature_label} ≤ {node.threshold:.2f}\nSamples: {node.samples}\nImpurity: {node.impurity:.2f}"
-        ax.text(x, y, label, ha="center", va="center", fontsize=10,
-                bbox=dict(boxstyle="round,pad=0.3", edgecolor="black", facecolor="lightgray"))
-
-        # Child positions
-        xl, xr = x - dx / (2 ** depth), x + dx / (2 ** depth)
-        yl, yr = y - dy, y - dy
-
-        # Draw edges
-        ax.plot([x, xl], [y - 0.02, yl + 0.02], "k-", lw=1)
-        ax.plot([x, xr], [y - 0.02, yr + 0.02], "k-", lw=1)
-
-        # Recursively plot children
-        plot_tree(node.left, depth + 1, xl, yl, dx, dy, ax, feature_names)
-        plot_tree(node.right, depth + 1, xr, yr, dx, dy, ax, feature_names)
-
-    if ax is None:
-        plt.show()
-    
-    return None
-
+    #?____________________________________________________________________________________ #

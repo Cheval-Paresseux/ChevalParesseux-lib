@@ -1,36 +1,77 @@
-from ..Models import common as com
+from ..predictors import common as com
 
+import pandas as pd
 import numpy as np
+from typing import Union, Self, Optional
+
 
 
 #! ==================================================================================== #
 #! ================================ Regression Models ================================= #
-class OLSRegression(com.ML_Model):
-    def __init__(self, n_jobs: int = 1):
-        self.n_jobs = n_jobs # Useless, just to fit the backtest compatibility
+class OLSRegression(com.Model):
+    """
+    OLS Regression Model using Normal Equation.
+    
+    This class implements Ordinary Least Squares (OLS) regression using the normal equation method.
+    It is designed to fit a linear model to the training data and make predictions on new data.
+    """
+    def __init__(
+        self, 
+        n_jobs: int = 1
+    ) -> None:
+        """
+        Constructor for OLSRegression class.
+        
+        Parameters:
+            - n_jobs (int): Number of parallel jobs to use for computation.
+        """
+        super().__init__(n_jobs=n_jobs)
         
         # --- Data Fitted ---
         self.X_train = None
         self.y_train = None
         
         # --- Model Parameters ---
-        self.params = None
         self.coefficients = None
         self.intercept = None
         
-        # --- Model Statistics ---
-        self.statistics = None
-        self.residuals = None
+        # --- Model Metrics ---
+        self.metrics = None
     
     #?____________________________________________________________________________________ #
-    def set_params(self):
+    def set_params(
+        self,
+    ) -> Self:
+        """
+        Sets the parameter grid for the model.
+        
+        Parameters:
+            The OLS regression model does not require any specific parameters to be set.
+        
+        Returns:
+            - Self: The instance of the class with the parameter set.
+        """
         return self
         
     #?_____________________________ Build Functions ______________________________________ #
-    def process_data(self, X_train, y_train):
+    def process_data(
+        self, 
+        features_matrix: Union[pd.DataFrame, np.array],
+        target_vector: Union[pd.Series, np.array]
+    ) -> tuple:
+        """
+        Transforms the input data into a suitable format for regression analysis.
+        
+        Parameters:
+            - features_matrix (pd.DataFrame | np.array): The input features for training.
+            - target_vector (pd.Series | np.array): The target variable for training.
+        
+        Returns:
+            - tuple: A tuple containing the processed features and target variable.
+        """
         # ======= I. Convert X and y to numpy arrays =======
-        X = np.array(X_train).reshape(-1, 1) if len(np.array(X_train).shape) == 1 else np.array(X_train)
-        y = np.array(y_train)
+        X = np.array(features_matrix).reshape(-1, 1) if len(np.array(X).shape) == 1 else np.array(features_matrix)
+        y = np.array(target_vector)
         
         # ======= II. Store training data =======
         self.X_train = X
@@ -39,40 +80,75 @@ class OLSRegression(com.ML_Model):
         return X, y
 
     #?____________________________________________________________________________________ #
-    def normal_equation(self, features_matrix: np.array, target_vector: np.array):
+    def normal_equation(
+        self, 
+        features_matrix: np.array, 
+        target_vector: np.array
+    ) -> tuple:
+        """
+        Performs OLS regression using the normal equation method.
+        
+        Parameters:
+            - features_matrix (np.array): The input features for training.
+            - target_vector (np.array): The target variable for training.
+        
+        Returns:
+            - tuple: A tuple containing the coefficients and intercept of the fitted model.
+        """
+        # ======= I. Add intercept to the features matrix =======
         X_with_intercept = np.c_[np.ones((features_matrix.shape[0], 1)), features_matrix]
 
-        # Compute coefficients using the normal equation
+        # ======= II. Compute coefficients using the normal equation =======
         XTX = X_with_intercept.T @ X_with_intercept
         XTy = X_with_intercept.T @ target_vector
 
-        # Use pseudo-inverse instead of direct inversion (handles singular matrices)
+        # ======= III. Solve for coefficients using the pseudo-inverse =======
         coefficients = np.linalg.pinv(XTX) @ XTy
 
-        # Extract intercept and coefficients
+        # ===== IV. Extract intercept and coefficients =======
         intercept = coefficients[0]
         coefficients = coefficients[1:]
 
         return coefficients, intercept
     
     #?_____________________________ User Functions _______________________________________ #
-    def fit(self, X_train, y_train):
+    def fit(
+        self, 
+        X_train: Union[pd.DataFrame, np.array],
+        y_train: Union[pd.Series, np.array]
+    ) -> Self:
+        """
+        Fit the OLS regression model to the training data.
+        
+        Parameters:
+            - X_train (pd.DataFrame | np.array): The input features for training.
+            - y_train (pd.Series | np.array): The target variable for training.
+        
+        Returns:
+            - Self: The instance of the class with the fitted model.
+        """
         # ======= I. Process Data =======
         X, y = self.process_data(X_train, y_train)
         
         # ======= II. Solve for coefficients =======
         self.coefficients, self.intercept = self.normal_equation(X, y)
         
-        # ======= III. Compute Training Predictions =======
-        train_predictions = self.predict(X)
-
-        # ======= IV. Compute Statistics =======
-        self.statistics, self.residuals = com.get_regression_stats(train_predictions, X, y, self.coefficients)
-        
-        return self.statistics
+        return self
         
     #?____________________________________________________________________________________ #
-    def predict(self, X_test):
+    def predict(
+        self, 
+        X_test: Union[pd.DataFrame, np.array]
+    ) -> np.array:
+        """
+        Makes predictions using the fitted OLS regression model.
+        
+        Parameters:
+            - X_test (pd.DataFrame | np.array): The input features for prediction.
+        
+        Returns:
+            - np.array: The predicted values.
+        """
         # ======= I. Convert X to a numpy array =======
         X = np.array(X_test).reshape(-1, 1) if len(np.array(X_test).shape) == 1 else np.array(X_test)
         
