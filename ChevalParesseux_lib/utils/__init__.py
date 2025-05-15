@@ -1,3 +1,3 @@
-from .function_tools import *
+from .calculations import *
 from .metrics import *
-from .visual_analysis import *
+from .plots import *
