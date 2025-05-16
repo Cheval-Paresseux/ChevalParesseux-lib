@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 
 from itertools import product
+import random
 import inspect
 
 
@@ -30,6 +31,38 @@ def get_dict_universe(
     params_as_list = [dict(zip(keys, values)) for values in values_product]
     
     return params_as_list
+
+#*____________________________________________________________________________________ #
+def get_random_dict_universe(
+    params_grid: dict,
+    n_samples: int = 10,
+    random_state: int = 72,
+) -> list:
+    """
+    Generate random combinations of parameters from a grid dictionary.
+
+    Parameters:
+        - params_grid (dict): A dictionary where keys are parameter names and values are lists of possible values.
+
+    Returns:
+        - params_as_list (List[dict]): A list of dictionaries, each representing a unique combination of parameters.
+    """
+    # ======= I. Extract keys =======
+    keys = list(params_grid.keys())
+
+    # ======= II. Extract every possible tuples =======
+    values_product = product(*params_grid.values())
+
+    # ======= III. Create a list of dictionaries with the keys and values =======
+    params_as_list = [dict(zip(keys, values)) for values in values_product]
+    
+    # ======= IV. Randomly select n_samples from the list =======
+    random.seed(random_state)
+    random.shuffle(params_as_list)
+    
+    random_params_as_list = params_as_list[:n_samples]
+    
+    return random_params_as_list
 
 #*____________________________________________________________________________________ #
 def get_func_params(
