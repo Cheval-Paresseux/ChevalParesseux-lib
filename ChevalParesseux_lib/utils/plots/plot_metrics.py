@@ -205,6 +205,46 @@ def plot_prediction_errors(
 
 #! ==================================================================================== #
 #! ================================ Financial Metrics  ================================ #
+def plot_quick_backtest(
+    series: pd.Series,
+    signal: pd.Series,
+    frequence: str = 'daily',
+    title: str = 'Quick Backtest',
+    figsize: tuple = (17, 7),
+):
+    """
+    Quick backtest of the signal on the series.
+
+    Parameters:
+        - series (pd.Series): Series of returns (e.g., daily or intraday).
+        - signal (pd.Series): Series of signals (1 for buy, -1 for sell, 0 for hold).
+        - frequence (str): Frequency of the return series. Must be one of:
+        - title (str): Title of the plot.
+        - figsize (tuple): Size of the figure.
+    
+    Returns:
+        - None
+    """
+    # ======= I. Compute the returns =======
+    returns = series.pct_change().shift(-1)
+    signal_returns = returns * signal
+
+    underlying_cum_returns = (1 + returns).cumprod()
+    signal_cum_returns = (1 + signal_returns).cumprod()
+
+    # ======= II. Plot the Cumulative Returns series =======
+    plt.figure(figsize=figsize)
+    plt.plot(signal_cum_returns, label='Signal Cumulative Returns')
+    plt.plot(underlying_cum_returns, label=' Underlying Cumulative Returns')
+    plt.title(title)
+    plt.legend()
+    plt.grid()
+    plt.show()
+
+    # ======= III. Plot Performance =======
+    plot_financial_performance(returns_series=signal_returns, market_returns=returns, risk_free_rate=0.0, frequence=frequence)
+
+#*____________________________________________________________________________________ #
 def plot_financial_distribution(
     returns_series: pd.Series,
     frequence: str = "daily"
@@ -307,9 +347,8 @@ def plot_financial_performance(
     # ======= II. Visualize metrics =======
     plt.figure(figsize=(17, 4))
     sns.barplot(x=list(metrics.keys()), y=list(metrics.values()), palette="coolwarm", hue=list(metrics.keys()), legend=False)
-    plt.title("Overall Classification Metrics", fontsize=14, fontweight="bold")
+    plt.title("Overall Financial Metrics", fontsize=14, fontweight="bold")
     plt.ylabel("Score")
-    plt.ylim(0, 1)
     plt.xticks(rotation=30, ha="right")
     plt.grid(axis="y", linestyle="--", alpha=0.7)
     plt.show()

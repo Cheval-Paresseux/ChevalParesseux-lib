@@ -76,11 +76,12 @@ class Momentum_feature(com.Feature):
             - data (pd.Series): The input data to be processed.
         
         Returns:
-            - processed_data (pd.Series): The smoothed series, or raw series if no smoothing is applied.
-        ________
-        N.B: The feature does not require preprocessing, but this method is kept for consistency.
+            - processed_data (pd.Series): The resetted index series.
         """
-        return data
+        processed_data = data.copy()
+        processed_data.reset_index(drop=True, inplace=True)
+
+        return processed_data
     
     #?____________________________________________________________________________________ #
     def get_feature(
@@ -112,7 +113,7 @@ class Momentum_feature(com.Feature):
             lambda_smooth=lambda_smooth
         )
         
-        processed_series = self.process_data(data=smoothed_series).dropna()
+        processed_series = self.process_data(data=smoothed_series)
 
         # ======= II. Compute the moving momentum =======
         rolling_momentum = processed_series.rolling(window=window ).apply(calc.get_momentum, raw=False)
@@ -122,6 +123,7 @@ class Momentum_feature(com.Feature):
         
         # ======= IV. Change Name =======
         rolling_momentum.name = f"{self.name}_{window}_{smoothing_method}_{window_smooth}_{lambda_smooth}"
+        rolling_momentum.index = data.index
 
         return rolling_momentum
 
@@ -192,11 +194,12 @@ class Z_momentum_feature(com.Feature):
             - data (pd.Series): The input data to be processed.
         
         Returns:
-            - processed_data (pd.Series): The smoothed series, or raw series if no smoothing is applied.
-        ________
-        N.B: The feature does not require preprocessing, but this method is kept for consistency.
+            - processed_data (pd.Series): The resetted index series.
         """
-        return data
+        processed_data = data.copy()
+        processed_data.reset_index(drop=True, inplace=True)
+
+        return processed_data
     
     #?____________________________________________________________________________________ #
     def get_feature(
@@ -228,7 +231,7 @@ class Z_momentum_feature(com.Feature):
             lambda_smooth=lambda_smooth
         )
         
-        processed_series = self.process_data(data=smoothed_series).dropna()
+        processed_series = self.process_data(data=smoothed_series)
 
         # ======= II. Compute the moving Z-momentum =======
         rolling_Z_momentum = processed_series.rolling(window=window).apply(calc.get_Z_momentum, raw=False)
@@ -238,6 +241,7 @@ class Z_momentum_feature(com.Feature):
         
         # ======= IV. Change Name =======
         rolling_Z_momentum.name = f"{self.name}_{window}_{smoothing_method}_{window_smooth}_{lambda_smooth}"
+        rolling_Z_momentum.index = data.index
 
         return rolling_Z_momentum
 

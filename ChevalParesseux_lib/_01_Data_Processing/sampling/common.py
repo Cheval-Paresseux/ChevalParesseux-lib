@@ -130,6 +130,6 @@ class DatasetBuilder(ABC):
         params_grid = calc.get_dict_universe(self.params)
 
         # ======= II. Extract the dataset for each Parameters =======
-        datasets = Parallel(n_jobs=self.n_jobs)(delayed(self.get_datset)(data, **params) for params in params_grid)
+        datasets = Parallel(n_jobs=self.n_jobs)(delayed(self.get_dataset)(data, **params) for params in params_grid)
 
         return datasets

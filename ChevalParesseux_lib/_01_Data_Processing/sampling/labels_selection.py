@@ -100,9 +100,10 @@ class Temporal_uniqueness_selection(com.DatasetBuilder):
             if grouping_column is not None:
                 df_grouped = df.groupby(grouping_column)
                 dfs_list = [df_grouped.get_group(x) for x in df_grouped.groups]
+                dfs_list = [df.reset_index(drop=True) for df in dfs_list]
             
             else:
-                dfs_list = [df]
+                dfs_list = [df.reset_index(drop=True)]
             
             return dfs_list
         

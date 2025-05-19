@@ -111,7 +111,7 @@ class Shannon_entropy_feature(com.Feature):
             lambda_smooth=lambda_smooth
         )
         
-        processed_series = self.process_data(data=smoothed_series).dropna()
+        processed_series = self.process_data(data=smoothed_series)
         
         # ======= II. Compute the rolling entropy feature =======
         rolling_shannon = processed_series.rolling(window=window).apply(calc.get_shannon_entropy, raw=False)
@@ -121,6 +121,7 @@ class Shannon_entropy_feature(com.Feature):
         
         # ======= IV. Change Name =======
         rolling_shannon.name = f"{self.name}_{window}_{smoothing_method}_{window_smooth}_{lambda_smooth}"
+        rolling_shannon.index = data.index
 
         return rolling_shannon
 
@@ -227,7 +228,7 @@ class Plugin_entropy_feature(com.Feature):
             lambda_smooth=lambda_smooth
         )
         
-        processed_series = self.process_data(data=smoothed_series).dropna()
+        processed_series = self.process_data(data=smoothed_series)
         
         # ======= II. Compute the rolling entropy feature =======
         rolling_plugin = processed_series.rolling(window=window).apply(calc.get_plugin_entropy, raw=False)
@@ -237,6 +238,7 @@ class Plugin_entropy_feature(com.Feature):
         
         # ======= IV. Change Name =======
         rolling_plugin.name = f"{self.name}_{window}_{smoothing_method}_{window_smooth}_{lambda_smooth}"
+        rolling_plugin.index = data.index
 
         return rolling_plugin
 
@@ -343,7 +345,7 @@ class LempelZiv_entropy_feature(com.Feature):
             lambda_smooth=lambda_smooth
         )
         
-        processed_series = self.process_data(data=smoothed_series).dropna()
+        processed_series = self.process_data(data=smoothed_series)
         
         # ======= II. Compute the rolling entropy feature =======
         rolling_lempelZiv = processed_series.rolling(window=window).apply(calc.get_lempel_ziv_entropy, raw=False)
@@ -353,6 +355,7 @@ class LempelZiv_entropy_feature(com.Feature):
         
         # ======= IV. Change Name =======
         rolling_lempelZiv.name = f"{self.name}_{window}_{smoothing_method}_{window_smooth}_{lambda_smooth}"
+        rolling_lempelZiv.index = data.index
 
         return rolling_lempelZiv
 
@@ -459,7 +462,7 @@ class Kontoyiannis_entropy_feature(com.Feature):
             lambda_smooth=lambda_smooth
         )
         
-        processed_series = self.process_data(data=smoothed_series).dropna()
+        processed_series = self.process_data(data=smoothed_series)
         
         # ======= II. Compute the rolling entropy feature =======
         rolling_kontoyiannis = processed_series.rolling(window=window).apply(calc.get_kontoyiannis_entropy, raw=False)
@@ -469,6 +472,7 @@ class Kontoyiannis_entropy_feature(com.Feature):
         
         # ======= IV. Change Name =======
         rolling_kontoyiannis.name = f"{self.name}_{window}_{smoothing_method}_{window_smooth}_{lambda_smooth}"
+        rolling_kontoyiannis.index = data.index
 
         return rolling_kontoyiannis
 
@@ -579,7 +583,7 @@ class Sample_entropy_feature(com.Feature):
             lambda_smooth=lambda_smooth
         )
         
-        processed_series = self.process_data(data=smoothed_series).dropna()
+        processed_series = self.process_data(data=smoothed_series)
         
         # ======= II. Compute the rolling entropy features =======
         rolling_sample = processed_series.rolling(window=window).apply(lambda x: calc.get_sample_entropy(series=x, sub_vector_size=sub_vector_size, threshold_distance=threshold_distance), raw=False)
@@ -589,6 +593,7 @@ class Sample_entropy_feature(com.Feature):
         
         # ======= IV. Change Name =======
         rolling_sample.name = f"{self.name}_{sub_vector_size}_{threshold_distance}_{window}_{smoothing_method}_{window_smooth}_{lambda_smooth}"
-        
+        rolling_sample.index = data.index
+
         return rolling_sample
 

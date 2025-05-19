@@ -151,3 +151,71 @@ def get_OU_estimation(
 
     return mu, theta, sigma, half_life
 
+#*____________________________________________________________________________________ #
+def get_autocorrelation(
+    series: pd.Series, 
+    lags: int
+) -> np.ndarray:
+    """
+    Compute autocorrelations up to given number of lags.
+    
+    Parameters:
+        - series (pd.Series): Time series data.
+        - lags (int): Number of lags to compute.
+    
+    Returns:
+        - np.ndarray: Autocorrelation values for each lag.
+    """
+    # ======= I. Standardize the series =======
+    standardized_series = (series - series.mean()) / series.std()
+    
+    # ======= II. Compute autocorrelations =======
+    result = [] 
+    for lag in range(1, lags + 1):
+        acf_lag = np.corrcoef(standardized_series[lag:], standardized_series[:-lag])[0, 1]
+        result.append(acf_lag)
+    
+    # ======= III. Transform into np.array =======
+    result = np.array(result)
+
+    return result
+
+#*____________________________________________________________________________________ #
+def get_partial_autocorrelation(
+    series: pd.Series, 
+    lags: int
+) -> np.ndarray:
+    """
+    Compute partial autocorrelation using linear regression (OLS) method.
+    
+    Parameters:
+        - series (pd.Series): Time series data.
+        - lags (int): Number of lags to compute.
+    
+    Returns:
+        - np.ndarray: Partial autocorrelation values for each lag.
+    """
+    # ======= I. Iterate through lags =======
+    pacf = []  
+    for lag in range(1, lags + 1):
+        # ----- 1. Create lagged DataFrame -----
+        df = pd.DataFrame({'y': series[lag:]})
+        for i in range(1, lag + 1):
+            df[f'lag_{i}'] = series.shift(i)[lag:]
+
+        # ----- 2. Extract explanatory and target series -----
+        df = df.dropna()
+        X = df.drop(columns='y').values
+        y = df['y'].values
+
+        # ----- 3. Fit OLS regression -----
+        reg_model = reg.OLS_regression()
+        reg_model.fit(X, y)
+        last_coeff = reg_model.coefficients[-1] # Last coefficient is PACF at lag k
+        pacf.append(last_coeff)  
+    
+    # ======= II. Transform into np.array =======
+    pacf = np.array(pacf)
+
+    return pacf
+

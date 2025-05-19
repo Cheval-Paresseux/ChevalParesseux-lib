@@ -1,3 +1,5 @@
+from ..calculations import trending_measures as tm
+
 import pandas as pd
 import numpy as np
 import scipy.stats as stats
@@ -64,14 +66,15 @@ def generate_series_report(
 #*____________________________________________________________________________________ #
 def plot_series_distribution(
     series: pd.Series, 
-    series_name: str = None
+    figsize: tuple = (17, 5),
+    title: str = 'Series Distribution',
 ) -> None:
     """
     Visualize the distribution and key statistics of a numerical Series.
 
     Parameters:
         - series (pd.Series): The Series to analyze.
-        - series_name (str): Optional label for the series.
+        - title (str): Title of the plot.
     
     Returns:
         - None
@@ -87,10 +90,10 @@ def plot_series_distribution(
     kurtosis = report['kurtosis']
 
     # ======= II. Set up the figure for visualization =======
-    plt.figure(figsize=(17, 5))
+    plt.figure(figsize=figsize)
     
     # II.1 Plot histogram and KDE for the series
-    sns.histplot(series, kde=True, bins=30, color="skyblue", stat="density", linewidth=0, label=f"{series_name} Distribution")
+    sns.histplot(series, kde=True, bins=30, color="skyblue", stat="density", linewidth=0)
     
     # II.2 Plot first moments values
     plt.axvline(mean, color='orange', linestyle='dashed', linewidth=2, label=f'Mean: {mean:.2f}')
@@ -111,8 +114,8 @@ def plot_series_distribution(
     plt.plot(x_vals, normal_pdf, color='black', linestyle='--', linewidth=2, label='Normal PDF')
 
     # II.5 Final touches for the plot
-    plt.title(f'{series_name} Distribution with Key Statistics and Normal Distribution')
-    plt.xlabel(f'{series_name} Value')
+    plt.title(title)
+    plt.xlabel(f'Series Values')
     plt.ylabel('Density')
     plt.legend()
     plt.grid(True)
@@ -120,13 +123,19 @@ def plot_series_distribution(
 
 #*____________________________________________________________________________________ #
 def plot_QQ(
-    series: np.array
+    series: np.array,
+    figsize: tuple = (17, 5),
+    title: str = 'QQ Plot',
 ) -> None:
     """
     Generates a QQ plot to visually inspect normality of a series.
     
     Parameters:
         - series (np.array): The series to inspect.
+        - title (str): Title of the plot.
+    
+    Returns:
+        - None
     """
     # ======= I. Sort residuals =======
     sorted_residuals = np.sort(series)
@@ -135,10 +144,10 @@ def plot_QQ(
     quantiles = np.percentile(np.random.normal(0, 1, 10000), np.linspace(0, 100, len(sorted_residuals)))
     
     # ======= III. Create QQ plot =======
-    plt.figure(figsize=(17,5))
+    plt.figure(figsize=figsize)
     plt.scatter(quantiles, sorted_residuals)
     plt.plot([min(quantiles), max(quantiles)], [min(sorted_residuals), max(sorted_residuals)], color='r', linestyle='--')
-    plt.title("QQ Plot")
+    plt.title(title)
     plt.xlabel("Theoretical Quantiles")
     plt.ylabel("Sample Quantiles")
     plt.show()
@@ -146,8 +155,8 @@ def plot_QQ(
 #*____________________________________________________________________________________ #
 def plot_correlation_matrix(
     df: pd.DataFrame,
-    title: str = "Correlation Matrix",
     figsize: tuple = (17, 5),
+    title: str = "Correlation Matrix",
     legend: bool = False,
 ):
     """
@@ -184,6 +193,157 @@ def plot_correlation_matrix(
 
     plt.title(title)
     plt.tight_layout()
+    plt.show()
+
+#*____________________________________________________________________________________ #
+def plot_acf(
+    series: pd.Series, 
+    lags: int = 20, 
+    figsize: tuple = (17, 5),
+    title: str = "Series"
+) -> None:
+    """
+    Plot Autocorrelation (ACF) for a given series.
+    
+    Parameters:
+        - series (pd.Series): Time series data.
+        - lags (int): Number of lags to compute.
+        - figsize (tuple): Size of the figure.
+        - title (str): Title of the plot.
+    
+    Returns:
+        - None
+    """
+    # ======= I. Check for constant series =======
+    series = pd.Series(series).dropna()
+    if series.nunique() <= 1:
+        print("Series is constant — cannot compute ACF/PACF.")
+        return
+    
+    # ======= II. Compute ACF values =======
+    acf_vals = tm.get_autocorrelation(series, lags)
+    N = len(series)
+    confidence_interval = 1.96 / np.sqrt(N)
+
+    # ======= III. Plot ACF =======
+    plt.figure(figsize=figsize)
+    plt.stem(range(1, len(acf_vals)+1), acf_vals, basefmt=" ")
+    plt.axhline(confidence_interval, linestyle='--', color='red', alpha=0.5)
+    plt.axhline(-confidence_interval, linestyle='--', color='red', alpha=0.5)
+    plt.axhline(0, linestyle='--', color='gray')
+    plt.title(title)
+    plt.ylabel("ACF")
+    plt.xlabel("Lag")
+    plt.tight_layout()
+    plt.show()
+
+#*____________________________________________________________________________________ #
+def plot_pacf(
+    series: pd.Series, 
+    lags: int = 20, 
+    figsize: tuple = (17, 5),
+    title: str = "Series"
+) -> None:
+    """
+    Plot Partial Autocorrelation (PACF) for a given series.
+
+    Parameters:
+        - series (pd.Series): Time series data.
+        - lags (int): Number of lags to compute.
+        - figsize (tuple): Size of the figure.
+        - title (str): Title of the plot.
+    
+    Returns:
+        - None
+    """
+    # ======= I. Check for constant series =======
+    series = pd.Series(series).dropna()
+    if series.nunique() <= 1:
+        print("Series is constant — cannot compute ACF/PACF.")
+        return
+    
+    # ======= II. Compute PACF values =======
+    pacf_vals = tm.get_partial_autocorrelation(series, lags)
+    N = len(series)
+    confidence_interval = 1.96 / np.sqrt(N)
+
+    # ======= III. Plot PACF =======
+    plt.figure(figsize=figsize)
+    plt.stem(range(1, len(pacf_vals)+1), pacf_vals, basefmt=" ")
+    plt.axhline(confidence_interval, linestyle='--', color='red', alpha=0.5)
+    plt.axhline(-confidence_interval, linestyle='--', color='red', alpha=0.5)
+    plt.axhline(0, linestyle='--', color='gray')
+    plt.title(title)
+    plt.ylabel("PACF")
+    plt.xlabel("Lag")
+    plt.tight_layout()
+    plt.show()
+
+#*____________________________________________________________________________________ #
+def plot_volatility(
+    series: pd.Series, 
+    rolling_window: int = 20, 
+    quantile: float = 0.75,
+    figsize: tuple = (17, 7),
+    title: str = 'Volatility Clustering Visualization',
+):
+    """
+    Plot the rolling volatility of a time series and highlight high volatility regimes.
+
+    Parameters:
+        - series (pd.Series): The time series data to analyze.
+        - rolling_window (int): The window size for rolling volatility calculation.
+        - quantile (float): The quantile threshold for high volatility detection.
+        - figsize (tuple): The size of the figure.
+        - title (str): The title of the plot.
+    
+    Returns:
+        - None: Displays the plot.
+    """
+    # ======= 0. Helper Function =======
+    def shade_intervals(ax, mask, color='red', alpha=0.15):
+        mask = mask.astype(int)
+        changes = mask.diff().fillna(0).abs()
+        starts = mask[(changes == 1) & (mask == 1)].index
+        ends = mask[(changes == 1) & (mask == 0)].index
+        
+        # If mask starts True from beginning
+        if mask.iloc[0] == 1:
+            starts = starts.insert(0, mask.index[0])
+        # If mask ends True at the end
+        if mask.iloc[-1] == 1:
+            ends = ends.append(pd.Index([mask.index[-1]]))
+        
+        for start, end in zip(starts, ends):
+            for a in ax:
+                a.axvspan(start, end, color=color, alpha=alpha)
+
+    # ======= I. Compute Rolling Volatility =======
+    rolling_vol = series.rolling(window=rolling_window).std()
+    threshold = rolling_vol.quantile(quantile)
+    
+    # ======= II. Plot Volatility =======
+    fig, ax = plt.subplots(2, 1, figsize=figsize, sharex=True)
+    
+    # 1. Plot original series
+    ax[0].plot(series, color='blue', label='Original Series')
+    ax[0].set_ylabel('Series Value')
+    ax[0].legend()
+    ax[0].grid(True)
+    
+    # 2. Plot rolling volatility
+    ax[1].plot(rolling_vol, color='green', label=f'Rolling Volatility (std, window={rolling_window})')
+    ax[1].set_ylabel('Volatility')
+    ax[1].legend()
+    ax[1].grid(True)
+    
+    # ======= III. Highlight High Volatility Regimes =======
+    high_vol_mask = rolling_vol > threshold
+    shade_intervals(ax, high_vol_mask)
+    
+    plt.xlabel('Date')
+    plt.suptitle(title)
+    plt.tight_layout(rect=[0, 0.03, 1, 0.95])
     plt.show()
 
 

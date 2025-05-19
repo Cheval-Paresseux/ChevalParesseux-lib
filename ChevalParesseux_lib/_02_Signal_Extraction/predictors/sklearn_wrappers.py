@@ -320,7 +320,7 @@ class SKL_randomForest_classifier(com.Model):
         return predictions
     
 #*____________________________________________________________________________________ #
-class SKL_logisticRegression_classifier(com.ML_Model):
+class SKL_logisticRegression_classifier(com.Model):
     """
     Wrapper for sklearn LogisticRegression.
 

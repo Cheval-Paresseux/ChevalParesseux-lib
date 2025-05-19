@@ -73,11 +73,12 @@ class Average_feature(com.Feature):
             - data (pd.Series): The input data to be processed.
         
         Returns:
-            - processed_data (pd.Series): The smoothed series, or raw series if no smoothing is applied.
-        ________
-        N.B: The feature does not require preprocessing, but this method is kept for consistency.
+            - processed_data (pd.Series): The resetted index series.
         """
-        return data
+        processed_data = data.copy()
+        processed_data.reset_index(drop=True, inplace=True)
+
+        return processed_data
     
     #?____________________________________________________________________________________ #
     def get_feature(
@@ -109,7 +110,7 @@ class Average_feature(com.Feature):
             lambda_smooth=lambda_smooth
         )
         
-        processed_series = self.process_data(data=smoothed_series).dropna()
+        processed_series = self.process_data(data=smoothed_series)
 
         # ======= II. Compute the moving average =======
         rolling_average = processed_series.rolling(window=window).apply(np.mean, raw=False)
@@ -119,6 +120,7 @@ class Average_feature(com.Feature):
         
         # ======= IV. Change Name =======
         rolling_average.name = f"{self.name}_{window}_{smoothing_method}_{window_smooth}_{lambda_smooth}"
+        rolling_average.index = data.index
 
         return rolling_average
 
@@ -188,11 +190,12 @@ class Median_feature(com.Feature):
             - data (pd.Series): The input data to be processed.
         
         Returns:
-            - processed_data (pd.Series): The smoothed series, or raw series if no smoothing is applied.
-        ________
-        N.B: The feature does not require preprocessing, but this method is kept for consistency.
+            - processed_data (pd.Series): The resetted index series.
         """
-        return data
+        processed_data = data.copy()
+        processed_data.reset_index(drop=True, inplace=True)
+
+        return processed_data
     
     #?____________________________________________________________________________________ #
     def get_feature(
@@ -224,7 +227,7 @@ class Median_feature(com.Feature):
             lambda_smooth=lambda_smooth
         ).copy()
         
-        processed_series = self.process_data(data=smoothed_series).dropna().copy()
+        processed_series = self.process_data(data=smoothed_series)
 
         # ======= II. Compute the moving median =======
         rolling_median = processed_series.rolling(window=window).apply(np.median, raw=False)
@@ -234,6 +237,7 @@ class Median_feature(com.Feature):
         
         # ======= IV. Change Name =======
         rolling_median.name = f"{self.name}_{window}_{smoothing_method}_{window_smooth}_{lambda_smooth}"
+        rolling_median.index = data.index
 
         return rolling_median
 
@@ -303,11 +307,12 @@ class Minimum_feature(com.Feature):
             - data (pd.Series): The input data to be processed.
         
         Returns:
-            - processed_data (pd.Series): The smoothed series, or raw series if no smoothing is applied.
-        ________
-        N.B: The feature does not require preprocessing, but this method is kept for consistency.
+            - processed_data (pd.Series): The resetted index series.
         """
-        return data
+        processed_data = data.copy()
+        processed_data.reset_index(drop=True, inplace=True)
+
+        return processed_data
     
     #?____________________________________________________________________________________ #
     def get_feature(
@@ -339,7 +344,7 @@ class Minimum_feature(com.Feature):
             lambda_smooth=lambda_smooth
         ).copy()
         
-        processed_series = self.process_data(data=smoothed_series).dropna().copy()
+        processed_series = self.process_data(data=smoothed_series)
 
         # ======= II. Compute the moving minimum =======
         rolling_min = processed_series.rolling(window=window).apply(np.min, raw=False)
@@ -349,6 +354,7 @@ class Minimum_feature(com.Feature):
         
         # ======= III. Change Name =======
         rolling_min.name = f"{self.name}_{window}_{smoothing_method}_{window_smooth}_{lambda_smooth}"
+        rolling_min.index = data.index
 
         return rolling_min
     
@@ -419,11 +425,12 @@ class Maximum_feature(com.Feature):
             - data (pd.Series): The input data to be processed.
         
         Returns:
-            - processed_data (pd.Series): The smoothed series, or raw series if no smoothing is applied.
-        ________
-        N.B: The feature does not require preprocessing, but this method is kept for consistency.
+            - processed_data (pd.Series): The resetted index series.
         """
-        return data
+        processed_data = data.copy()
+        processed_data.reset_index(drop=True, inplace=True)
+
+        return processed_data
     
     #?____________________________________________________________________________________ #
     def get_feature(
@@ -455,7 +462,7 @@ class Maximum_feature(com.Feature):
             lambda_smooth=lambda_smooth
         )
         
-        processed_series = self.process_data(data=smoothed_series).dropna()
+        processed_series = self.process_data(data=smoothed_series)
 
         # ======= II. Compute the moving maximum =======
         rolling_max = processed_series.rolling(window=window).apply(np.max, raw=False)
@@ -465,6 +472,7 @@ class Maximum_feature(com.Feature):
         
         # ======= III. Change Name =======
         rolling_max.name = f"{self.name}_{window}_{smoothing_method}_{window_smooth}_{lambda_smooth}"
+        rolling_max.index = data.index
 
         return rolling_max
 
@@ -540,11 +548,12 @@ class Volatility_feature(com.Feature):
             - data (pd.Series): The input data to be processed.
         
         Returns:
-            - processed_data (pd.Series): The smoothed series, or raw series if no smoothing is applied.
-        ________
-        N.B: The feature does not require preprocessing, but this method is kept for consistency.
+            - processed_data (pd.Series): The resetted index series.
         """
-        return data
+        processed_data = data.copy()
+        processed_data.reset_index(drop=True, inplace=True)
+
+        return processed_data
     
     #?____________________________________________________________________________________ #
     def get_feature(
@@ -576,10 +585,10 @@ class Volatility_feature(com.Feature):
             lambda_smooth=lambda_smooth
         )
         
-        processed_series = self.process_data(data=smoothed_series).dropna()
+        processed_series = self.process_data(data=smoothed_series)
 
         # ======= II. Compute the moving volatility =======
-        returns_series = processed_series.pct_change().dropna()
+        returns_series = processed_series.pct_change()
         rolling_vol = returns_series.rolling(window=window).apply(np.std, raw=False)
 
         # ======= II. Convert to pd.Series and Center =======
@@ -587,6 +596,7 @@ class Volatility_feature(com.Feature):
         
         # ======= III. Change Name =======
         rolling_vol.name = f"{self.name}_{window}_{smoothing_method}_{window_smooth}_{lambda_smooth}"
+        rolling_vol.index = data.index
 
         return rolling_vol
 
@@ -658,11 +668,12 @@ class Skewness_feature(com.Feature):
             - data (pd.Series): The input data to be processed.
         
         Returns:
-            - processed_data (pd.Series): The smoothed series, or raw series if no smoothing is applied.
-        ________
-        N.B: The feature does not require preprocessing, but this method is kept for consistency.
+            - processed_data (pd.Series): The resetted index series.
         """
-        return data
+        processed_data = data.copy()
+        processed_data.reset_index(drop=True, inplace=True)
+
+        return processed_data
     
     #?____________________________________________________________________________________ #
     def get_feature(
@@ -694,10 +705,10 @@ class Skewness_feature(com.Feature):
             lambda_smooth=lambda_smooth
         )
         
-        processed_series = self.process_data(data=smoothed_series).dropna()
+        processed_series = self.process_data(data=smoothed_series)
 
         # ======= II. Compute the moving skewness =======
-        returns_series = processed_series.pct_change().dropna()
+        returns_series = processed_series.pct_change()
         rolling_skew = returns_series.rolling(window=window).apply(lambda x: x.skew())
 
         # ======= II. Convert to pd.Series and Center =======
@@ -705,6 +716,7 @@ class Skewness_feature(com.Feature):
         
         # ======= III. Change Name =======
         rolling_skew.name = f"{self.name}_{window}_{smoothing_method}_{window_smooth}_{lambda_smooth}"
+        rolling_skew.index = data.index
 
         return rolling_skew
 
@@ -776,11 +788,12 @@ class Kurtosis_feature(com.Feature):
             - data (pd.Series): The input data to be processed.
         
         Returns:
-            - processed_data (pd.Series): The smoothed series, or raw series if no smoothing is applied.
-        ________
-        N.B: The feature does not require preprocessing, but this method is kept for consistency.
+            - processed_data (pd.Series): The resetted index series.
         """
-        return data
+        processed_data = data.copy()
+        processed_data.reset_index(drop=True, inplace=True)
+
+        return processed_data
     
     #?____________________________________________________________________________________ #
     def get_feature(
@@ -812,10 +825,10 @@ class Kurtosis_feature(com.Feature):
             lambda_smooth=lambda_smooth
         )
         
-        processed_series = self.process_data(data=smoothed_series).dropna()
+        processed_series = self.process_data(data=smoothed_series)
 
         # ======= II. Compute the moving kurtosis =======
-        returns_series = processed_series.pct_change().dropna()
+        returns_series = processed_series.pct_change()
         rolling_kurt = returns_series.rolling(window=window).apply(lambda x: x.kurtosis())
 
         # ======= II. Convert to pd.Series and Center =======
@@ -823,6 +836,7 @@ class Kurtosis_feature(com.Feature):
         
         # ======= III. Change Name =======
         rolling_kurt.name = f"{self.name}_{window}_{smoothing_method}_{window_smooth}_{lambda_smooth}"
+        rolling_kurt.index = data.index
 
         return rolling_kurt
 
@@ -897,11 +911,12 @@ class Quantile_feature(com.Feature):
             - data (pd.Series): The input data to be processed.
         
         Returns:
-            - processed_data (pd.Series): The smoothed series, or raw series if no smoothing is applied.
-        ________
-        N.B: The feature does not require preprocessing, but this method is kept for consistency.
+            - processed_data (pd.Series): The resetted index series.
         """
-        return data
+        processed_data = data.copy()
+        processed_data.reset_index(drop=True, inplace=True)
+
+        return processed_data
     
     #?____________________________________________________________________________________ #
     def get_feature(
@@ -935,10 +950,10 @@ class Quantile_feature(com.Feature):
             lambda_smooth=lambda_smooth
         )
         
-        processed_series = self.process_data(data=smoothed_series).dropna()
+        processed_series = self.process_data(data=smoothed_series)
 
         # ======= II. Compute the moving quantile =======
-        returns_series = processed_series.pct_change().dropna()
+        returns_series = processed_series.pct_change()
         rolling_quantile = returns_series.rolling(window=window).apply(lambda x: np.quantile(x, quantile))
 
         # ======= II. Convert to pd.Series and Center =======
@@ -946,6 +961,7 @@ class Quantile_feature(com.Feature):
         
         # ======= III. Change Name =======
         rolling_quantile.name = f"{self.name}_{quantile}_{window}_{smoothing_method}_{window_smooth}_{lambda_smooth}"
+        rolling_quantile.index = data.index
 
         return rolling_quantile
 

@@ -13,14 +13,14 @@ import pandas as pd
 #! ================================ Financial Metrics  ================================ #
 def get_distribution(
     returns_series: pd.Series, 
-    frequence: str = "daily"
+    frequency: str = "daily"
 ) -> dict:
     """
     Compute distribution statistics for a return series at a given frequency.
 
     Parameters:
         - returns_series (pd.Series): Series of returns (e.g., daily or intraday).
-        - frequence (str): Frequency of the return series. Must be one of:
+        - frequency (str): Frequency of the return series. Must be one of:
                            'daily', '5m', or '1m'.
                            Default is 'daily'.
 
@@ -33,15 +33,15 @@ def get_distribution(
             - skew: Skewness of the return distribution.
             - kurtosis: Kurtosis of the return distribution.
     """
-    # ======= I. Get the right frequence =======
-    frequence_dict = {"daily": 252, "5m": 19656, "1m": 98280}
-    adjusted_frequence = frequence_dict[frequence]
+    # ======= I. Get the right frequency =======
+    frequency_dict = {"daily": 252, "5m": 19656, "1m": 98280}
+    adjusted_frequency = frequency_dict[frequency]
     
     # ======= II. Compute the statistics =======
-    expected_return = returns_series.mean() * adjusted_frequence
-    volatility = returns_series.std() * np.sqrt(adjusted_frequence)
-    downside_deviation = returns_series[returns_series < 0].std() * np.sqrt(adjusted_frequence) if returns_series[returns_series < 0].sum() != 0 else 0
-    median_return = returns_series.median() * adjusted_frequence
+    expected_return = returns_series.mean() * adjusted_frequency
+    volatility = returns_series.std() * np.sqrt(adjusted_frequency)
+    downside_deviation = returns_series[returns_series < 0].std() * np.sqrt(adjusted_frequency) if returns_series[returns_series < 0].sum() != 0 else 0
+    median_return = returns_series.median() * adjusted_frequency
     skew = returns_series.skew()
     kurtosis = returns_series.kurtosis()
     
@@ -108,7 +108,7 @@ def get_risk_measures(
 def get_market_sensitivity(
     returns_series: pd.Series, 
     market_returns: pd.Series, 
-    frequence: str = "daily"
+    frequency: str = "daily"
 ) -> dict:
     """
     Estimate the sensitivity of a strategy or asset to market returns.
@@ -116,7 +116,7 @@ def get_market_sensitivity(
     Parameters:
         - returns_series (pd.Series): Asset or strategy return series.
         - market_returns (pd.Series): Benchmark or market return series.
-        - frequence (str): Frequency of data ('daily', '5m', or '1m'). Default is 'daily'.
+        - frequency (str): Frequency of data ('daily', '5m', or '1m'). Default is 'daily'.
 
     Returns:
         - market_sensitivity_stats (dict): Dictionary containing:
@@ -126,21 +126,21 @@ def get_market_sensitivity(
             - downside_capture: Average return ratio in negative market periods.
             - tracking_error: Annualized tracking error vs. the market.
     """
-    # ======= I. Get the right frequence =======
-    frequence_dict = {"daily": 252, "5m": 19656, "1m": 98280}
-    adjusted_frequence = frequence_dict[frequence]
+    # ======= I. Get the right frequency =======
+    frequency_dict = {"daily": 252, "5m": 19656, "1m": 98280}
+    adjusted_frequency = frequency_dict[frequency]
     
     # ======= II. Compute the statistics =======
     # ------ Beta and Alpha (Jensens's)
     beta = returns_series.cov(market_returns) / market_returns.var()
-    alpha = returns_series.mean() * adjusted_frequence - beta * (market_returns.mean() * adjusted_frequence)
+    alpha = returns_series.mean() * adjusted_frequency - beta * (market_returns.mean() * adjusted_frequency)
     
     # ------ Capture Ratios
     upside_capture = returns_series[market_returns > 0].mean() / market_returns[market_returns > 0].mean()
     downside_capture = returns_series[market_returns < 0].mean() / market_returns[market_returns < 0].mean()
 
     # ------ Tracking Error
-    tracking_error = returns_series.sub(market_returns).std() * np.sqrt(adjusted_frequence)
+    tracking_error = returns_series.sub(market_returns).std() * np.sqrt(adjusted_frequency)
     
     # ======= III. Store the statistics =======
     market_sensitivity_stats = {
@@ -158,7 +158,7 @@ def get_performance_measures(
     returns_series: pd.Series, 
     market_returns: pd.Series, 
     risk_free_rate: float = 0.0, 
-    frequence: str = "daily"
+    frequency: str = "daily"
 ) -> tuple:
     """
     Compute classic performance ratios and supporting metrics for a strategy.
@@ -180,12 +180,12 @@ def get_performance_measures(
         - details (tuple): Tuple of three dictionaries:
             (distribution_stats, risk_stats, market_sensitivity_stats)
     """
-    # ======= I. Get the right frequence =======
-    frequence_dict = {"daily": 252, "5m": 19656, "1m": 98280}
-    adjusted_frequence = frequence_dict[frequence]
+    # ======= I. Get the right frequency =======
+    frequency_dict = {"daily": 252, "5m": 19656, "1m": 98280}
+    adjusted_frequency = frequency_dict[frequency]
     
     # ======= II. Extract Statistics =======
-    distribution_stats = get_distribution(returns_series, frequence)
+    distribution_stats = get_distribution(returns_series, frequency)
     expected_return = distribution_stats["expected_return"]
     volatility = distribution_stats["volatility"]
     downside_deviation = distribution_stats["downside_deviation"]
@@ -194,7 +194,7 @@ def get_performance_measures(
     mean_drawdown = risk_stats["mean_drawdown"]
     maximum_drawdown = risk_stats["maximum_drawdown"]
     
-    market_sensitivity_stats = get_market_sensitivity(returns_series, market_returns, frequence)
+    market_sensitivity_stats = get_market_sensitivity(returns_series, market_returns, frequency)
     beta = market_sensitivity_stats["beta"]
     tracking_error = market_sensitivity_stats["tracking_error"]
     
@@ -203,7 +203,7 @@ def get_performance_measures(
     sharpe_ratio = (expected_return - risk_free_rate) / volatility if volatility != 0 else 0
     sortino_ratio = expected_return / downside_deviation if downside_deviation != 0 else 0
     treynor_ratio = expected_return / beta if beta != 0 else 0
-    information_ratio = (expected_return - market_returns.mean() * adjusted_frequence) / tracking_error if tracking_error != 0 else 0
+    information_ratio = (expected_return - market_returns.mean() * adjusted_frequency) / tracking_error if tracking_error != 0 else 0
 
     # ------ Sterling, and Calmar Ratios
     average_drawdown = abs(mean_drawdown) if mean_drawdown != 0 else 0
