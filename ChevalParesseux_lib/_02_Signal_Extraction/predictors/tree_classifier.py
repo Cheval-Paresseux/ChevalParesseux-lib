@@ -1,5 +1,5 @@
 from ..predictors import common as com
-from ...utils import calculations as calc
+from ...utils import measures as calc
 
 import numpy as np
 import pandas as pd

@@ -1,4 +1,4 @@
-from ...utils import calculations as calc
+from ...utils import __init__ as util
 
 import numpy as np
 import pandas as pd
@@ -127,9 +127,9 @@ class Labeller(ABC):
         
         # ======= II. Compute the smoothed series =======
         elif smoothing_method == "ewma":
-            smoothed_data = calc.ewma_smoothing(price_series=data, window=window_smooth, ind_lambda=lambda_smooth)
+            smoothed_data = util.ewma_smoothing(price_series=data, window=window_smooth, ind_lambda=lambda_smooth)
         elif smoothing_method == "average":
-            smoothed_data = calc.average_smoothing(price_series=data, window=window_smooth)
+            smoothed_data = util.average_smoothing(price_series=data, window=window_smooth)
             
         else:
             raise ValueError("Smoothing method not recognized")
@@ -151,7 +151,7 @@ class Labeller(ABC):
             - labels_df (pd.DataFrame): The extracted labels as a DataFrame.
         """
         # ======= I. Extract the Parameters Universe =======
-        params_grid = calc.get_dict_universe(self.params)
+        params_grid = util.get_dict_universe(self.params)
 
         # ======= II. Extract the labels for each Parameters =======
         labels = Parallel(n_jobs=self.n_jobs)(delayed(self.get_labels)(data, **params) for params in params_grid)

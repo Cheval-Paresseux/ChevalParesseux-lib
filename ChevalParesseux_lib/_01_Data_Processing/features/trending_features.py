@@ -1,5 +1,5 @@
 from ..features import common as com
-from ...utils import calculations as calc
+from ... import utils
 
 import numpy as np
 import pandas as pd
@@ -116,7 +116,7 @@ class Momentum_feature(com.Feature):
         processed_series = self.process_data(data=smoothed_series)
 
         # ======= II. Compute the moving momentum =======
-        rolling_momentum = processed_series.rolling(window=window ).apply(calc.get_momentum, raw=False)
+        rolling_momentum = processed_series.rolling(window=window ).apply(utils.get_momentum, raw=False)
         
         # ======= III. Convert to pd.Series and Center =======
         rolling_momentum = pd.Series(rolling_momentum, index=processed_series.index)
@@ -234,7 +234,7 @@ class Z_momentum_feature(com.Feature):
         processed_series = self.process_data(data=smoothed_series)
 
         # ======= II. Compute the moving Z-momentum =======
-        rolling_Z_momentum = processed_series.rolling(window=window).apply(calc.get_Z_momentum, raw=False)
+        rolling_Z_momentum = processed_series.rolling(window=window).apply(utils.get_Z_momentum, raw=False)
         
         # ======= III. Convert to pd.Series and Center =======
         rolling_Z_momentum = pd.Series(rolling_Z_momentum, index=processed_series.index)
@@ -350,7 +350,7 @@ class Linear_tempReg_feature():
         ) -> tuple:
             
             current_window = series.iloc[start_idx - window + 1: start_idx + 1]
-            intercept, coefficients, metrics = calc.get_simple_TempReg(series=current_window)
+            intercept, coefficients, metrics = utils.get_simple_TempReg(series=current_window)
             
             return start_idx, intercept, coefficients, metrics
             
@@ -495,7 +495,7 @@ class Nonlinear_tempReg_feature(com.Feature):
         ) -> tuple:
             
             current_window = series.iloc[start_idx - window + 1: start_idx + 1]
-            intercept, coefficients, metrics = calc.get_quad_TempReg(series=current_window)
+            intercept, coefficients, metrics = utils.get_quad_TempReg(series=current_window)
             
             return start_idx, intercept, coefficients, metrics
             
@@ -679,7 +679,7 @@ class Hurst_exponent_feature(com.Feature):
 
                 Y = np.append(Y, np.log2(np.average(rs_array)))
 
-            model = calc.OLS_regression()
+            model = utils.OLS_regression()
             model.fit(X, Y)
             
             hurst = model.coefficients[0]

@@ -1,5 +1,5 @@
 from ..labelling import common as com
-from ...utils import calculations as calc
+from ...utils import __init__ as util
 
 import numpy as np
 import pandas as pd
@@ -471,7 +471,7 @@ class RegR2rank_labeller(com.Labeller):
                 temporality = np.arange(len(future_ewma))  
 
                 # ------ 2. Fit the Linear Regression and Extract R² ------
-                model = calc.OLS_regression()
+                model = util.OLS_regression()
                 model.fit(temporality, future_ewma)
                 r2 = model.metrics["r2"]
                 slope = model.coefficients[0]
@@ -806,7 +806,7 @@ class Slope_labeller(com.Labeller):
                 temporality = np.arange(len(future_ewma))
 
                 # ------ 2. Fit the Linear Regression and Extract R² ------
-                model = calc.OLS_regression()
+                model = util.OLS_regression()
                 model.fit(temporality, future_ewma)
                 slope = model.coefficients[0]
 

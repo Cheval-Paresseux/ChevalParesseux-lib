@@ -1,5 +1,5 @@
 from ..features import common as com
-from ...utils import calculations as calc
+from ... import utils
 
 import pandas as pd
 import numpy as np
@@ -154,7 +154,7 @@ class Cointegration_feature(com.Feature):
             series2_window = series_2.iloc[i : i + window]
 
             # IV.2 Perform Cointegration Test
-            beta, intercept, adf_results, kpss_results, residuals = calc.get_cointegration(
+            beta, intercept, adf_results, kpss_results, residuals = utils.get_cointegration(
                 series_1=series1_window, 
                 series_2=series2_window
             )
@@ -336,12 +336,12 @@ class OU_feature(com.Feature):
             
             # IV.2 Extract residuals from cointegration test
             if residuals_weights is None:
-                _, _, _, _, residuals = calc.get_cointegration(series_1=series1_window, series_2=series2_window)
+                _, _, _, _, residuals = utils.get_cointegration(series_1=series1_window, series_2=series2_window)
             else: 
                 residuals = series1_window - residuals_weights[0] * series2_window - residuals_weights[1]
             
             # IV.3 Perform Ornstein-Uhlenbeck Estimation
-            mu, theta, sigma, half_life = calc.get_OU_estimation(series=residuals)
+            mu, theta, sigma, half_life = utils.get_OU_estimation(series=residuals)
             
             # IV.4 Store Results
             mu_values[i] = mu
@@ -522,12 +522,12 @@ class KalmanOU_feature(com.Feature):
             
             # IV.2 Extract residuals from cointegration test
             if residuals_weights is None:
-                _, _, _, _, residuals = calc.get_cointegration(series_1=series1_window, series_2=series2_window)
+                _, _, _, _, residuals = utils.get_cointegration(series_1=series1_window, series_2=series2_window)
             else: 
                 residuals = series1_window - residuals_weights[0] * series2_window - residuals_weights[1]
             
             # IV.3 Perform Ornstein-Uhlenbeck Estimation
-            filtered_states, variances = calc.kalmanOU_smoothing(series=residuals, smooth_coefficient=smooth_coefficient)
+            filtered_states, variances = utils.kalmanOU_smoothing(series=residuals, smooth_coefficient=smooth_coefficient)
             
             # IV.4 Store Results
             state_values[i] = filtered_states.iloc[-1]

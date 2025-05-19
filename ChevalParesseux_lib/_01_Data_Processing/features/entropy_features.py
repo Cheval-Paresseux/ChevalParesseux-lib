@@ -1,5 +1,5 @@
 from ..features import common as com
-from ...utils import calculations as calc
+from ... import utils
 
 import numpy as np
 import pandas as pd
@@ -77,7 +77,7 @@ class Shannon_entropy_feature(com.Feature):
         Returns:
             - processed_data (pd.Series): The signs series as a message for entropy calculation.
         """
-        signs_series = calc.get_movements_signs(series=data)
+        signs_series = utils.get_movements_signs(series=data)
         
         return signs_series
     
@@ -114,7 +114,7 @@ class Shannon_entropy_feature(com.Feature):
         processed_series = self.process_data(data=smoothed_series)
         
         # ======= II. Compute the rolling entropy feature =======
-        rolling_shannon = processed_series.rolling(window=window).apply(calc.get_shannon_entropy, raw=False)
+        rolling_shannon = processed_series.rolling(window=window).apply(utils.get_shannon_entropy, raw=False)
 
         # ======= III. Convert to pd.Series =======
         rolling_shannon = pd.Series(rolling_shannon, index=processed_series.index)
@@ -194,7 +194,7 @@ class Plugin_entropy_feature(com.Feature):
         Returns:
             - processed_data (pd.Series): The signs series as a message for entropy calculation.
         """
-        signs_series = calc.get_movements_signs(series=data)
+        signs_series = utils.get_movements_signs(series=data)
         
         return signs_series
     
@@ -231,7 +231,7 @@ class Plugin_entropy_feature(com.Feature):
         processed_series = self.process_data(data=smoothed_series)
         
         # ======= II. Compute the rolling entropy feature =======
-        rolling_plugin = processed_series.rolling(window=window).apply(calc.get_plugin_entropy, raw=False)
+        rolling_plugin = processed_series.rolling(window=window).apply(utils.get_plugin_entropy, raw=False)
 
         # ======= III. Convert to pd.Series =======
         rolling_plugin = pd.Series(rolling_plugin, index=processed_series.index)
@@ -311,7 +311,7 @@ class LempelZiv_entropy_feature(com.Feature):
         Returns:
             - processed_data (pd.Series): The signs series as a message for entropy calculation.
         """
-        signs_series = calc.get_movements_signs(series=data)
+        signs_series = utils.get_movements_signs(series=data)
         
         return signs_series
     
@@ -348,7 +348,7 @@ class LempelZiv_entropy_feature(com.Feature):
         processed_series = self.process_data(data=smoothed_series)
         
         # ======= II. Compute the rolling entropy feature =======
-        rolling_lempelZiv = processed_series.rolling(window=window).apply(calc.get_lempel_ziv_entropy, raw=False)
+        rolling_lempelZiv = processed_series.rolling(window=window).apply(utils.get_lempel_ziv_entropy, raw=False)
 
         # ======= III. Convert to pd.Series =======
         rolling_lempelZiv = pd.Series(rolling_lempelZiv, index=processed_series.index)
@@ -428,7 +428,7 @@ class Kontoyiannis_entropy_feature(com.Feature):
         Returns:
             - processed_data (pd.Series): The signs series as a message for entropy calculation.
         """
-        signs_series = calc.get_movements_signs(series=data)
+        signs_series = utils.get_movements_signs(series=data)
         
         return signs_series
     
@@ -465,7 +465,7 @@ class Kontoyiannis_entropy_feature(com.Feature):
         processed_series = self.process_data(data=smoothed_series)
         
         # ======= II. Compute the rolling entropy feature =======
-        rolling_kontoyiannis = processed_series.rolling(window=window).apply(calc.get_kontoyiannis_entropy, raw=False)
+        rolling_kontoyiannis = processed_series.rolling(window=window).apply(utils.get_kontoyiannis_entropy, raw=False)
 
         # ======= III. Convert to pd.Series =======
         rolling_kontoyiannis = pd.Series(rolling_kontoyiannis, index=processed_series.index)
@@ -548,7 +548,7 @@ class Sample_entropy_feature(com.Feature):
         Returns:
             - processed_data (pd.Series): The signs series as a message for entropy calculation.
         """
-        signs_series = calc.get_movements_signs(series=data)
+        signs_series = utils.get_movements_signs(series=data)
         
         return signs_series
     
@@ -586,7 +586,7 @@ class Sample_entropy_feature(com.Feature):
         processed_series = self.process_data(data=smoothed_series)
         
         # ======= II. Compute the rolling entropy features =======
-        rolling_sample = processed_series.rolling(window=window).apply(lambda x: calc.get_sample_entropy(series=x, sub_vector_size=sub_vector_size, threshold_distance=threshold_distance), raw=False)
+        rolling_sample = processed_series.rolling(window=window).apply(lambda x: utils.get_sample_entropy(series=x, sub_vector_size=sub_vector_size, threshold_distance=threshold_distance), raw=False)
 
         # ======= III. Convert to pd.Series =======
         rolling_sample = pd.Series(rolling_sample, index=processed_series.index)

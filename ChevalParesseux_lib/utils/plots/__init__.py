@@ -1,3 +1,3 @@
-from .plot_metrics import *
-from .plot_models import *
-from .plot_series import *
+from .metrics_plot import *
+from .models_plot import *
+from .series_plot import *

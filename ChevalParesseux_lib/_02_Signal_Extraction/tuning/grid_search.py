@@ -1,6 +1,6 @@
 from ..tuning import common as com
 from ...utils import metrics as met
-from ...utils import calculations as calc
+from ...utils import tools as tool
 
 import pandas as pd
 import numpy as np
@@ -211,9 +211,9 @@ class Classifier_gridSearch(com.PredictorTuning):
         """
         # ======= I. Extract the parameters =======
         if self.params['random_search']:
-            grid_universe = calc.get_random_dict_universe(grid_universe, self.params['n_samples'], self.random_state)
+            grid_universe = tool.get_random_dict_universe(grid_universe, self.params['n_samples'], self.random_state)
         else:
-            grid_universe = calc.get_dict_universe(grid_universe)
+            grid_universe = tool.get_dict_universe(grid_universe)
         
         # ======= II. Run the grid search =======
         grid_results = Parallel(n_jobs=self.n_jobs)(
