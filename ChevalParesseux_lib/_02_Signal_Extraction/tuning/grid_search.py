@@ -1,11 +1,11 @@
 from ..tuning import common as com
-from ...utils import metrics as met
-from ...utils import tools as tool
+from ... import utils
 
 import pandas as pd
 import numpy as np
 from joblib import Parallel, delayed
 from typing import Union, List, Self
+from tqdm import tqdm
 
 
 
@@ -101,10 +101,10 @@ class Classifier_gridSearch(com.PredictorTuning):
             - object: The fitted model.
         """
         # ======= I. Initiate the model =======
-        fitted_model = model(n_jobs=self.n_jobs).set_params(**model_params)
+        fitted_model = model(n_jobs=self.n_jobs, random_state=self.random_state).set_params(**model_params)
         
         # ======= II. Train the model =======
-        fitted_model.fit(features_matrix, target_vector)
+        fitted_model = fitted_model.fit(features_matrix, target_vector)
         
         return fitted_model
     
@@ -130,11 +130,11 @@ class Classifier_gridSearch(com.PredictorTuning):
         """
         # ======= I. Make predictions =======
         predictions = model.predict(features_matrix)
-        predictions = pd.Series(predictions)
+        predictions = pd.Series(predictions, index=features_matrix.index)
         
         # ======= II. Calculate the metrics =======
         classes_labels = pd.Series(target_vector).unique()
-        metrics = met.generate_classification_metrics(predictions=predictions, labels=target_vector, classes=classes_labels)
+        metrics = utils.generate_classification_metrics(predictions=predictions, labels=target_vector, classes=classes_labels)
         measure = metrics[criteria]
 
         return measure
@@ -182,7 +182,9 @@ class Classifier_gridSearch(com.PredictorTuning):
                     test_target_vector = test_fold[1]
                     
                     weight = len(test_features_matrix)
-                    score += weight * self.get_score(fitted_model, criteria, test_features_matrix, test_target_vector)
+                    fold_score = self.get_score(fitted_model, criteria, test_features_matrix, test_target_vector)
+
+                    score += weight * fold_score
                     weights += weight
             
             score /= weights
@@ -211,14 +213,14 @@ class Classifier_gridSearch(com.PredictorTuning):
         """
         # ======= I. Extract the parameters =======
         if self.params['random_search']:
-            grid_universe = tool.get_random_dict_universe(grid_universe, self.params['n_samples'], self.random_state)
+            grid_universe = utils.get_random_dict_universe(grid_universe, self.params['n_samples'], self.random_state)
         else:
-            grid_universe = tool.get_dict_universe(grid_universe)
+            grid_universe = utils.get_dict_universe(grid_universe)
         
         # ======= II. Run the grid search =======
         grid_results = Parallel(n_jobs=self.n_jobs)(
             delayed(self.evaluate_params)(model, params, criteria, data)
-            for params in grid_universe
+            for params in tqdm(grid_universe)
         )
         
         # ======= III. Save the results =======

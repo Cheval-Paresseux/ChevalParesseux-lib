@@ -8,6 +8,14 @@ from typing import Self
 #! ==================================================================================== #
 #! ================================= Main Function ==================================== #
 class Correlation_selector(com.FeaturesSelector):
+    """
+    Feature selection based on correlation.
+    
+    This class implements a feature selection method that removes features with high correlation
+    to other features. It computes the correlation matrix and drops features that exceed a
+    specified correlation threshold.
+    """
+    #?_____________________________ Initialization methods _______________________________ #
     def __init__(
         self,
         n_jobs: int = 1

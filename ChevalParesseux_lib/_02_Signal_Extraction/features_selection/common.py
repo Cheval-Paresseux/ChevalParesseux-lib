@@ -9,6 +9,13 @@ from typing import Self, Union
 #! ==================================================================================== #
 #! ================================= Main Function ==================================== #
 class FeaturesSelector(ABC):
+    """
+    Base class for feature selection methods.
+    
+    This class provides an interface for feature selection methods, allowing for the extraction
+    of features from data. It includes methods for setting parameters, processing data, fitting
+    the model, and extracting features.
+    """
     #?_____________________________ Initialization methods _______________________________ #
     @abstractmethod
     def __init__(

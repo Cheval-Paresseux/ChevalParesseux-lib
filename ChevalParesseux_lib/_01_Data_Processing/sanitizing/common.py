@@ -23,7 +23,7 @@ class Features_sanitizer():
     def __init__(
         self, 
         n_jobs: int = 1
-    ):
+    ) -> None:
         # ======= I. Store the inputs =======
         self.n_jobs = n_jobs
 
@@ -176,7 +176,7 @@ class Features_sanitizer():
         self,
         training_data: Union[list, pd.DataFrame],
         non_feature_columns: list = ['open', 'high', 'low', 'close', 'volume'],
-    ):
+    ) -> list:
         """
         Cleans the training data by performing the following steps:
         

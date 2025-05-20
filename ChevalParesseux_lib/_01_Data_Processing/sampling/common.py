@@ -1,4 +1,4 @@
-from ...utils import __init__ as util
+from ... import utils
 
 import pandas as pd
 import numpy as np
@@ -127,7 +127,7 @@ class DatasetBuilder(ABC):
             - datasets (list): List of DataFrames, each representing a dataset for a specific parameter combination.
         """
         # ======= I. Extract the Parameters Universe =======
-        params_grid = util.get_dict_universe(self.params)
+        params_grid = utils.get_dict_universe(self.params)
 
         # ======= II. Extract the dataset for each Parameters =======
         datasets = Parallel(n_jobs=self.n_jobs)(delayed(self.get_dataset)(data, **params) for params in params_grid)

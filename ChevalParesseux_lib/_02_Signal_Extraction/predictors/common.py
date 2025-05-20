@@ -1,4 +1,4 @@
-from ...utils import metrics as met
+from ... import utils
 
 import numpy as np
 import pandas as pd
@@ -204,20 +204,20 @@ class Model(ABC):
             - dict: A dictionary containing various regression metrics.
         """
         # ======= I. Prediction Accuracy =======
-        rmse = met.get_regression_rmse(predictions, y_true)
-        mse = met.get_regression_mse(predictions, y_true)
-        smape = met.get_regression_smape(predictions, y_true)
-        max_error = met.get_regression_max_error(predictions, y_true)
+        rmse = utils.get_regression_rmse(predictions, y_true)
+        mse = utils.get_regression_mse(predictions, y_true)
+        smape = utils.get_regression_smape(predictions, y_true)
+        max_error = utils.get_regression_max_error(predictions, y_true)
         
         # ======= II. Significance Measures =======
-        r2 = met.get_regression_r2(predictions, y_true)
-        significance_df = met.get_regression_significance(predictions, features_matrix, y_true, coefficients, feature_names)
+        r2 = utils.get_regression_r2(predictions, y_true)
+        significance_df = utils.get_regression_significance(predictions, features_matrix, y_true, coefficients, feature_names)
         
         # ======= III. Residuals Measures =======
         residuals = y_true - predictions
-        durbin_watson = met.get_durbin_watson(residuals)
-        JB_stat, JB_p_value = met.get_jarque_bera(residuals)
-        lm_stat, lm_p_value = met.breusch_pagan_test(features_matrix, residuals)
+        durbin_watson = utils.get_durbin_watson(residuals)
+        JB_stat, JB_p_value = utils.get_jarque_bera(residuals)
+        lm_stat, lm_p_value = utils.breusch_pagan_test(features_matrix, residuals)
         
         # ======= IV. Create the metrics dictionary =======
         metrics_dict = {

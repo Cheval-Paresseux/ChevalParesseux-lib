@@ -1,5 +1,5 @@
 from ..predictors import common as com
-from ...utils import measures as calc
+from ... import utils
 
 import numpy as np
 import pandas as pd
@@ -85,11 +85,11 @@ class Tree_classifier(com.Model):
         
         # ======= II. Variables ======= 
         self.available_entropies = {
-            "gini": calc.get_gini_impurity,
-            "shannon": calc.get_shannon_entropy,
-            "plugin": calc.get_plugin_entropy,
-            "lempel_ziv": calc.get_lempel_ziv_entropy,
-            "kontoyiannis": calc.get_kontoyiannis_entropy,
+            "gini": utils.get_gini_impurity,
+            "shannon": utils.get_shannon_entropy,
+            "plugin": utils.get_plugin_entropy,
+            "lempel_ziv": utils.get_lempel_ziv_entropy,
+            "kontoyiannis": utils.get_kontoyiannis_entropy,
         }
 
         self.root = None
@@ -381,6 +381,7 @@ class Tree_classifier(com.Model):
         Returns:
             - np.ndarray: The feature importances.
         """
+
         # ======= 0. Define the recursive function ======= 
         def compute_importance(node, total_samples):
             # Base case: we reached a leaf node
@@ -402,7 +403,14 @@ class Tree_classifier(com.Model):
         compute_importance(self.root, len(target_vector))
         
         # ======= III. Normalize the feature importances ======= 
-        self.features_importances /= np.sum(self.features_importances)
+        total_importance = np.sum(self.features_importances)
+        
+        if total_importance > 0 and not np.isnan(total_importance):
+            self.features_importances /= total_importance
+        else:
+            # Log the issue for debugging purposes
+            print("[WARNING] Feature importances sum to zero or NaN. Returning zero vector.")
+            self.features_importances = np.zeros_like(self.features_importances)
         
         return self.features_importances
     
@@ -432,8 +440,9 @@ class Tree_classifier(com.Model):
         
         # ======= III. Compute the key model statistics ======= 
         features_importances = self.get_features_importances(X, y)
+        self.feature_importances = pd.Series(features_importances, index=X_train.columns)
         
-        return features_importances
+        return self
 
     #?____________________________________________________________________________________ #
     def predict(
