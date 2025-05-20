@@ -10,6 +10,12 @@ from typing import Union, Self, Optional
 #! ==================================================================================== #
 #! ================================= Main Function ==================================== #
 class Temporal_uniqueness_selection(com.DatasetBuilder):
+    """
+    Resampling method for temporal uniqueness selection.
+    
+    This class is used to extract a new dataset from the original one based on random drawing of samples.
+    Each label is mapped to a probability that depends on the average uniqueness of the event, the time decay, and the event returns.
+    """
     #?_____________________________ Initialization methods _______________________________ #
     def __init__(
         self, 
@@ -33,6 +39,7 @@ class Temporal_uniqueness_selection(com.DatasetBuilder):
         price_column: list = ['close'],
         n_samples: list = [1000],
         replacement: list = [False],
+        balancing: list = [False],
         vol_window: list = [10],
         upper_barrier: list = [0.5],
         vertical_barrier: list = [20],
@@ -46,6 +53,7 @@ class Temporal_uniqueness_selection(com.DatasetBuilder):
             - price_column (list): The column names for the prices. Default is ['close'].
             - n_samples (list): The number of samples to extract. Default is [1000].
             - replacement (list): Whether to sample with replacement. Default is [False].
+            - balancing (list): Whether to balance the dataset. Default is [False].
             - vol_window (list): The window size for calculating the rolling volatility. Default is [10].
             - upper_barrier (list): The upper barrier for the event. Default is [0.5].
             - vertical_barrier (list): The vertical barrier for the event. Default is [20].
@@ -58,6 +66,7 @@ class Temporal_uniqueness_selection(com.DatasetBuilder):
             'price_column': price_column,
             'n_samples': n_samples,
             'replacement': replacement,
+            'balancing': balancing,
             'vol_window': vol_window,
             'upper_barrier': upper_barrier,
             'vertical_barrier': vertical_barrier,
@@ -306,10 +315,28 @@ class Temporal_uniqueness_selection(com.DatasetBuilder):
         vol_window: int,
         upper_barrier: float,
         vertical_barrier: int,
-        n_samples: int,
+        n_samples: list,
         replacement: bool,
+        balancing: bool,
     ) -> pd.DataFrame:
+        """
+        Extract a new dataset from the original one based on random drawing of samples, probabilities computed using the labels weights.
         
+        Parameters:
+            - data (pd.DataFrame or list): The input data to be processed.
+            - grouping_column (str): The column name to group by.
+            - label_column (str): The column name for the labels.
+            - price_column (str): The column name for the prices.
+            - vol_window (int): The window size for calculating the rolling volatility.
+            - upper_barrier (float): The upper barrier for the event.
+            - vertical_barrier (int): The vertical barrier for the event.
+            - n_samples (list): The number of samples to extract.
+            - replacement (bool): Whether to sample with replacement.
+            - balancing (bool): Whether to balance the dataset.
+        
+        Returns:
+            - results (list): A list of DataFrames, each representing a sampled dataset.
+        """
         # ======= I. Process Data =======
         np.random.seed(self.random_state)
         processed_data = self.process_data(data=data, grouping_column=grouping_column)
@@ -330,33 +357,56 @@ class Temporal_uniqueness_selection(com.DatasetBuilder):
                 label_column=label_column,
                 price_column=price_column,
             )
+            print(f'Sample weight len : {len(sample_weights)}')
+            print(sample_weights)
             training_df = pd.concat([training_df, sample_weights], axis=1)
             training_df = training_df.dropna(axis=0)
 
-            # ----- II. Separate Classes -----
-            available_labels = training_df[label_column].unique()
-            labels_specific_dfs = [training_df[training_df[label_column] == label].copy() for label in available_labels]
-
-            # ----- III. Sample Each Class -----
-            nb_labels = len(labels_specific_dfs)
-            nb_samples_per_label = n_samples // nb_labels
-            
-            sampled_dfs = []
-            for unique_df in labels_specific_dfs:
-                unique_df['sample_weights'] = unique_df['sample_weights'] / unique_df['sample_weights'].sum()
+            # ----- 2. If rebalancing, extract for each label -----
+            if balancing:
+                # 2.1 Get the number of labels
+                available_labels = training_df[label_column].unique()
+                labels_specific_dfs = [training_df[training_df[label_column] == label].copy() for label in available_labels]
+                nb_labels = len(labels_specific_dfs)
                 
-                if not replacement:
-                    nb_samples_per_label = min(nb_samples_per_label, unique_df.shape[0])
+                # 2.2 For each label, extract the resampled dataframe
+                sampled_dfs = []
+                for unique_df in labels_specific_dfs:
+                    # 2.2.1 Normalize the sample weights to be a probability
+                    unique_df['sample_weights'] = unique_df['sample_weights'] / unique_df['sample_weights'].sum()
                     
-                sampled_indices = np.random.choice(unique_df.index, size=nb_samples_per_label, replace=replacement, p=unique_df["sample_weights"])
-                
-                df_sampled = unique_df.loc[sampled_indices].reset_index(drop=True)
-                sampled_dfs.append(df_sampled)
+                    # 2.2.2 Adjust the number of samples if replacement
+                    if not replacement:
+                        target_nb_samples = n_samples // nb_labels
+                        nb_samples = min(target_nb_samples, unique_df.shape[0])
+                    else:
+                        target_nb_samples = n_samples // nb_labels
+                    
+                    # 2.2.3 Sample the indices
+                    sampled_indices = np.random.choice(unique_df.index, size=nb_samples, replace=replacement, p=unique_df["sample_weights"])
+                    df_sampled = unique_df.loc[sampled_indices].reset_index(drop=True)
+                    sampled_dfs.append(df_sampled)
             
-            # ----- IV. Concatenate the Sampled DataFrames -----
-            df_sampled = pd.concat(sampled_dfs, axis=0).reset_index(drop=True)
-            df_sampled = df_sampled.drop(columns=['sample_weights'])
-            results.append(df_sampled)
+                # 2.3 Concatenate the sampled DataFrames
+                df_sampled = pd.concat(sampled_dfs, axis=0).reset_index(drop=True)
+                df_sampled = df_sampled.drop(columns=['sample_weights'])
+                results.append(df_sampled)
+            
+            # ----- 3. Else, extract directly using label weight -----
+            else:
+                # 3.1 Normalize the sample weights to be a probability
+                training_df['sample_weights'] = training_df['sample_weights'] / training_df['sample_weights'].sum()
+                
+                # 3.2 Adjust the number of samples if replacement
+                if not replacement:
+                    n_samples = min(n_samples, training_df.shape[0])
+                    print(f'n_samples: {n_samples}')
+                
+                # 3.3 Sample the indices
+                sampled_indices = np.random.choice(training_df.index, size=n_samples, replace=replacement, p=training_df["sample_weights"])
+                df_sampled = training_df.loc[sampled_indices].reset_index(drop=True)
+                # df_sampled = df_sampled.drop(columns=['sample_weights'])
+                results.append(df_sampled)
         
         return results
 
