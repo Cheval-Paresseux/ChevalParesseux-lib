@@ -130,7 +130,6 @@ class Temporal_uniqueness_selection(com.DatasetBuilder):
     #?________________________________ Auxiliary methods _________________________________ #
     def extract_event(
         self,
-        idx: int, 
         row: pd.Series, 
         df: pd.DataFrame, 
         upper_barrier: float, 
@@ -141,45 +140,49 @@ class Temporal_uniqueness_selection(com.DatasetBuilder):
         """
         Extracts the event information from the current row of the DataFrame.
         
-        Parameters:
-            - idx (int): The index of the current row.
-            - row (pd.Series): The current row of the DataFrame.
-            - df (pd.DataFrame): The DataFrame containing the data.
-            - upper_barrier (float): The upper barrier for the event.
-            - vertical_barrier (int): The vertical barrier for the event.
-            - label_column (str): The name of the labels column.
-            - price_column (str): The name of the price column.
-        
         Returns:
-            - tuple: A tuple containing the start index, end index, and event returns.
+            - tuple: (start_index, end_index, event_returns)
         """
-        # ======= I. Extract close and barrier =======
-        current_close = row[price_column]
-        barrier = row['volatility'] * upper_barrier # This row is setted up in the parent function
-        
+        idx = row.name
+        current_price = row[price_column]
+        barrier = row['volatility'] * upper_barrier
+
+        # Convert idx (label) to position for slicing
+        idx_pos = df.index.get_loc(idx)
+        max_pos = min(idx_pos + vertical_barrier, len(df) - 1)
+        futur = df.iloc[idx_pos : max_pos + 1].copy() 
+
+        max_price = futur[price_column].max()
+        min_price = futur[price_column].min()
+        max_price_index = futur[price_column].idxmax()
+        min_price_index = futur[price_column].idxmin()
+
+        max_return = (max_price - current_price) / current_price
+        min_return = (min_price - current_price) / current_price
+
         # ======= II. Define the event =======
         if row[label_column] == 1:
-            target_close = current_close * (1 + barrier)
-            barrier_cross = df[(df[price_column] >= target_close) & (df.index > idx)]
+            if max_return < barrier:
+                barrier_hit_idx = futur.index[-1]
+                final_return = (futur[price_column].iloc[-1] / current_price) - 1
+                event_returns = final_return if final_return > 0 else np.nan
+            else:
+                barrier_hit_idx = max_price_index
+                event_returns = max_return
 
         elif row[label_column] == -1:
-            target_close = current_close * (1 - barrier)
-            barrier_cross = df[(df[price_column] <= target_close) & (df.index > idx)]
-            
+            if min_return > -barrier:
+                barrier_hit_idx = futur.index[-1]
+                final_return = (futur[price_column].iloc[-1] / current_price) - 1
+                event_returns = -final_return if final_return < 0 else np.nan
+            else:
+                barrier_hit_idx = min_price_index
+                event_returns = -min_return
+
         else:
-            event_returns = (1 + barrier) / 2
-            return idx, idx + vertical_barrier, event_returns
-        
-        # ======= III. Get the event start and end =======
-        barrier_hit_idx = barrier_cross.index.min() if not barrier_cross.empty else idx + vertical_barrier
-        
-        # ======= IV. Get the event returns =======
-        if barrier_hit_idx < idx + vertical_barrier:
-            hit_close = df.loc[barrier_hit_idx, price_column]
-            event_returns = np.abs(np.log(hit_close / current_close))
-        else:
-            event_returns = np.nan
-            
+            barrier_hit_idx = futur.index[-1]
+            event_returns = barrier / 2  # This is arbitrary but OK for neutral labels
+
         return idx, barrier_hit_idx, event_returns
 
     #?____________________________________________________________________________________ #
@@ -278,9 +281,10 @@ class Temporal_uniqueness_selection(com.DatasetBuilder):
         
         # ======= II. Extract Events =======
         events = Parallel(n_jobs=self.n_jobs)(
-            delayed(self.extract_event)(idx, row, auxiliary_df, upper_barrier, vertical_barrier, label_column, price_column)
-            for idx, row in auxiliary_df.iterrows()
+            delayed(self.extract_event)(row, auxiliary_df, upper_barrier, vertical_barrier, label_column, price_column)
+            for _, row in auxiliary_df.iterrows()
         )
+
         auxiliary_df['start_event'] = [event[0] for event in events]
         auxiliary_df['end_event'] = [event[1] for event in events]
         auxiliary_df['event_returns'] = [event[2] for event in events]
@@ -357,8 +361,6 @@ class Temporal_uniqueness_selection(com.DatasetBuilder):
                 label_column=label_column,
                 price_column=price_column,
             )
-            print(f'Sample weight len : {len(sample_weights)}')
-            print(sample_weights)
             training_df = pd.concat([training_df, sample_weights], axis=1)
             training_df = training_df.dropna(axis=0)
 
@@ -381,6 +383,7 @@ class Temporal_uniqueness_selection(com.DatasetBuilder):
                         nb_samples = min(target_nb_samples, unique_df.shape[0])
                     else:
                         target_nb_samples = n_samples // nb_labels
+                        nb_samples = target_nb_samples
                     
                     # 2.2.3 Sample the indices
                     sampled_indices = np.random.choice(unique_df.index, size=nb_samples, replace=replacement, p=unique_df["sample_weights"])
@@ -405,7 +408,7 @@ class Temporal_uniqueness_selection(com.DatasetBuilder):
                 # 3.3 Sample the indices
                 sampled_indices = np.random.choice(training_df.index, size=n_samples, replace=replacement, p=training_df["sample_weights"])
                 df_sampled = training_df.loc[sampled_indices].reset_index(drop=True)
-                # df_sampled = df_sampled.drop(columns=['sample_weights'])
+                df_sampled = df_sampled.drop(columns=['sample_weights'])
                 results.append(df_sampled)
         
         return results

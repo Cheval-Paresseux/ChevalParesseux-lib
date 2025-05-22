@@ -2,13 +2,25 @@ import os
 import pandas as pd
 
 
-def load_data(ticker: str):
+def load_data(
+    ticker: str
+) -> pd.DataFrame:
+    """
+    Load data from CSV files for a given ticker symbol.
+    
+    Parameters:
+        - ticker (str): The ticker symbol of the stock.
+    
+    Returns:
+        - pd.DataFrame: The loaded data as a pandas DataFrame.
+    """
     # ======= I. Define the paths to the data directories =======
     current_dir = os.path.dirname(os.path.abspath(__file__))
 
     data_nyse_dir = os.path.join(current_dir, 'dataNYSE')
     data_nasdaq_dir = os.path.join(current_dir, 'dataNASDAQ')
     data_wdo_dir = os.path.join(current_dir, 'dataWDO')
+    data_etfs_dir = os.path.join(current_dir, 'dataETfs')
 
     # ======= II. Construct the full paths to the CSV files  =======
     file_name = f'{ticker}.csv'
@@ -16,9 +28,10 @@ def load_data(ticker: str):
     csv_path_nyse = os.path.join(data_nyse_dir, file_name)
     csv_path_nasdaq = os.path.join(data_nasdaq_dir, file_name)
     csv_path_wdo = os.path.join(data_wdo_dir, file_name)
+    csv_path_etfs = os.path.join(data_etfs_dir, file_name)
 
     # ======= III. Load the data =======
-    for path in [csv_path_nyse, csv_path_nasdaq, csv_path_wdo]:
+    for path in [csv_path_nyse, csv_path_nasdaq, csv_path_wdo, csv_path_etfs]:
         try:
             data = pd.read_csv(path)
             break  

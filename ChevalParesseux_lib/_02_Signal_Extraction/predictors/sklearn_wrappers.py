@@ -315,7 +315,7 @@ class SKL_randomForest_classifier(com.Model):
         
         # ======= II. Predictions =======
         predictions = self.random_forest.predict(X)
-        predictions = pd.Series(predictions, index=X.index)
+        predictions = pd.Series(predictions, index=X_test.index)
 
         return predictions
     
