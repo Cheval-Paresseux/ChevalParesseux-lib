@@ -11,6 +11,16 @@ from joblib import Parallel, delayed
 #! ==================================================================================== #
 #! =================================== Base Models ==================================== #
 class SignalProcessor(ABC):
+    """
+    Base class for signal processing models.
+    
+    Subclasses should implement the following methods:
+        - __init__: Initialize the model with parameters.
+        - set_params: Set the parameters for the model.
+        - process_data: Preprocess the data.
+        - fit: Fit the model to the training data if necessary.
+        - predict: Make predictions on the test data.
+    """
     #?_____________________________ Initialization methods _______________________________ #
     @abstractmethod
     def __init__(
@@ -69,16 +79,12 @@ class SignalProcessor(ABC):
     @abstractmethod
     def fit(
         self,
-        X_train: Union[pd.DataFrame, pd.Series],
-        y_train: pd.Series,
         **kwargs
     ) -> Self:
         """
         Fit the model to the training data.
         
         Parameters:
-            - X_train (pd.DataFrame | pd.Series): The input features for training.
-            - y_train (pd.Series): The target variable for training.
             - **kwargs: Additional parameters for fitting the model.
         
         Returns:
@@ -90,15 +96,15 @@ class SignalProcessor(ABC):
     @abstractmethod
     def predict(
         self,
-        X_test: Union[pd.DataFrame, pd.Series],
+        data: Union[pd.DataFrame, pd.Series],
         **kwargs
     ) -> Union[pd.DataFrame, pd.Series]:
         """
         Makes predictions on the test data.
         
         Parameters:
-            - X_test (pd.DataFrame | pd.Series): The input features for testing.
-            - **kwargs: Additional parameters for making predictions.
+            - data (pd.DataFrame | pd.Series): The input data for signal processing.
+            - **kwargs: Additional parameters for signal processing.
         
         Returns:
             - pd.DataFrame or pd.Series: The predicted values.

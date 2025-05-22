@@ -191,7 +191,6 @@ def get_performance_measures(
     downside_deviation = distribution_stats["downside_deviation"]
     
     risk_stats = get_risk_measures(returns_series)
-    mean_drawdown = risk_stats["mean_drawdown"]
     maximum_drawdown = risk_stats["maximum_drawdown"]
     
     market_sensitivity_stats = get_market_sensitivity(returns_series, market_returns, frequency)
@@ -199,15 +198,11 @@ def get_performance_measures(
     tracking_error = market_sensitivity_stats["tracking_error"]
     
     # ======= III. Compute the ratios =======
-    # ------ Sharpe, Sortino, Treynor, and Information Ratios
+    # ------ Sharpe, Sortino, Treynor, Information and Calmar Ratios
     sharpe_ratio = (expected_return - risk_free_rate) / volatility if volatility != 0 else 0
     sortino_ratio = expected_return / downside_deviation if downside_deviation != 0 else 0
     treynor_ratio = expected_return / beta if beta != 0 else 0
     information_ratio = (expected_return - market_returns.mean() * adjusted_frequency) / tracking_error if tracking_error != 0 else 0
-
-    # ------ Sterling, and Calmar Ratios
-    average_drawdown = abs(mean_drawdown) if mean_drawdown != 0 else 0
-    sterling_ratio = (expected_return - risk_free_rate) / average_drawdown if average_drawdown != 0 else 0
     calmar_ratio = expected_return / abs(maximum_drawdown) if maximum_drawdown != 0 else 0
     
     # ======= IV. Store the statistics =======
@@ -216,7 +211,6 @@ def get_performance_measures(
         "sortino_ratio": sortino_ratio,
         "treynor_ratio": treynor_ratio,
         "information_ratio": information_ratio,
-        "sterling_ratio": sterling_ratio,
         "calmar_ratio": calmar_ratio,
     }
     
