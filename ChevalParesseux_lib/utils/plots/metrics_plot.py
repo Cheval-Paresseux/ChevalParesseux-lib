@@ -9,6 +9,8 @@ from sklearn.calibration import calibration_curve
 import matplotlib.pyplot as plt
 import seaborn as sns
 
+from typing import Optional
+
 
 
 #! ==================================================================================== #
@@ -208,6 +210,7 @@ def plot_prediction_errors(
 def plot_quick_backtest(
     series: pd.Series,
     signal: pd.Series,
+    size: Optional[pd.Series] = None,
     frequence: str = 'daily',
     title: str = 'Quick Backtest',
     figsize: tuple = (17, 7),
@@ -227,7 +230,10 @@ def plot_quick_backtest(
     """
     # ======= I. Compute the returns =======
     returns = series.pct_change().shift(-1)
-    signal_returns = returns * signal
+    if size is not None:
+        signal_returns = returns * signal * size
+    else:
+        signal_returns = returns * signal
 
     underlying_cum_returns = (1 + returns).cumprod()
     signal_cum_returns = (1 + signal_returns).cumprod()

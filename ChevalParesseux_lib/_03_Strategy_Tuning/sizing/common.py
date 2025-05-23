@@ -10,9 +10,9 @@ from joblib import Parallel, delayed
 
 #! ==================================================================================== #
 #! =================================== Base Models ==================================== #
-class SignalProcessor(ABC):
+class Sizer(ABC):
     """
-    Base class for signal processing models.
+    Base class for sizing models.
     
     Subclasses should implement the following methods:
         - __init__: Initialize the model with parameters.
@@ -28,7 +28,7 @@ class SignalProcessor(ABC):
         n_jobs: int = 1
     ) -> None:
         """
-        Initializes the SignalProcessor object.
+        Initializes the Sizer object.
 
         Parameters:
             - n_jobs (int): Number of parallel jobs to use for computation.
@@ -100,7 +100,7 @@ class SignalProcessor(ABC):
         **kwargs
     ) -> Union[pd.DataFrame, pd.Series]:
         """
-        Makes predictions on the test data.
+        Extracts the sizes.
         
         Parameters:
             - data (pd.DataFrame | pd.Series): The input data for signal processing.

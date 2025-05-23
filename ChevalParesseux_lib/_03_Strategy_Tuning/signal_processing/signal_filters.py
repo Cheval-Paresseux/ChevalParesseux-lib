@@ -70,7 +70,7 @@ class Confirmation_processor(com.SignalProcessor):
         return self
     
     #?____________________________________________________________________________________ #
-    def predict(
+    def extract(
         self, 
         signal_series: pd.Series
     ) -> pd.Series:
