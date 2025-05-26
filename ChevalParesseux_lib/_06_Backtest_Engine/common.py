@@ -4,7 +4,7 @@ import numpy as np
 from joblib import Parallel, delayed
 
 from typing import Union, Optional, Self
-
+import uuid
 
 
 #! ==================================================================================== #
@@ -13,269 +13,250 @@ class Backtester():
     #?_____________________________ Initialization methods _______________________________ #
     def __init__(
         self, 
-        strategy: object,
-        initial_capital: float = 1.0,
+        n_jobs: int = 1,
     ) -> None:
         """
-        Constructor for the Backtester class.
-        
-        Parameters:
-            - strategy (object): The strategy object to be used for backtesting.
-            - initial_capital (float): The initial capital for the backtest.
         """
         # ======= Backtest parameters =======
+        self.n_jobs = n_jobs
+
+        # ======= Costs parameters =======
         self.brokerage_cost = None
         self.slippage_cost = None
         
-        self.n_jobs = 1
+        # ======= Computation parameters =======
+        self.ask_name = None
+        self.bid_name = None
+        self.date_name = None
         
-        # ======= Strategy inputs =======
-        self.strategy = strategy
-        self.initial_capital = initial_capital
-    
     #?____________________________________________________________________________________ #
     def set_params(
         self, 
         brokerage_cost: float = 0.0, 
         slippage_cost: float = 0.0,
-        n_jobs: int = 1
+        ask_name: str = "ask_open",
+        bid_name: str = "bid_open",
+        date_name: str = "date",
     ) -> Self:
         """
-        Sets the parameters for the backtest.
-        
-        Parameters:
-            - brokerage_cost (float): The brokerage cost per trade.
-            - slippage_cost (float): The slippage cost per trade.
-            - n_jobs (int): The number of jobs to run in parallel.
         """
-        self.n_jobs = n_jobs
+        # ======= Costs parameters =======
         self.brokerage_cost = brokerage_cost
         self.slippage_cost = slippage_cost
 
+        # ======= Computation parameters =======
+        self.ask_name = ask_name
+        self.bid_name = bid_name
+        self.date_name = date_name
+
         return self
     
-    #?________________________________ Auxiliary methods _________________________________ #
-    def run_strategy(
+    #?________________________ Operations Extraction methods _____________________________ #
+    def add_operation(
         self,
-        data: Union[pd.DataFrame, list]
-    ) -> tuple:
-        """
-        This method runs the strategy on the provided data.
+        operations_df: pd.DataFrame,
+        code: str,
+        trade_id: str,
+        side: int,
+        size: float,
+        size_op: float,
+        date: pd.Timestamp,
+        entry_price: float,
+        exit_price: float,
+        pnl: float,
+    ) -> pd.DataFrame:
+
+        # --- Define the new row ---
+        new_row = pd.DataFrame([{
+            'code': code,
+            'trade_id': trade_id,
+            'side': side,
+            'size': size,
+            'size_op': size_op,
+            'date': date,
+            'entry_price': entry_price,
+            'exit_price': exit_price,
+            'pnl': pnl,
+        }])
+        # --- Append the new row to the operations DataFrame ---
+        new_operations_df = operations_df.copy()
+        new_operations_df.loc[len(new_operations_df)] = new_row.iloc[0]
+
+        return new_operations_df
+
+    #?____________________________________________________________________________________ #
+    def get_weighted_entry_price(
+        self,
+        df: pd.DataFrame, 
+        code: str, 
+        trade_id: str
+    ) -> float:
         
-        Parameters:
-            - data (Union[pd.DataFrame, list]): The data to be used for backtesting. It can be a single DataFrame or a list of DataFrames.
+        entries = df[(df['code'] == code) & (df['trade_id'] == trade_id) & (df['size_op'] > 0)]
+        average_price = np.average(entries['entry_price'], weights=entries['size_op'])
         
-        Returns:
-            - tuple: A tuple containing the full operations DataFrame, full signals DataFrame, individual operations DataFrames, and individual signals DataFrames.
-        """
-        # ======= I. Ensure Data is in the right format =======
-        if isinstance(data, pd.DataFrame):
-            prepared_data = [data]
-        elif isinstance(data, list):
-            prepared_data = data
-        else:
-            raise ValueError("Data must be a pandas DataFrame or a list of DataFrames.")
-        
-        # ======= II. Run the Strategy =======
-        if self.n_jobs > 1:
-            #! Be aware that the strategy should be thread-safe and to keep track of the timestamps to reconstitute the operations later.
-            operations_dfs, signals_dfs = Parallel(n_jobs=self.n_jobs)(delayed(self.strategy.operate)(data_group) for data_group in prepared_data)
-        else:
-            operations_dfs = []
-            signals_dfs = []
-            for data_group in prepared_data:
-                operations_df, signals_df = self.strategy.operate(data_group)
-                operations_dfs.append(operations_df)
-                signals_dfs.append(signals_df)
-        
-        return operations_dfs, signals_dfs
+        return average_price
     
     #?____________________________________________________________________________________ #
-    def apply_costs(
+    def get_remaining_position(
+        self,
+        df: pd.DataFrame, 
+        code: str, 
+        trade_id: str
+    ) -> float:
+        
+        entries = df[(df['code'] == code) & (df['trade_id'] == trade_id)]
+        remaining_size = entries['size_op'].sum()
+
+        return remaining_size
+
+    #?____________________________________________________________________________________ #
+    def extract_operations(
         self, 
-        operations_df: pd.DataFrame
+        signals_df: pd.DataFrame
     ) -> pd.DataFrame:
         """
-        This method applies slippage to the entry and exit prices of the operations.
-        
-        Parameters:
-            - operations_df (pd.DataFrame): The DataFrame containing the operations data.
-        
-        Returns:
-            - pd.DataFrame: The adjusted operations DataFrame with slippage applied.
         """
-        # ======= I. Ensure there are operations =======
-        adjusted_df = operations_df.copy()
-        if operations_df.empty:
-            return adjusted_df
+        # ======= I. Pre-checks =======
+        required_columns = [self.bid_name, self.ask_name, self.date_name, 'signal', 'size', 'code']
+        missing = [col for col in required_columns if col not in signals_df.columns]
+        if missing:
+            raise ValueError(f"Missing required columns: {missing}")
 
-        # ======= II. Apply slippage on Entry/Exit prices =======
-        # ----- 1. Initialize variables -----
-        cumulative_entry_value = 0
-        cumulative_exit_value = 0
-        cumulative_size = 0
-        cumulative_brokerage = 0
+        # ======= II. Initialize Operations =======
+        operations_df = pd.DataFrame({
+            'code': pd.Series(dtype='str'),
+            'trade_id': pd.Series(dtype='str'),
+            'side': pd.Series(dtype='int'),
+            'size': pd.Series(dtype='float'),
+            'size_op': pd.Series(dtype='float'),
+            'date': pd.Series(dtype='datetime64[ns]'),
+            'entry_price': pd.Series(dtype='float'),
+            'exit_price': pd.Series(dtype='float'),
+            'pnl': pd.Series(dtype='float'),
+        })
+
+        # ======= II. Ensure signals_df is clean =======
+        df = signals_df.copy()
+        df['signal'] = df['signal'].fillna(0)
+        df['size'] = df['size'].fillna(0)
+
+        df[['signal', 'size']] = signals_df[['signal', 'size']].shift(1) # Avoid leakage
+        df = df.iloc[1:].reset_index(drop=True)
+        df.loc[df.index[-1], 'signal'] = 0  # Ensure last signal is 0 to avoid dangling operation
+
+        # ======= III. Iterate through the signals to extract operations =======
+        code = df['code'].iloc[0]
+
         last_trade_id = None
-        last_size = 0
+        last_side = 0
+        last_size = 0  
+        for i, row in df.iterrows():
+            # ----- 1. Extract values -----
+            side = row['signal']
+            size = row['size']
 
-        # ----- 2. Iterate through each operation -----
-        for idx, row in adjusted_df.iterrows():
-            # 2.1 Extract trade information
-            trade_id = row["trade_id"]
-            side = row["side"]
-            entry_price = row["entry_price"]
-            exit_price = row["exit_price"]
-            size = row["size"]
+            ask_open = row[self.ask_name]
+            bid_open = row[self.bid_name]
+            date = row[self.date_name]
 
-            # 2.2 Reset cumulative values if trade_id changes (=> new trade)
-            if trade_id != last_trade_id:
-                cumulative_entry_value = 0
-                cumulative_exit_value = 0
-                cumulative_size = 0
-                cumulative_brokerage = 0
-                size_change = size
-            else:
-                size_change = size - last_size
+            # ----- Case 0 : Nothing changed -----
+            if (side == last_side) and (size == last_size):
+                continue
+
+            # ----- Case 1 : New operation from 0 -----
+            elif (side != last_side) and (last_side == 0):
+                # 1. Create the new operation
+                trade_id = str(uuid.uuid4())
+                size_op = size
+
+                entry_price = ask_open if side == 1 else bid_open
+                entry_price = entry_price * (1 + self.slippage_cost) if side == 1 else entry_price * (1 - self.slippage_cost)
                 
-            # 2.3 Calculate the absolute change in size
-            abs_change = np.abs(size_change)
-            if abs_change > 0:
-                # 2.4 Adjust entry and exit prices based on slippage
-                if side == 1:
-                    entry_adj = entry_price * (1 + self.slippage_cost)
-                    exit_adj = exit_price * (1 - self.slippage_cost)
-                else:
-                    entry_adj = entry_price * (1 - self.slippage_cost)
-                    exit_adj = exit_price * (1 + self.slippage_cost)
+                exit_price = 0
+                pnl = -self.brokerage_cost * size_op * entry_price  # Initial PnL is just the brokerage cost
+                
+                operations_df = self.add_operation(operations_df, code, trade_id, side, size, size_op, date, entry_price, exit_price, pnl)
 
-                cumulative_entry_value += entry_adj * abs_change
-                cumulative_exit_value += exit_adj * abs_change
-                cumulative_size += abs_change
+                # 3. Update variables 
+                last_trade_id = trade_id
+                last_side = side
+                last_size = size
 
-                # 2.5 Calculate the brokerage cost
-                cumulative_brokerage += self.brokerage_cost * abs_change * entry_price
+            # ----- Case 2 : Changing size only -----
+            elif (side == last_side) and (size != last_size) and (side != 0):
+                # 1. Extract delta size and trade_id
+                delta_size = size - last_size
+                trade_id = last_trade_id
 
-                # 2.6 Adjust the entry and exit prices
-                entry_price_adjusted = cumulative_entry_value / cumulative_size
-                exit_price_adjusted = cumulative_exit_value / cumulative_size
-                pnl_adjusted = ((cumulative_exit_value - cumulative_entry_value) / cumulative_size * side) - (cumulative_brokerage / cumulative_size)
+                # 2. Check if we are adding or reducing the position
+                if delta_size > 0: # Adding to position
+                    entry_price = ask_open if side == 1 else bid_open
+                    entry_price = entry_price * (1 + self.slippage_cost) if side == 1 else entry_price * (1 - self.slippage_cost)
+                    
+                    exit_price = 0
+                    pnl = -self.brokerage_cost * delta_size * entry_price  # Initial PnL is just the brokerage cost
 
-                adjusted_df.at[idx, "entry_price_adjusted"] = entry_price_adjusted
-                adjusted_df.at[idx, "exit_price_adjusted"] = exit_price_adjusted
-                adjusted_df.at[idx, "pnl_adjusted"] = pnl_adjusted
+                else: # Reducing position
+                    # i. Get the average entry price of this trade
+                    average_entry_price = self.get_weighted_entry_price(operations_df, code, last_trade_id)
+
+                    # ii. Create the partial exit operation
+                    entry_price = average_entry_price # entry slippage is already included in the average entry price
+                    
+                    exit_price = bid_open if side == 1 else ask_open
+                    exit_price = exit_price * (1 - self.slippage_cost) if side == 1 else exit_price * (1 + self.slippage_cost)
+                    
+                    pnl = side * (average_entry_price - (exit_price)) * abs(delta_size) - self.brokerage_cost * abs(delta_size) * entry_price  # PnL is the difference in price times the size, minus brokerage cost
+                
+                # 3. Create the new operation
+                operations_df = self.add_operation(operations_df, code, trade_id, side, size, delta_size, date, entry_price, exit_price, pnl)
+
+                # 4. Update variables 
+                last_trade_id = trade_id
+                last_side = side
+                last_size = size
+
+            # ----- Case 3 : New operation in opposite direction -----
+            elif (side != last_side) and (last_side != 0):
+                # 1. Close the previous operation if it exists
+                average_entry_price = self.get_weighted_entry_price(operations_df, code, last_trade_id)
+                remaining_size = -self.get_remaining_position(operations_df, code, last_trade_id)
+
+                if remaining_size != 0:
+                    trade_id = last_trade_id
+                    size_op = remaining_size
+
+                    entry_price = average_entry_price # entry slippage is already included in the average entry price
+                    exit_price = bid_open if last_side == 1 else ask_open
+                    exit_price = exit_price * (1 - self.slippage_cost) if last_side == 1 else exit_price * (1 + self.slippage_cost)
+                    
+                    pnl = last_side * (average_entry_price - exit_price) * remaining_size - self.brokerage_cost * abs(remaining_size) * entry_price  # PnL is the difference in price times the size, minus brokerage cost
+
+                    operations_df = self.add_operation(operations_df, code, trade_id, last_side, last_size, size_op, date, entry_price, exit_price, pnl)
+
+                # 2. Create the new operation
+                if side != 0:
+                    trade_id = str(uuid.uuid4())
+                    size_op = size
+                    
+                    entry_price = ask_open if side == 1 else bid_open
+                    entry_price = entry_price * (1 + self.slippage_cost) if side == 1 else entry_price * (1 - self.slippage_cost)
+                    
+                    exit_price = 0
+                    pnl = -self.brokerage_cost * size_op * entry_price  # Initial PnL is just the brokerage cost
+
+                    operations_df = self.add_operation(operations_df, code, trade_id, side, size, size_op, date, entry_price, exit_price, pnl)
+
+                    # 3. Update variables 
+                    last_trade_id = trade_id
+                    last_side = side
+                    last_size = size
             
-            # 2.7 Actualize the last trade information
-            last_trade_id = trade_id
-            last_size = size
+        # ======= IV. Finalize operations DataFrame =======
+        operations_df['exit_price'] = np.where(operations_df['exit_price'] == 0, np.nan, operations_df['exit_price'])
 
-        return adjusted_df
+        return operations_df
     
-    #?_____________________________ User Functions _______________________________________ #
-    def run_backtest(
-        self, 
-        data: pd.DataFrame
-    ):
-        # ======= I. Run the Strategy =======
-        operations_dfs, signals_dfs = self.run_strategy(data=data)
-        
-        # ======= II. Apply slippage and brokerage costs =======
-        for i, operations_df in enumerate(operations_dfs):
-            operations_dfs[i] = self.apply_costs(operations_df)
-        
-        # ======= III. Concatenate the DataFrames =======
-        full_operations_df = pd.concat(operations_dfs, ignore_index=True)
-        full_operations_df = full_operations_df.sort_values(by=['entry_date', 'trade_id']).reset_index(drop=True)
-        
-        # ======= IV. Compute the Daily and Cumulative Returns (No intra-day compounding) =======
-        aux_df = full_operations_df.copy()
-        aux_df['returns'] = aux_df['pnl_adjusted'] / aux_df['entry_price_adjusted']
-        
-        # Daily net PnL (no intra-day compounding)
-        aux_df['entry_date'] = pd.to_datetime(aux_df['entry_date'])
-        daily_operations = aux_df.groupby('entry_date').to_list()
-
-        for i, daily_operations_df in enumerate(daily_operations):
-            continue 
-        #TODO: Implement the logic to compute daily operations and returns
-
-        return full_operations_df, signals_dfs, returns_df
-        
-    #?____________________________________________________________________________________ #
-    def plot_operationsBars(
-        self, 
-        by_date: bool = False, 
-        buyHold: bool = True, 
-        noFees: bool = True, 
-        fees: bool = True
-    ):
-        # ======= I. Prepare the DataFrame for plotting =======
-        plotting_df = self.full_operations_df.copy()
-
-        # ======= II. Initialize the plot =======
-        sns.set_style("whitegrid")
-        colors = sns.color_palette("husl", 3)
-        plt.figure(figsize=(17, 6))
-        
-        if by_date:
-            plotting_df = plotting_df.set_index(plotting_df['entry_date'])
-            plt.xlabel('Date', fontsize=14, fontweight='bold')
-        else:
-            plt.xlabel('Number of Trades', fontsize=14, fontweight='bold')
-        
-        plt.ylabel('Cumulative Returns', fontsize=14, fontweight='bold')
-        plt.title('Strategy Performance Comparison', fontsize=16, fontweight='bold')
-
-        # ======= III. Plot the Cumulative Returns =======
-        if buyHold:
-            plt.plot(plotting_df['buyHold_cumret'], label='Buy and Hold', color=colors[0], linewidth=2)
-        if noFees:
-            plt.plot(plotting_df['noFees_strategy_cumret'], label='Cumulative Returns Without Fees', color=colors[1], linestyle='--', linewidth=1)
-        if fees:
-            plt.plot(plotting_df['strategy_cumret'], label='Cumulative Returns Adjusted', color=colors[2], linewidth=2)
-
-        plt.legend(fontsize=12, loc='best', frameon=True, shadow=True)
-        plt.grid(True, linestyle='--', alpha=0.6)
-        plt.show()
-
-        # ======= IV. Compute statistics =======
-        returns_series = plotting_df['strategy_returns']
-        market_returns = plotting_df['buyHold_returns']
-
-        performance_stats, _ = ft.get_performance_measures(returns_series, market_returns, frequence="daily")
-
-        return performance_stats
+    #?______________________________ User methods ________________________________________ #
     
-    #?____________________________________________________________________________________ #
-    def plot_timeBars(
-        self
-    ):
-        # ======= I. Prepare the DataFrame for plotting =======
-        date_name = self.strategy.date_name
-        plotting_df = self.full_signals_df.copy()
-        plotting_df = plotting_df.set_index(plotting_df[date_name])
-
-        # ======= II. Initialize the plot =======
-        sns.set_style("whitegrid")
-        colors = sns.color_palette("husl", 3)
-        plt.figure(figsize=(17, 6))
-        
-        plt.xlabel('Date', fontsize=14, fontweight='bold')
-        plt.ylabel('Cumulative Returns', fontsize=14, fontweight='bold')
-        plt.title('Strategy Performance Comparison', fontsize=16, fontweight='bold')
-
-        # ======= III. Plot the Cumulative Returns =======
-        plt.plot(plotting_df['buyHold_cumret'], label='Buy and Hold', color=colors[0], linewidth=2)
-        plt.plot(plotting_df['strategy_cumret'], label='Cumulative Returns Adjusted', color=colors[2], linewidth=2)
-
-        plt.legend(fontsize=12, loc='best', frameon=True, shadow=True)
-        plt.grid(True, linestyle='--', alpha=0.6)
-        plt.show()
-
-        # ======= IV. Compute statistics =======
-        returns_series = plotting_df['strategy_returns']
-        market_returns = plotting_df['buyHold_returns']
-
-        performance_stats, _ = ft.get_performance_measures(returns_series, market_returns, frequence="daily")
-
-        return performance_stats
-        
