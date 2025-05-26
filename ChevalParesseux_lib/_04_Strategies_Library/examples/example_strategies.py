@@ -11,9 +11,16 @@ from joblib import Parallel, delayed
 
 
 
-
 class Simple_momentum(com.Strategy):
     """
+    Simple Momentum Strategy.
+    
+    This strategy uses a combination of features based on moving averages, momentum, and volatility to generate trading signals.
+    It includes a labeller for defining the target variable, a feature selector for reducing dimensionality, and a predictor for generating signals.
+    The strategy is designed to be flexible and can be tuned with various parameters for each component.
+    
+    The strategy aims to predict the directio of a single asset's price movement based on historical data.
+    It outputs a DataFrame containing the signals, sizes, and other relevant columns for trading operations.
     """
     #?_____________________________ Initialization methods _______________________________ #
     def __init__(
@@ -21,6 +28,10 @@ class Simple_momentum(com.Strategy):
         n_jobs: int = 1,
     ) -> None:
         """
+        Constructor for the Simple_momentum strategy.
+        
+        Parameters:
+            - n_jobs (int): The number of jobs to run in parallel, default is 1.
         """
         # ======= I. Jobs =======
         self.n_jobs = n_jobs
@@ -81,6 +92,16 @@ class Simple_momentum(com.Strategy):
         data: pd.DataFrame,
     ) -> pd.DataFrame:
         """
+        Extracts features and labels from the input data.
+        
+        This method applies a series of transformations to the input data to generate features based on moving averages, momentum, and volatility.
+        It also labels the data using a triple barrier method to define the target variable for the strategy.
+        
+        Parameters:
+            - data (pd.DataFrame): DataFrame containing the input data with a 'close' column.
+        
+        Returns:
+            - processed_data (pd.DataFrame): DataFrame containing the original data along with the extracted features and labels.
         """
         # ======= 0. Copy data =======
         processed_data = data.copy()
@@ -123,8 +144,20 @@ class Simple_momentum(com.Strategy):
     def process_data(
         self,
         data: pd.DataFrame,
-    ):
+    ) -> tuple:
         """
+        Processes the input data to extract features and labels, and applies feature selection.
+        
+        This method is designed to be called before fitting the model or making predictions.
+        It extracts features and labels from the input data, applies a feature selection model, and prepares the data for training or prediction.
+        
+        Parameters:
+            - data (pd.DataFrame): DataFrame containing the input data with a 'close' column.
+        
+        Returns:
+            - processed_data (pd.DataFrame): DataFrame containing the original data along with the extracted features and labels.
+            - X (pd.DataFrame): DataFrame containing the features used for training or prediction.
+            - y (pd.Series): Series containing the labels corresponding to the features.
         """
         # ======= I. Extract Features and Labels =======
         processed_data = self.get_features_labels(data=data).copy()
@@ -133,6 +166,7 @@ class Simple_momentum(com.Strategy):
         processed_data = self.selector.extract(data=processed_data)
         
         # ======= III. Extracting the features =======
+        processed_data = processed_data.dropna(axis=0, how='any').copy()
         X = processed_data.drop(columns=self.non_features).copy()
         y = processed_data['label'].copy()
         
@@ -142,8 +176,18 @@ class Simple_momentum(com.Strategy):
     def fit(
         self,
         data: pd.DataFrame,
-    ):
+    ) -> Self:
         """
+        Fits the Simple_momentum strategy to the input data.
+        
+        This method processes the input data to extract features and labels, applies resampling, feature selection, and predictor tuning.
+        It prepares the strategy for making predictions on new data.
+        
+        Parameters:
+            - data (pd.DataFrame): DataFrame containing the input data with a 'close' column.
+        
+        Returns:
+            - self (Simple_momentum): The fitted strategy instance.
         """
         # ======= 0. Prepare data =======
         processed_data = self.get_features_labels(data=data).copy()
@@ -204,25 +248,25 @@ class Simple_momentum(com.Strategy):
         return self
     
     #?__________________________________ Prediction methods ______________________________ #
-    def predict(
+    def extract(
         self,
         data: pd.DataFrame,
     ) -> pd.DataFrame:
         """
         Makes predictions on the data using the trained model.
         
-        Even if this method is defined individually for each strategy, it should always output a DataFrame containing the signals, sizes and columns used to operate.
-        This constraint is important to ensure that the operations can be extracted from the signals using a common method.
+        This method processes the input data to extract features, applies the trained predictor to generate signals,
+        and processes the signals to determine the size of positions based on volatility.
         
         Parameters:
             - data (pd.DataFrame): DataFrame containing the data to predict.
         
         Returns:
-            - results_df (pd.DataFrame): DataFrame containing the predictions.
+            - signals_df (pd.DataFrame): DataFrame containing the predictions.
         """
         # ======= I. Process data =======
         processed_data, X, y = self.process_data(data=data)
-        results_df = processed_data.copy()
+        signals_df = processed_data.copy()
         
         # ======= II. Predict =======
         signals = self.predictor.predict(X)
@@ -232,14 +276,15 @@ class Simple_momentum(com.Strategy):
         signal_processor_params = self.params['signal_processor_params']
         signal_processor.set_params(**signal_processor_params)
 
-        results_df['signal'] = signal_processor.extract(signal_series=signals)
+        signals_df['signal'] = signal_processor.extract(signal_series=signals)
         
         # ======= III. Size Positions =======
         sizer = tune.Volatility_sizer(n_jobs=self.n_jobs)
         sizer_params = self.params['sizer_params']
         sizer.set_params(**sizer_params)
         
-        results_df['size'] = sizer.extract(data=results_df)
+        signals_df['size'] = sizer.extract(data=signals_df)
+        signals_df['size'] = signals_df['size'].fillna(0)
         
-        return results_df
+        return signals_df
 

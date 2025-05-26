@@ -456,8 +456,8 @@ class SKL_logisticRegression_classifier(com.Model):
         X = np.array(X_test)
         
         # ======= II. Predictions =======
-        predictions = self.log_reg.predict(X_test)
-        predictions = pd.Series(predictions, index=X.index)
+        predictions = self.log_reg.predict(X)
+        predictions = pd.Series(predictions, index=X_test.index)
 
         return predictions
     
