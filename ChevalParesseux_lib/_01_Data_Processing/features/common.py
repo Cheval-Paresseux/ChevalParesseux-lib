@@ -2,8 +2,7 @@ from ... import utils
 
 import numpy as np
 import pandas as pd
-from typing import Union
-from typing import Self
+from typing import Union, Self
 from abc import ABC, abstractmethod
 from joblib import Parallel, delayed
 

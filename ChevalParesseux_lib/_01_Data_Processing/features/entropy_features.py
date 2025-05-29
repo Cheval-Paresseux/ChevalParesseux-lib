@@ -510,7 +510,7 @@ class Sample_entropy_feature(com.Feature):
         self,
         window: list = [5, 10, 30, 60],
         sub_vector_size: list = [2, 3],
-        threshold_distance: list = [0.1, 0.2, 0.3],
+        distance_threshold: list = [0.1, 0.2, 0.3],
         smoothing_method: list = [None, "ewma", "average"],
         window_smooth: list = [5, 10],
         lambda_smooth: list = [0.1, 0.2, 0.5],
@@ -521,12 +521,12 @@ class Sample_entropy_feature(com.Feature):
         Parameters:
             - window (list): Rolling window sizes for sample entropy.
             - sub_vector_size (list): Embedding dimension values.
-            - threshold_distance (list): Tolerance values as a fraction of standard deviation.
+            - distance_threshold (list): Tolerance values as a fraction of standard deviation.
         """
         self.params = {
             "window": window,
             "sub_vector_size": sub_vector_size,
-            "threshold_distance": threshold_distance,
+            "distance_threshold": distance_threshold,
             "smoothing_method": smoothing_method,
             "window_smooth": window_smooth,
             "lambda_smooth": lambda_smooth,
@@ -558,7 +558,7 @@ class Sample_entropy_feature(com.Feature):
         data: pd.Series,
         window: int,
         sub_vector_size: int,
-        threshold_distance: float,
+        distance_threshold: float,
         smoothing_method: str,
         window_smooth: int,
         lambda_smooth: float,
@@ -570,7 +570,7 @@ class Sample_entropy_feature(com.Feature):
             - data (pd.Series): The input data to be processed.
             - window (int): Rolling window size for sample entropy.
             - sub_vector_size (int): Embedding dimension.
-            - threshold_distance (float): Tolerance for entropy, as a fraction of std.
+            - distance_threshold (float): Tolerance for entropy, as a fraction of std.
 
         Returns:
             - sample_entropy_series (pd.Series): Series of sample entropy values.
@@ -586,13 +586,13 @@ class Sample_entropy_feature(com.Feature):
         processed_series = self.process_data(data=smoothed_series)
         
         # ======= II. Compute the rolling entropy features =======
-        rolling_sample = processed_series.rolling(window=window).apply(lambda x: utils.get_sample_entropy(series=x, sub_vector_size=sub_vector_size, threshold_distance=threshold_distance), raw=False)
+        rolling_sample = processed_series.rolling(window=window).apply(lambda x: utils.get_sample_entropy(series=x, sub_vector_size=sub_vector_size, distance_threshold=distance_threshold), raw=False)
 
         # ======= III. Convert to pd.Series =======
         rolling_sample = pd.Series(rolling_sample, index=processed_series.index)
         
         # ======= IV. Change Name =======
-        rolling_sample.name = f"{self.name}_{sub_vector_size}_{threshold_distance}_{window}_{smoothing_method}_{window_smooth}_{lambda_smooth}"
+        rolling_sample.name = f"{self.name}_{sub_vector_size}_{distance_threshold}_{window}_{smoothing_method}_{window_smooth}_{lambda_smooth}"
         rolling_sample.index = data.index
 
         return rolling_sample

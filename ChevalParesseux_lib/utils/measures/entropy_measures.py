@@ -283,7 +283,7 @@ def get_gini_impurity(
 def get_sample_entropy(
     series: pd.Series, 
     sub_vector_size: int = 2, 
-    threshold_distance: float = 0.2
+    distance_threshold: float = 0.2
 ) -> float:
     """
     Compute the sample entropy of a time series.
@@ -291,7 +291,7 @@ def get_sample_entropy(
     Parameters:
         - series (pd.Series): Time series data.
         - sub_vector_size (int): Size of the sub-vectors to consider.
-        - threshold_distance (float): Threshold distance for similarity.
+        - distance_threshold (float): Threshold distance for similarity.
     
     Returns:
         - sample_entropy (float): Sample entropy of the time series.
@@ -354,7 +354,7 @@ def get_sample_entropy(
     
     #?____________________________________________________________________________________ #
     try:
-        r_abs = threshold_distance * np.std(series)
+        r_abs = distance_threshold * np.std(series)
         phi = get_phi(series, sub_vector_size, r_abs)
         phi_plus_1 = get_phi(series, sub_vector_size + 1, r_abs)
 

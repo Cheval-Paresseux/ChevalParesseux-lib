@@ -395,10 +395,68 @@ class Backtester():
         summary_df.set_index('date', inplace=True)
         
         # ======= V. Calculate cumulative returns =======
-        summary_df['cumulative_pnl'] = (1 + summary_df['daily_returns']).cumprod()
+        summary_df['cumulative_returns'] = (1 + summary_df['daily_returns']).cumprod()
 
         return summary_df
     
+    #?____________________________________________________________________________________ #
+    def get_underlying_summary(
+        self,
+        signals_df: pd.DataFrame,
+    ) -> pd.DataFrame:
+        """
+        This method extracts the underlying asset's daily closing prices and calculates daily and cumulative returns.
+        
+        Parameters:
+            - signals_df (pd.DataFrame): DataFrame containing trading signals with columns:
+                - 'code': Asset code
+                - 'date': Date of the signal
+                - self.ask_name: Ask price column name (default is "ask_open")
+        
+        Returns:
+            - pd.DataFrame: DataFrame containing daily closing prices, daily returns, and cumulative returns.
+        """
+        # ======= I. Extract basic information from the signals DataFrame =======
+        asset_code = signals_df['code'].iloc[0]
+        daily_dfs = [group for _, group in signals_df.groupby('date')]
+        
+        def extract_close(
+            day_df: pd.DataFrame
+        ) -> dict:
+            """
+            Extracts daily returns for a single day's signals DataFrame.
+            
+            Parameters:
+                - day_df (pd.DataFrame): DataFrame containing signals for a single day.
+            
+            Returns:
+                - dict: A dictionary containing the date and closing price for that day.
+            """
+            close = day_df[self.ask_name].iloc[-1]
+            infos = {
+                'date': day_df['date'].iloc[0],
+                'close': close,
+            }
+            
+            return infos
+
+        # ======= II. Extract daily closing prices =======
+        daily_closes = Parallel(n_jobs=self.n_jobs)(
+            delayed(extract_close)(day_df) for day_df in daily_dfs
+        )
+        
+        # ======= III. Create a summary DataFrame with daily closing prices =======
+        summary_df = pd.DataFrame(daily_closes)
+        summary_df.sort_values(by='date', inplace=True)
+        summary_df.set_index('date', inplace=True)
+        
+        # ======= IV. Calculate daily returns and cumulative returns =======
+        summary_df['daily_returns'] = summary_df['close'].pct_change().fillna(0)
+        summary_df['cumulative_returns'] = (1 + summary_df['daily_returns']).cumprod()
+        summary_df['code'] = asset_code
+        
+        return summary_df
+        
     #?______________________________ User methods ________________________________________ #
     def run_backtest(
         self, 
@@ -406,6 +464,11 @@ class Backtester():
     ) -> pd.DataFrame:
         """
         Run the backtest on the provided signals DataFrame.
+        
+        This method extracts operations from the signals DataFrame, computes the corresponding trades, and returns a DataFrame containing the operations along with a daily summary of returns.
+        It gives an accurate representation of the trading strategy's performance over time. However, it looks only at the operations and does not movements between the opening and the closing 
+        of a position. So, it is aimed at analyzing trading strategies that operate a lot and where the price movements between the opening and closing of a position are not significant.
+        For instance, it is not suitable for strategies that open positions and hold them for a long time, as it does not account for the price movements during the holding period.
         
         Parameters:
             - signals_dfs (Union[list, pd.DataFrame]): List of DataFrames or a single DataFrame containing trading signals.
@@ -430,9 +493,18 @@ class Backtester():
         
         # ======= IV. Extract daily summary =======
         daily_summary_df = self.get_daily_summary(operations_df)
-        
+            
         return operations_df, daily_summary_df
     
     #?____________________________________________________________________________________ #
     
         
+        
+        
+        # ======= V. Add the underlying assets to the daily summary =======
+        # for asset_df in signals_dfs:
+        #     asset_summary = self.get_underlying_summary(asset_df)
+        #     asset_cumret = asset_summary['cumulative_returns']
+        #     asset_cumret.name = f"{asset_df['code'].iloc[0]}_cumret"
+            
+        #     daily_summary_df = daily_summary_df.join(asset_cumret, how='outer')
