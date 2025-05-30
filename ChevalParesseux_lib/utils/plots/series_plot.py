@@ -102,22 +102,39 @@ def plot_series_distribution(
     plt.axvline(max_val, color='blue', linestyle='dashed', linewidth=2, label=f'Max: {max_val:.2f}')
     plt.axvspan(mean - std, mean + std, color='yellow', alpha=0.3, label='±1 Std Dev')
 
-    # II.3 Add skewness and kurtosis text box
+    # II.3 Confidence intervals (as vertical lines)
+    confidence_levels = [0.90, 0.95, 0.99]
+    line_styles = ['solid', 'dashed', 'dotted']
+    colors = ['#1f77b4', '#ff7f0e', '#2ca02c']  # Blue, orange, green
+    
+    for level, style, color in zip(confidence_levels, line_styles, colors):
+        z = stats.norm.ppf((1 + level) / 2)
+        lower = mean - z * std
+        upper = mean + z * std
+        plt.axvline(lower, color=color, linestyle=style, linewidth=1.5, label=f'{int(level * 100)}% CI Lower')
+        plt.axvline(upper, color=color, linestyle=style, linewidth=1.5, label=f'{int(level * 100)}% CI Upper')
+
+    # II.4 Add skewness and kurtosis text box
     textstr = '\n'.join((f'Skewness: {skewness:.2f}', f'Kurtosis: {kurtosis:.2f}'))
     plt.gca().text(0.95, 0.95, textstr, transform=plt.gca().transAxes,
                    fontsize=12, verticalalignment='top', horizontalalignment='right',
                    bbox=dict(boxstyle='round', facecolor='white', alpha=0.7))
 
-    # II.4 Plot Normal Distribution for comparison
+    # II.5 Plot Normal Distribution for comparison
     x_vals = np.linspace(series.min(), series.max(), 200)
     normal_pdf = stats.norm.pdf(x_vals, loc=mean, scale=std)
     plt.plot(x_vals, normal_pdf, color='black', linestyle='--', linewidth=2, label='Normal PDF')
 
-    # II.5 Final touches for the plot
+    # II.6 Final touches for the plot
     plt.title(title)
-    plt.xlabel(f'Series Values')
+    plt.xlabel('Series Values')
     plt.ylabel('Density')
-    plt.legend()
+    plt.legend(
+        bbox_to_anchor=(1.01, 1), 
+        loc='upper left', 
+        borderaxespad=0.,
+        frameon=True
+    )
     plt.grid(True)
     plt.show()
 
