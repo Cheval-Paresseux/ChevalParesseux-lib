@@ -20,6 +20,8 @@ def load_data(
     data_nyse_dir = os.path.join(current_dir, 'NYSE')
     data_nasdaq_dir = os.path.join(current_dir, 'NASDAQ')
     data_etfs_dir = os.path.join(current_dir, 'ETFs')
+    data_vxs_dir = os.path.join(current_dir, 'VXs')
+    data_rates_dir = os.path.join(current_dir, 'Rates')
 
     # ======= II. Construct the full paths to the CSV files  =======
     file_name = f'{ticker}.csv'
@@ -27,10 +29,12 @@ def load_data(
     csv_path_nyse = os.path.join(data_nyse_dir, file_name)
     csv_path_nasdaq = os.path.join(data_nasdaq_dir, file_name)
     csv_path_etfs = os.path.join(data_etfs_dir, file_name)
+    csv_path_vxs = os.path.join(data_vxs_dir, file_name)
+    csv_path_rates = os.path.join(data_rates_dir, file_name)
 
     # ======= III. Load the data =======
     data = None
-    for path in [csv_path_nyse, csv_path_nasdaq, csv_path_etfs]:
+    for path in [csv_path_nyse, csv_path_nasdaq, csv_path_etfs, csv_path_vxs, csv_path_rates]:
         try:
             data = pd.read_csv(path)
             break  
@@ -60,6 +64,8 @@ def load_dataList(
     data_nyse_dir = os.path.join(current_dir, 'NYSE')
     data_nasdaq_dir = os.path.join(current_dir, 'NASDAQ')
     data_etfs_dir = os.path.join(current_dir, 'ETFs')
+    data_vxs_dir = os.path.join(current_dir, 'VXs')
+    data_rates_dir = os.path.join(current_dir, 'Rates')
 
     # If ticker_list is None, load all available data
     if ticker_list is None:
@@ -77,6 +83,16 @@ def load_dataList(
             
         # List all CSV files in the ETfs directory
         for file_name in os.listdir(data_etfs_dir):
+            if file_name.endswith('.csv'):
+                ticker_list.append(file_name.replace('.csv', ''))
+        
+        # List all CSV files in the VXs directory
+        for file_name in os.listdir(data_vxs_dir):
+            if file_name.endswith('.csv'):
+                ticker_list.append(file_name.replace('.csv', ''))
+
+        # List all CSV files in the Rates directory
+        for file_name in os.listdir(data_rates_dir):
             if file_name.endswith('.csv'):
                 ticker_list.append(file_name.replace('.csv', ''))
 
