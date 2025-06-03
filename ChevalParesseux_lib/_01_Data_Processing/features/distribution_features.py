@@ -832,7 +832,7 @@ class Kurtosis_feature(com.Feature):
         rolling_kurt = returns_series.rolling(window=window).apply(lambda x: x.kurtosis())
 
         # ======= II. Convert to pd.Series and Center =======
-        rolling_kurt = pd.Series(rolling_kurt, index=processed_series.index)
+        rolling_kurt = pd.Series(rolling_kurt, index=processed_series.index) - 3 # Centering to excess kurtosis
         
         # ======= III. Change Name =======
         rolling_kurt.name = f"{self.name}_{window}_{smoothing_method}_{window_smooth}_{lambda_smooth}"
