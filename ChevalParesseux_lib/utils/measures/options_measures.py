@@ -195,7 +195,3 @@ def get_IV_interpolation(
 
     return call_vol_mid, put_vol_mid
 
-
-
-
-
