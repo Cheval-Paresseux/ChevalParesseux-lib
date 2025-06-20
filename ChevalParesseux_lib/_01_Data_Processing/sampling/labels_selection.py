@@ -37,12 +37,12 @@ class Temporal_uniqueness_selection(com.DatasetBuilder):
         self,
         label_column: list = ['label'],
         price_column: list = ['close'],
-        n_samples: list = [1000],
-        replacement: list = [False],
-        balancing: list = [False],
-        vol_window: list = [10],
+        n_samples: list = [1.3],
+        replacement: list = [True],
+        balancing: list = [True],
+        vol_window: list = [21],
         upper_barrier: list = [0.5],
-        vertical_barrier: list = [20],
+        vertical_barrier: list = [21],
         grouping_column: Optional[list] = None,
     ) -> Self:
         """
@@ -51,7 +51,7 @@ class Temporal_uniqueness_selection(com.DatasetBuilder):
         Parameters:
             - label_column (list): The column names for the labels. Default is ['label'].
             - price_column (list): The column names for the prices. Default is ['close'].
-            - n_samples (list): The number of samples to extract. Default is [1000].
+            - n_samples (list): The number of samples to extract in percentage according to orignial df size. Default is [1.3].
             - replacement (list): Whether to sample with replacement. Default is [False].
             - balancing (list): Whether to balance the dataset. Default is [False].
             - vol_window (list): The window size for calculating the rolling volatility. Default is [10].
@@ -319,7 +319,7 @@ class Temporal_uniqueness_selection(com.DatasetBuilder):
         vol_window: int,
         upper_barrier: float,
         vertical_barrier: int,
-        n_samples: list,
+        n_samples: float,
         replacement: bool,
         balancing: bool,
     ) -> pd.DataFrame:
@@ -334,7 +334,7 @@ class Temporal_uniqueness_selection(com.DatasetBuilder):
             - vol_window (int): The window size for calculating the rolling volatility.
             - upper_barrier (float): The upper barrier for the event.
             - vertical_barrier (int): The vertical barrier for the event.
-            - n_samples (list): The number of samples to extract.
+            - n_samples (float): The number of samples to extract in percentage according to original DataFrame size.
             - replacement (bool): Whether to sample with replacement.
             - balancing (bool): Whether to balance the dataset.
         
@@ -378,11 +378,11 @@ class Temporal_uniqueness_selection(com.DatasetBuilder):
                     unique_df['sample_weights'] = unique_df['sample_weights'] / unique_df['sample_weights'].sum()
                     
                     # 2.2.2 Adjust the number of samples if replacement
+                    sample_size = training_df.shape[0] * n_samples
+                    target_nb_samples = int(sample_size // nb_labels)
                     if not replacement:
-                        target_nb_samples = n_samples // nb_labels
                         nb_samples = min(target_nb_samples, unique_df.shape[0])
                     else:
-                        target_nb_samples = n_samples // nb_labels
                         nb_samples = target_nb_samples
                     
                     # 2.2.3 Sample the indices

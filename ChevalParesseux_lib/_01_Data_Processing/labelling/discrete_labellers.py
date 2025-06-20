@@ -9,6 +9,131 @@ from typing import Self
 
 #! ==================================================================================== #
 #! =============================== TRINARY LABELLERS ================================== #
+class Naive_labeller(com.Labeller):
+    """
+    Naive Method for labelling time series data.
+    
+    This class computes labels based on the returns of the series, (1 for positive returns, -1 for negative returns, and 0 for no change).
+    It inherits from the Labeller base class and implements methods to:
+        - set_params : define parameter grids.
+        - process_data : optionally performs preprocessing on the input series.
+        - get_labels : compute the moving average feature over a rolling window
+    """
+    def __init__(
+        self, 
+        name: str = "naive",
+        n_jobs: int = 1
+    ) -> None:
+        """
+        Initializes the Naive Labeller with a number of jobs.
+        
+        Parameters:
+            - name (str): The name of the labeller.
+            - n_jobs (int): The number of jobs to run in parallel. Default is 1.
+        """
+        super().__init__(
+            name=name,
+            n_jobs=n_jobs,
+        )
+    
+    #?____________________________________________________________________________________ #
+    def set_params(
+        self,
+        threshold: list = [0.5, 1, 2, 3],
+        vol_window: list = [5, 10, 15, 30],
+        smoothing_method: list = [None, "ewma", "average"],
+        window_smooth: list = [5, 10, 15],
+        lambda_smooth: list = [0.2, 0.5, 0.7],
+    ):
+        """
+        Defines the parameters grid for the Naive Labeller.
+        
+        Parameters:
+            - threshold (list): The threshold for the label.
+            - vol_window (list): The window size for the volatility calculation.
+            - smoothing_method (list): The smoothing method to be applied. Options are "ewma" or "average".
+            - window_smooth (list): The window size for the smoothing method. It should a number of bars.
+            - lambda_smooth (list): The lambda parameter for the ewma method. It should be in [0, 1].
+        """
+        self.params = {
+            "threshold": threshold,
+            "vol_window": vol_window,
+            "smoothing_method": smoothing_method,
+            "window_smooth": window_smooth,
+            "lambda_smooth": lambda_smooth,
+        }
+
+        return self
+    
+    #?____________________________________________________________________________________ #
+    def process_data(
+        self, 
+        data: pd.Series,
+    ) -> pd.Series:
+        """
+        Applies preprocessing to the input data before labels extraction.
+        
+        Parameters:
+            - data (pd.Series): The input data to be processed.
+        
+        Returns:
+            - processed_data (pd.Series): The smoothed series, or raw series if no smoothing is applied.
+        ________
+        N.B: The labeller does not require preprocessing, but this method is kept for consistency.
+        """
+        return data
+
+    #?____________________________________________________________________________________ #
+    def get_labels(
+        self, 
+        data: pd.Series,
+        threshold: float,
+        vol_window: int,
+        smoothing_method: str,
+        window_smooth: int,
+        lambda_smooth: float,
+    ) -> pd.Series:
+        """
+        Computes the naive labels of the processed series.
+
+        Parameters: 
+            - data (pd.Series): The input series to be processed.
+            - threshold (float): The threshold for the label.
+            - vol_window (int): The window size for the volatility calculation.
+            - smoothing_method (str): The smoothing method to be applied. Options are "ewma" or "average".
+            - window_smooth (int): The window size for the smoothing method. It should a number of bars.
+            - lambda_smooth (float): The lambda parameter for the ewma method. It should be in [0, 1].
+            
+        Returns:
+            - labels_series (pd.Series): A series of {-1, 0, 1} labels based on future performance.
+        """
+        # ======= I. Smooth the Data & Preprocess =======
+        smoothed_series = self.smooth_data(
+            data=data, 
+            smoothing_method=smoothing_method, 
+            window_smooth=window_smooth, 
+            lambda_smooth=lambda_smooth
+        )
+        
+        processed_series = self.process_data(data=smoothed_series).dropna()
+
+        # ======= II. Compute the Volatility Series =======
+        returns_series = processed_series.pct_change().fillna(0)
+        volatility_series = returns_series.rolling(vol_window).std()
+
+        # ======= III. Initialize the labeled series =======
+        labels_series = pd.Series(index=processed_series.index, dtype=int)
+
+        # ======= IV. Iterate through the price series =======
+        score = returns_series / volatility_series
+        labels_series = score.apply(lambda x: 1 if x > threshold else (-1 if x < -threshold else 0))
+        
+        # ======= V. Change name =======
+        labels_series.name = f"{self.name}_{threshold}_{vol_window}_{smoothing_method}_{window_smooth}_{lambda_smooth}"
+
+        return labels_series
+
+#*____________________________________________________________________________________ #
 class TripleBarrier_labeller(com.Labeller):
     """
     Triple Barrier Method for labelling time series data.
