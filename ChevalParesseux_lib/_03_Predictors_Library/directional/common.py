@@ -1,4 +1,4 @@
-from .... import utils
+from ... import utils
 
 import numpy as np
 import pandas as pd
@@ -12,7 +12,7 @@ from joblib import Parallel, delayed
 #! =================================== Base Models ==================================== #
 class Directional_Model(ABC):
     """
-    This class defines the core structure and interface for classification models. It is meant to be subclassed
+    This class defines the core structure and interface for directional models. It is meant to be subclassed
     by specific model implementations.
     
     Subclasses must implement the following abstract methods:
@@ -81,16 +81,12 @@ class Directional_Model(ABC):
     @abstractmethod
     def fit(
         self,
-        X_train: Union[pd.DataFrame, pd.Series],
-        y_train: pd.Series,
         **kwargs
     ) -> Self:
         """
         Fit the model to the training data.
         
         Parameters:
-            - X_train (pd.DataFrame | pd.Series): The input features for training.
-            - y_train (pd.Series): The target variable for training.
             - **kwargs: Additional parameters for fitting the model.
         
         Returns:
@@ -100,16 +96,14 @@ class Directional_Model(ABC):
     
     #?_________________________________ Callable methods _________________________________ #
     @abstractmethod
-    def predict(
+    def get_signals(
         self,
-        X_test: Union[pd.DataFrame, pd.Series],
         **kwargs
     ) -> Union[pd.DataFrame, pd.Series]:
         """
-        Makes predictions on the test data.
-        
+        Generates the input data for the model.
+
         Parameters:
-            - X_test (pd.DataFrame | pd.Series): The input features for testing.
             - **kwargs: Additional parameters for making predictions.
         
         Returns:

@@ -1,4 +1,7 @@
-
+from ... import _01_Data_Processing as dlib
+from ... import _02_Predictive_Models as plib
+from ... import utils
+from ..directional import common as com
 
 import pandas as pd
 import numpy as np
@@ -7,7 +10,7 @@ from tqdm import tqdm
 
 
 
-class OtC_directional():
+class OtC_directional(com.Directional_Model):
     """
     Directional Model for Open-to-Close (OtC) trading strategy.
     
@@ -19,6 +22,12 @@ class OtC_directional():
         self, 
         n_jobs: int = 1
     ) -> None:
+        """
+        Constructor for the OtC_directional model.
+        
+        Parameters:
+            - n_jobs (int): Number of jobs to run in parallel. Default is 1.
+        """
         # ======= I. Initialize Class =======
         # super().__init__(n_jobs=n_jobs)
         self.n_jobs = n_jobs
@@ -71,38 +80,38 @@ class OtC_directional():
         # --- 2. Features Model Registry ---
         # i. Features using general params
         features_general = {
-            "average": lib.Average_feature,
-            "median": lib.Median_feature,
-            "minimum": lib.Minimum_feature,
-            "maximum": lib.Maximum_feature,
-            "shannon": lib.Shannon_entropy_feature,
-            "plugin": lib.Plugin_entropy_feature,
-            "lempelZiv": lib.LempelZiv_entropy_feature,
-            "kontoyiannis": lib.Kontoyiannis_entropy_feature,
-            "momentum": lib.Momentum_feature,
-            "linear_tempreg": lib.Linear_tempReg_feature,
-            "non_linear_tempreg": lib.Nonlinear_tempReg_feature,
-            "stochasticRSI": lib.StochasticRSI_feature,
-            "rsi": lib.RSI_feature,
-            "ehlersFisher": lib.EhlersFisher_feature,
-            "oscillator": lib.Oscillator_feature,
-            "vortex": lib.Vortex_feature,
-            "vigor": lib.Vigor_feature,
-            "stochasticOscillator": lib.StochasticOscillator_feature,
+            "average": dlib.Average_feature,
+            "median": dlib.Median_feature,
+            "minimum": dlib.Minimum_feature,
+            "maximum": dlib.Maximum_feature,
+            "shannon": dlib.Shannon_entropy_feature,
+            "plugin": dlib.Plugin_entropy_feature,
+            "lempelZiv": dlib.LempelZiv_entropy_feature,
+            "kontoyiannis": dlib.Kontoyiannis_entropy_feature,
+            "momentum": dlib.Momentum_feature,
+            "linear_tempreg": dlib.Linear_tempReg_feature,
+            "non_linear_tempreg": dlib.Nonlinear_tempReg_feature,
+            "stochasticRSI": dlib.StochasticRSI_feature,
+            "rsi": dlib.RSI_feature,
+            "ehlersFisher": dlib.EhlersFisher_feature,
+            "oscillator": dlib.Oscillator_feature,
+            "vortex": dlib.Vortex_feature,
+            "vigor": dlib.Vigor_feature,
+            "stochasticOscillator": dlib.StochasticOscillator_feature,
         }
 
         # ii. Features using no-smoothing params 
         features_nosmooth = {
-            "volatility": lib.Volatility_feature,
-            "skewness": lib.Skewness_feature,
-            "kurtosis": lib.Kurtosis_feature,
-            "Z_momentum": lib.Z_momentum_feature,
+            "volatility": dlib.Volatility_feature,
+            "skewness": dlib.Skewness_feature,
+            "kurtosis": dlib.Kurtosis_feature,
+            "Z_momentum": dlib.Z_momentum_feature,
         }
 
         # iii. Features with custom params 
         features_custom = {
-            "quantile": (lib.Quantile_feature, quantile_params),
-            "kama": (lib.Kama_feature, kama_params),
+            "quantile": (dlib.Quantile_feature, quantile_params),
+            "kama": (dlib.Kama_feature, kama_params),
         }
 
         # --- 3. Final Features Model Dictionary ---
@@ -121,7 +130,7 @@ class OtC_directional():
             "window_smooth": [0],
             "lambda_smooth": [0],
         }
-        labeller_models = (lib.Naive_labeller, labeller_params)
+        labeller_models = (dlib.Naive_labeller, labeller_params)
         default_params['labeller_models'] = labeller_models
         
         # ======= III. Resampler Model =======
@@ -136,26 +145,26 @@ class OtC_directional():
             'vertical_barrier': [21],
             'grouping_column': [None],
         }
-        resampler_models = (lib.Temporal_uniqueness_selection, resampler_params)
+        resampler_models = (dlib.Temporal_uniqueness_selection, resampler_params)
         default_params['resampler_models'] = resampler_models
         
         # ======= IV. Feature Selector Model =======
         selector_params = {
             'correlation_threshold': [0.9],
         }
-        selector_models = (lib.Correlation_selector, selector_params)
+        selector_models = (plib.Correlation_selector, selector_params)
         default_params['selector_models'] = selector_models
         
         # ======= V. Tuner Model =======
         tuner_params = {
             'random_search': True,
-            'n_samples': 500, # useless as we don't use random search
+            'n_samples': 500,
         }
-        tuner_models = (lib.Classifier_gridSearch, tuner_params)
+        tuner_models = (plib.Classifier_gridSearch, tuner_params)
         default_params['tuner_models'] = tuner_models
         
         # ======= VI. Predictor Model =======
-        predictor_models = lib.SKL_randomForest_classifier
+        predictor_models = plib.SKL_randomForest_classifier
         default_params['predictor_models'] = predictor_models
         
         # ======= VII. Grid Universe =======
@@ -249,7 +258,7 @@ class OtC_directional():
             raise ValueError(f"Missing required columns: {missing_cols}")
 
         # ======= I. Decompose Series =======
-        intraday_df, overnight_df, complete_df, daily_data = lib.get_series_decomposition(data=data)
+        intraday_df, overnight_df, complete_df, daily_data = utils.get_series_decomposition(data=data)
         series_dict = {"intraday": intraday_df, "overnight": overnight_df, "complete": complete_df, "daily_data": daily_data}
         
         return series_dict
@@ -339,7 +348,15 @@ class OtC_directional():
         self, 
         data: pd.DataFrame
     ) -> pd.DataFrame:
-        """"""
+        """
+        Processes the training data for the OtC directional model.
+        
+        Parameters:
+            - data (pd.DataFrame): The input DataFrame containing financial data with columns ['date', 'open', 'close', 'high', 'low'].
+        
+        Returns:
+            - pd.DataFrame: A DataFrame containing the processed features and labels for training.
+        """
         # ======= I. Pre-process data =======
         data_df = data.copy()
         data_df = data_df[['date', 'open', 'close', 'high', 'low']]
@@ -358,12 +375,6 @@ class OtC_directional():
         processed_data['label'] = processed_data['label'].shift(-1) # to align labels with the next row
         processed_data.reset_index(inplace=True)
         processed_data.rename(columns={'index': 'date'}, inplace=True)
-        
-        # # ======= VI. Get rid of 2020 crisis data =======
-        # processed_data['date'] = pd.to_datetime(processed_data['date'])
-        # start_date = pd.Timestamp('2020-01-01')
-        # end_date = pd.Timestamp('2020-06-01')
-        # processed_data = processed_data[~((processed_data['date'] >= start_date) & (processed_data['date'] <= end_date))]
 
         return processed_data
     
@@ -371,7 +382,16 @@ class OtC_directional():
     def fit(
         self,
         processed_train_data: pd.DataFrame,
-    ):
+    ) -> tuple:
+        """
+        Fits the OtC directional model using the provided training data.
+        
+        Parameters:
+            - processed_train_data (pd.DataFrame): The pre-processed training data containing features and labels.
+        
+        Returns:
+            - tuple: A tuple containing the training features (X_train) and labels (y_train).
+        """
         # ======= 0. Set non-features (always the same if transformed data from transform_data method) =======
         non_features = ['date', 'label', 'intra_close']
         train_data = processed_train_data.dropna(axis=0).copy()
@@ -436,10 +456,19 @@ class OtC_directional():
         return X_train, y_train
 
     #?________________________________ Predict methods ___________________________________ #
-    def transform_data(
+    def process_data(
         self,
         data: pd.DataFrame,
     ) -> list:
+        """
+        Transforms the input data into a format suitable for prediction.
+        
+        Parameters:
+            - data (pd.DataFrame): The input DataFrame containing financial data with columns ['date', 'open', 'close', 'high', 'low'].
+        
+        Returns:
+            - list: A list of DataFrames, each containing the processed features and labels for a single day.
+        """
         # ======= I. Pre-process data =======
         data_df = data.copy()
         data_df = data_df[['date', 'open', 'close', 'high', 'low']]

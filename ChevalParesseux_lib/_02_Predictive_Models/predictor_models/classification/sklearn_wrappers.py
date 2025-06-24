@@ -1,5 +1,6 @@
 from ..classification import common as com
 
+
 import numpy as np
 import pandas as pd
 from typing import Union
@@ -7,6 +8,7 @@ from typing import Union
 from sklearn import tree
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
+from sklearn.ensemble import HistGradientBoostingClassifier
 
 
 
@@ -262,8 +264,8 @@ class SKL_randomForest_classifier(com.Classification_Model):
         Process the data to be used for training the model.
         
         Parameters:
-            - X_train (pd.DataFrame): The training data features.
-            - y_train (pd.Series): The training data labels.
+            - features_matrix (pd.DataFrame): The training data features.
+            - target_vector (pd.Series): The training data labels.
         
         Returns:
             - tuple: A tuple containing the processed features and labels.
@@ -479,3 +481,161 @@ class SKL_logisticRegression_classifier(com.Classification_Model):
 
         return predictions
     
+#*____________________________________________________________________________________ #
+class SKL_XGBoost_classifier(com.Classification_Model):
+    """
+    Wrapper for XGBoost XGBClassifier.
+
+    This class creates an XGBoost classifier designed to integrate with the ML_Model framework.
+    """
+    def __init__(
+        self,
+        n_jobs: int = 1,
+        random_state: int = 72
+    ):
+        """
+        Constructor for the SKL_XGBoost_classifier class.
+
+        Parameters:
+            - n_jobs (int): Number of parallel threads.
+            - random_state (int): Random state for reproducibility.
+        """
+        # ======= I. Initialization ======= 
+        super().__init__(n_jobs=n_jobs)
+        
+        self.random_state = random_state
+        np.random.seed(self.random_state)
+        
+        self.params = {}
+        
+        # ======= II. Variables ======= 
+        self.xgb_model = None
+
+    #?____________________________________________________________________________________ #
+    def set_params(
+        self,
+        raw_predict: bool = False,
+        min_proba: float = 0.5,
+        loss: str = 'log_loss',
+        learning_rate: float = 0.1,
+        max_iter: int = 100,
+        max_depth: int = 3,
+        min_samples_leaf: int = 20,
+        l2_regularization: float = 0.0,
+        max_bins: int = 256,
+    ):
+        """
+        Set hyperparameters for the XGBoost Classifier.
+
+        Parameters:
+            - raw_predict (bool): Whether to return raw class predictions or filtered ones based on min_proba.
+            - min_proba (float): Minimum probability threshold to accept predictions.
+            - loss (int): Loss function to be used. Default is 100.
+            - learning_rate (float): Step size shrinkage used in update to prevents overfitting
+            - max_iter (int): The maximum number of iterations for the model.
+            - max_depth (int): Maximum depth of the tree.
+            - min_samples_leaf (int): Minimum number of samples required to be at a leaf node.
+            - l2_regularization (float): L2 regularization term on weights.
+            - max_bins (int): Maximum number of bins to use for discretizing continuous features.
+
+        Returns:
+            - self
+        """
+        self.params = {
+            'loss': loss,
+            'learning_rate': learning_rate,
+            'max_iter': max_iter,
+            'max_depth': max_depth,
+            'min_samples_leaf': min_samples_leaf,
+            'l2_regularization': l2_regularization,
+            'max_bins': max_bins,
+            'random_state': self.random_state
+        }
+        self.raw_predict = raw_predict
+        self.min_proba = min_proba
+
+        return self
+
+    #?____________________________________________________________________________________ #
+    def process_data(
+        self, 
+        features_matrix: Union[pd.DataFrame, np.ndarray], 
+        target_vector: Union[pd.Series, np.ndarray]
+    ) -> tuple:
+        """
+        Process the data to be used for training the model.
+        
+        Parameters:
+            - features_matrix (pd.DataFrame): The training data features.
+            - target_vector (pd.Series): The training data labels.
+        
+        Returns:
+            - tuple: A tuple containing the processed features and labels.
+        """
+        X, y = np.array(features_matrix), np.array(target_vector)
+        
+        return X, y
+
+    #?____________________________________________________________________________________ #
+    def fit(
+        self, 
+        X_train: Union[pd.DataFrame, np.ndarray], 
+        y_train: Union[pd.Series, np.ndarray]
+    ):
+        """
+        Fit the model to the training data.
+        
+        Parameters:
+            - X_train (pd.DataFrame): The training data features.
+            - y_train (pd.Series): The training data labels.
+        
+        Returns:
+            - self: The instance of the class with the fitted model.
+        """
+        # ======= I. Data Processing ======= 
+        X, y = self.process_data(X_train, y_train)
+        
+        # ======= II. Model Fitting =======
+        clf = HistGradientBoostingClassifier(**self.params)
+        clf = clf.fit(X, y)
+        
+        # ======= III. Model Saving =======
+        self.xgb_model = clf
+        
+        return self
+
+    #?____________________________________________________________________________________ #
+    def predict(
+        self, 
+        X_test: pd.DataFrame
+    ) -> pd.Series:
+        """
+        Predict the labels for the given data.
+        
+        Parameters:
+            - X_test (pd.DataFrame): The data to be predicted.
+        
+        Returns:
+            - pd.Series: The predicted labels.
+        """
+        # ======= I. Data Processing =======
+        X = np.array(X_test)
+        
+        # ======= II. Predictions =======
+        preds_probas = self.xgb_model.predict_proba(X)
+        
+        # ======= III. Raw Predictions =======
+        class_order = self.xgb_model.classes_
+        predicted_class_indices = np.argmax(preds_probas, axis=1)
+        predicted_labels = class_order[predicted_class_indices]
+
+        # ====== IV. Filter Predictions =======
+        if self.raw_predict:
+            return predicted_labels
+        
+        max_probs = np.max(preds_probas, axis=1)
+        filtered_preds = np.where(max_probs >= self.min_proba, predicted_labels, np.nan)
+
+        predictions = pd.Series(filtered_preds, index=X_test.index).fillna(0)
+        
+        return predictions
